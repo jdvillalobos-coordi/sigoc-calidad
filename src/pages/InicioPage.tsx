@@ -1,328 +1,370 @@
 import React, { useState } from "react";
-import { useApp } from "@/context/AppContext";
 import { registros, alertasIA, personas, vehiculos } from "@/data/mockData";
-import { TipoBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDateTime, descripcionCorta } from "@/lib/utils-app";
-import { Plus, ChevronDown, X } from "lucide-react";
+import { useApp } from "@/context/AppContext";
+import { TrendingUp, TrendingDown, FileText, AlertTriangle, Clock, CheckCircle, Users, Truck } from "lucide-react";
 
-const TIPOS = ["todos", "faltante", "evento", "rce", "posventa", "lesiva", "contacto", "evidencia"] as const;
+// ── helpers ──────────────────────────────────────────────────────────────────
 
-// Mapa de regionales con sus terminales
-const REGIONALES: Record<string, string[]> = {
-  "Centro":     ["Bogotá"],
-  "Sur":        ["Cali", "Pereira"],
-  "Oriente":    ["Bucaramanga", "Cartagena"],
-  "Occidente":  ["Medellín"],
-  "México":     ["México"],
-};
-
-// Todas las terminales disponibles (orden alfabético)
-const TODAS_TERMINALES = Object.values(REGIONALES).flat().sort();
-
-type FiltroRegional = keyof typeof REGIONALES | "todas";
-
-function FilterPill({
-  label,
-  active,
-  onRemove,
-}: {
-  label: string;
-  active: boolean;
-  onRemove: () => void;
-}) {
-  if (!active) return null;
-  return (
-    <span className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-      {label}
-      <button onClick={onRemove} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors">
-        <X className="w-3 h-3" />
-      </button>
-    </span>
-  );
+function pct(a: number, b: number) {
+  if (b === 0) return 0;
+  return Math.round((a / b) * 100);
 }
 
-function DropdownSelect({
+const REGIONALES: Record<string, string[]> = {
+  "Centro":    ["Bogotá"],
+  "Sur":       ["Cali", "Pereira"],
+  "Oriente":   ["Bucaramanga", "Cartagena"],
+  "Occidente": ["Medellín"],
+  "México":    ["México"],
+};
+
+function regionalDeTerminal(terminal: string): string {
+  return Object.entries(REGIONALES).find(([, ts]) => ts.includes(terminal))?.[0] ?? "Otras";
+}
+
+// ── sub-componentes ───────────────────────────────────────────────────────────
+
+function KPICard({
   label,
-  options,
   value,
-  onChange,
-  placeholder,
+  sub,
+  trend,
+  trendUp,
+  color = "primary",
+  icon: Icon,
 }: {
   label: string;
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
+  value: number | string;
+  sub?: string;
+  trend?: string;
+  trendUp?: boolean;
+  color?: "primary" | "red" | "amber" | "green" | "purple";
+  icon: React.ElementType;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const isActive = value !== "";
-
+  const colorMap = {
+    primary: "bg-primary/8 text-primary",
+    red:     "bg-red-50 text-red-600",
+    amber:   "bg-amber-50 text-amber-600",
+    green:   "bg-green-50 text-green-600",
+    purple:  "bg-purple-50 text-purple-600",
+  };
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-          isActive
-            ? "bg-primary text-primary-foreground border-primary"
-            : "bg-card border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-        }`}
-      >
-        <span>{label}</span>
-        {isActive && <span className="opacity-70">·</span>}
-        {isActive && <span>{value}</span>}
-        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-
-      {open && (
-        <div className="absolute top-full mt-1 left-0 bg-card border border-border rounded-xl shadow-lg z-40 min-w-[160px] overflow-hidden">
-          <button
-            onClick={() => { onChange(""); setOpen(false); }}
-            className={`w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors ${value === "" ? "font-semibold text-primary" : "text-muted-foreground"}`}
-          >
-            {placeholder}
-          </button>
-          <div className="border-t border-border" />
-          {options.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => { onChange(opt); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors ${value === opt ? "font-semibold text-primary bg-primary/5" : "text-foreground"}`}
-            >
-              {opt}
-            </button>
-          ))}
+    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</span>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorMap[color]}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+      </div>
+      <div>
+        <div className="text-3xl font-bold text-foreground">{value}</div>
+        {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+      </div>
+      {trend && (
+        <div className={`flex items-center gap-1 text-xs font-medium ${trendUp ? "text-green-600" : "text-red-500"}`}>
+          {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+          {trend}
         </div>
       )}
     </div>
   );
 }
 
+function BarChart({
+  data,
+  label,
+  colorClass = "bg-primary",
+}: {
+  data: { name: string; value: number }[];
+  label: string;
+  colorClass?: string;
+}) {
+  const max = Math.max(...data.map((d) => d.value), 1);
+  return (
+    <div className="bg-card border border-border rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-foreground mb-4">{label}</h3>
+      <div className="space-y-2.5">
+        {data.map((d) => (
+          <div key={d.name} className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground w-24 flex-shrink-0 truncate">{d.name}</span>
+            <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
+                style={{ width: `${pct(d.value, max)}%` }}
+              />
+            </div>
+            <span className="text-xs font-semibold text-foreground w-6 text-right">{d.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DonutStat({
+  label,
+  segments,
+}: {
+  label: string;
+  segments: { name: string; value: number; color: string }[];
+}) {
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  return (
+    <div className="bg-card border border-border rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-foreground mb-4">{label}</h3>
+      <div className="space-y-2">
+        {segments.map((seg) => (
+          <div key={seg.name} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${seg.color}`} />
+              <span className="text-xs text-foreground">{seg.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-24 bg-muted rounded-full h-1.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${seg.color}`}
+                  style={{ width: `${pct(seg.value, total)}%` }}
+                />
+              </div>
+              <span className="text-xs font-semibold text-foreground w-5 text-right">{seg.value}</span>
+            </div>
+          </div>
+        ))}
+        <div className="pt-1 border-t border-border flex justify-between text-xs text-muted-foreground">
+          <span>Total</span>
+          <span className="font-semibold text-foreground">{total}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Página principal ──────────────────────────────────────────────────────────
+
 export default function InicioPage() {
-  const { abrirRegistro, abrirPersona, abrirVehiculo, setPaginaActiva, setNuevaRegistroAbierto } = useApp();
-  const [filtroTipo, setFiltroTipo] = useState<string>("todos");
-  const [filtroRegional, setFiltroRegional] = useState<string>("");
-  const [filtroTerminal, setFiltroTerminal] = useState<string>("");
+  const { setPaginaActiva } = useApp();
 
-  // Al cambiar regional, limpiar terminal si no pertenece a la nueva regional
-  function handleRegionalChange(regional: string) {
-    setFiltroRegional(regional);
-    if (regional && filtroTerminal) {
-      const terminalesDeRegional = REGIONALES[regional] ?? [];
-      if (!terminalesDeRegional.includes(filtroTerminal)) {
-        setFiltroTerminal("");
-      }
-    }
-  }
+  // ── métricas derivadas de mockData ─────────────────────────────────────────
+  const total = registros.length;
+  const enInvestigacion = registros.filter((r) => r.estado === "en_investigacion").length;
+  const cerrados = registros.filter((r) => r.estado === "cerrado").length;
+  const vencidos = registros.filter((r) => r.estado === "vencido").length;
+  const pendientes = registros.filter((r) => r.estado === "pendiente").length;
+  const bloqueados = registros.filter((r) => r.estado === "bloqueado").length;
+  const alertasCriticas = alertasIA.filter((a) => a.severidad === "critica").length;
+  const alertasAltas = alertasIA.filter((a) => a.severidad === "alta").length;
+  const personasEnSeguimiento = personas.filter((p) => p.estado === "en_seguimiento").length;
+  const personasBloqueadas = personas.filter((p) => p.estado === "bloqueado").length;
+  const vehiculosBloqueados = vehiculos.filter((v) => v.estado === "bloqueado").length;
+  const casosVencidos30d = registros.filter((r) => r.diasAbierto > 30 && r.estado !== "cerrado").length;
 
-  // Terminales disponibles según regional seleccionada
-  const terminalesDisponibles = filtroRegional
-    ? REGIONALES[filtroRegional] ?? []
-    : TODAS_TERMINALES;
+  // Por tipo
+  const porTipo = [
+    { name: "Faltantes",  value: registros.filter((r) => r.tipo === "faltante").length },
+    { name: "Eventos",    value: registros.filter((r) => r.tipo === "evento").length },
+    { name: "Posventa",   value: registros.filter((r) => r.tipo === "posventa").length },
+    { name: "RCE",        value: registros.filter((r) => r.tipo === "rce").length },
+    { name: "Evidencias", value: registros.filter((r) => r.tipo === "evidencia").length },
+    { name: "Lesivas",    value: registros.filter((r) => r.tipo === "lesiva").length },
+    { name: "Contacto",   value: registros.filter((r) => r.tipo === "contacto").length },
+  ].sort((a, b) => b.value - a.value);
 
-  const feed = [...registros]
-    .filter((r) => filtroTipo === "todos" || r.tipo === filtroTipo)
-    .filter((r) => {
-      if (filtroTerminal) return r.terminal === filtroTerminal;
-      if (filtroRegional) {
-        const terms = REGIONALES[filtroRegional] ?? [];
-        return terms.includes(r.terminal);
-      }
-      return true;
-    })
-    .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-    .slice(0, 20);
+  // Por regional
+  const porRegional = Object.keys(REGIONALES).map((reg) => ({
+    name: reg,
+    value: registros.filter((r) => REGIONALES[reg].includes(r.terminal)).length,
+  })).sort((a, b) => b.value - a.value);
 
-  const hayFiltrosActivos = filtroRegional !== "" || filtroTerminal !== "";
+  // Por estado (para donut)
+  const estadosSegmentos = [
+    { name: "En investigación", value: enInvestigacion, color: "bg-blue-500" },
+    { name: "Cerrados",         value: cerrados,        color: "bg-green-500" },
+    { name: "Pendientes",       value: pendientes,      color: "bg-amber-400" },
+    { name: "Vencidos",         value: vencidos,        color: "bg-red-500" },
+    { name: "Bloqueados",       value: bloqueados,      color: "bg-gray-500" },
+  ].filter((s) => s.value > 0);
+
+  // Top 5 terminales con más registros
+  const terminalesCount: Record<string, number> = {};
+  registros.forEach((r) => { terminalesCount[r.terminal] = (terminalesCount[r.terminal] ?? 0) + 1; });
+  const topTerminales = Object.entries(terminalesCount)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-foreground">Buenos días, Sandra 👋</h1>
+            <h1 className="text-xl font-bold text-foreground">Dashboard de Calidad</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              {" · "}Resumen general del sistema
             </p>
           </div>
           <button
-            onClick={() => setNuevaRegistroAbierto(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
+            onClick={() => setPaginaActiva("bandeja")}
+            className="text-xs text-primary underline hover:no-underline"
           >
-            <Plus className="w-4 h-4" /> Nuevo registro
+            Ir a mi bandeja →
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          {/* Feed actividad */}
-          <div className="col-span-2">
+        {/* KPIs fila 1 */}
+        <div className="grid grid-cols-4 gap-4">
+          <KPICard
+            label="Total registros"
+            value={total}
+            sub="En toda la plataforma"
+            trend="+8 esta semana"
+            trendUp
+            icon={FileText}
+            color="primary"
+          />
+          <KPICard
+            label="En investigación"
+            value={enInvestigacion}
+            sub={`${pct(enInvestigacion, total)}% del total`}
+            icon={Clock}
+            color="amber"
+          />
+          <KPICard
+            label="Cerrados"
+            value={cerrados}
+            sub={`Tasa de cierre: ${pct(cerrados, total)}%`}
+            trend="+2 esta semana"
+            trendUp
+            icon={CheckCircle}
+            color="green"
+          />
+          <KPICard
+            label="Vencidos (+30d)"
+            value={casosVencidos30d}
+            sub="Sin cierre en más de 30 días"
+            trend="Requieren atención"
+            trendUp={false}
+            icon={AlertTriangle}
+            color="red"
+          />
+        </div>
 
-            {/* Filtros de tipo */}
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
-              {TIPOS.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setFiltroTipo(t)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                    filtroTipo === t
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card border-border text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {t === "todos" ? "Todos" : t === "faltante" ? "Faltantes" : t === "evento" ? "Eventos" : t === "rce" ? "RCE" : t === "posventa" ? "Posventa" : t === "lesiva" ? "Lesivas" : t === "contacto" ? "Contacto" : "Evidencias"}
-                </button>
-              ))}
-            </div>
+        {/* KPIs fila 2 */}
+        <div className="grid grid-cols-4 gap-4">
+          <KPICard
+            label="Alertas IA activas"
+            value={alertasIA.length}
+            sub={`${alertasCriticas} críticas · ${alertasAltas} altas`}
+            icon={AlertTriangle}
+            color="red"
+          />
+          <KPICard
+            label="Personas en seguimiento"
+            value={personasEnSeguimiento}
+            sub={`${personasBloqueadas} bloqueadas`}
+            icon={Users}
+            color="amber"
+          />
+          <KPICard
+            label="Vehículos bloqueados"
+            value={vehiculosBloqueados}
+            sub={`de ${vehiculos.length} en sistema`}
+            icon={Truck}
+            color="purple"
+          />
+          <KPICard
+            label="Pendientes de asignar"
+            value={pendientes}
+            sub="Sin responsable asignado"
+            icon={Clock}
+            color="amber"
+          />
+        </div>
 
-            {/* Filtros de Regional y Terminal */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <DropdownSelect
-                label="Regional"
-                options={Object.keys(REGIONALES)}
-                value={filtroRegional}
-                onChange={handleRegionalChange}
-                placeholder="Todas las regionales"
-              />
-              <DropdownSelect
-                label="Terminal"
-                options={terminalesDisponibles}
-                value={filtroTerminal}
-                onChange={setFiltroTerminal}
-                placeholder="Todas las terminales"
-              />
-              {hayFiltrosActivos && (
-                <button
-                  onClick={() => { setFiltroRegional(""); setFiltroTerminal(""); }}
-                  className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                >
-                  Limpiar filtros
-                </button>
-              )}
-            </div>
+        {/* Gráficas */}
+        <div className="grid grid-cols-3 gap-4">
+          <BarChart
+            data={porTipo}
+            label="Registros por tipo"
+            colorClass="bg-primary"
+          />
+          <BarChart
+            data={porRegional}
+            label="Registros por regional"
+            colorClass="bg-accent-blue"
+          />
+          <DonutStat
+            label="Distribución por estado"
+            segments={estadosSegmentos}
+          />
+        </div>
 
-            {/* Resumen de filtros activos */}
-            {hayFiltrosActivos && (
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <span className="text-xs text-muted-foreground">Filtrando por:</span>
-                <FilterPill
-                  label={`Regional: ${filtroRegional}`}
-                  active={filtroRegional !== ""}
-                  onRemove={() => handleRegionalChange("")}
-                />
-                <FilterPill
-                  label={`Terminal: ${filtroTerminal}`}
-                  active={filtroTerminal !== ""}
-                  onRemove={() => setFiltroTerminal("")}
-                />
-                <span className="text-xs text-muted-foreground">
-                  · {feed.length} resultado{feed.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              {feed.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                  <span className="text-4xl mb-3">🔍</span>
-                  <p className="text-sm font-medium">No se encontraron registros</p>
-                  <p className="text-xs mt-1">
-                    {filtroRegional || filtroTerminal
-                      ? "No hay registros para los filtros seleccionados."
-                      : "No hay registros disponibles."}
-                  </p>
-                </div>
-              ) : (
-                feed.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => abrirRegistro(r.id)}
-                    className="w-full bg-card border border-border rounded-xl p-4 text-left hover:shadow-card-hover hover:border-ring/30 transition-all group"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <TipoBadge tipo={r.tipo} />
-                          <span className="text-xs font-mono text-muted-foreground">{r.id}</span>
-                          <EstadoBadge estado={r.estado} />
-                        </div>
-                        <p className="text-sm font-medium text-foreground truncate">{descripcionCorta(r)}</p>
-                        <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-                          <span>📍 {r.terminal}</span>
-                          <span>🗓 {r.fecha}</span>
-                          <span>👤 {r.responsableNombre}</span>
-                          {r.diasAbierto > 0 && (
-                            <span className={r.diasAbierto > 30 ? "text-destructive font-medium" : ""}>
-                              {r.diasAbierto}d abierto
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-muted-foreground group-hover:text-foreground transition-colors text-xs">→</div>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
+        {/* Tabla top terminales + alertas recientes */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Top terminales */}
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Top terminales por actividad</h3>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="text-left pb-2 font-medium">Terminal</th>
+                  <th className="text-left pb-2 font-medium">Regional</th>
+                  <th className="text-right pb-2 font-medium">Registros</th>
+                  <th className="text-right pb-2 font-medium">% del total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {topTerminales.map((t) => (
+                  <tr key={t.name} className="hover:bg-muted/50 transition-colors">
+                    <td className="py-2 font-medium text-foreground">{t.name}</td>
+                    <td className="py-2 text-muted-foreground">{regionalDeTerminal(t.name)}</td>
+                    <td className="py-2 text-right font-semibold text-foreground">{t.value}</td>
+                    <td className="py-2 text-right text-muted-foreground">{pct(t.value, total)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {/* Panel IA */}
-          <div>
-            <div className="sticky top-0">
-              <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          {/* Alertas recientes IA */}
+          <div className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <span className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
-                Alertas IA activas
-              </h2>
-              <div className="space-y-3">
-                {alertasIA.map((a) => (
-                  <div
-                    key={a.id}
-                    className={`border rounded-xl p-3 ${
-                      a.severidad === "critica" ? "bg-red-50 border-red-200" :
-                      a.severidad === "alta" ? "bg-amber-50 border-amber-200" :
-                      "bg-blue-50 border-blue-200"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <SeveridadBadge severidad={a.severidad} />
-                    </div>
-                    <p className="text-xs font-semibold text-foreground leading-snug mb-1">{a.titulo}</p>
-                    <p className="text-xs text-muted-foreground leading-snug mb-2">{a.descripcion.slice(0, 100)}...</p>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {a.entidadesInvolucradas.map((e) => (
-                        <button
-                          key={e.id}
-                          className="text-xs text-coordinadora-blue underline hover:no-underline"
-                          onClick={(ev) => {
-                            ev.stopPropagation();
-                            if (e.tipo === "persona") abrirPersona(e.id);
-                            else if (e.tipo === "vehiculo") abrirVehiculo(e.id);
-                          }}
-                        >
-                          {e.nombre}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => setPaginaActiva("ia")}
-                      className="text-xs font-medium text-coordinadora-blue hover:underline"
-                    >
-                      Ver detalle →
-                    </button>
+                Alertas IA recientes
+              </h3>
+              <button
+                onClick={() => setPaginaActiva("ia")}
+                className="text-xs text-primary hover:underline"
+              >
+                Ver todas →
+              </button>
+            </div>
+            <div className="space-y-2.5">
+              {alertasIA.slice(0, 4).map((a) => (
+                <div key={a.id} className="flex items-start gap-2.5">
+                  <div className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${
+                    a.severidad === "critica" ? "bg-red-500" :
+                    a.severidad === "alta" ? "bg-amber-500" : "bg-blue-500"
+                  }`} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground leading-snug truncate">{a.titulo}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-1">{a.descripcion.slice(0, 80)}…</p>
                   </div>
-                ))}
-              </div>
+                  <span className={`flex-shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    a.severidad === "critica" ? "bg-red-100 text-red-700" :
+                    a.severidad === "alta" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                  }`}>
+                    {a.severidad === "critica" ? "Crítica" : a.severidad === "alta" ? "Alta" : "Media"}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

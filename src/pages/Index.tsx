@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { AppProvider, useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import InicioPage from "@/pages/InicioPage";
+import BandejaPage from "@/pages/BandejaPage";
 import RegistrosPage from "@/pages/RegistrosPage";
 import BusquedaPage from "@/pages/BusquedaPage";
 import IAPage from "@/pages/IAPage";
@@ -17,20 +18,19 @@ function AppContent() {
   return (
     <AppLayout>
       <div className="h-full overflow-hidden">
-        {paginaActiva === "inicio" && <InicioPage />}
-        {paginaActiva === "registros" && <RegistrosPage />}
-        {paginaActiva === "busqueda" && <BusquedaPage />}
-        {paginaActiva === "ia" && <IAPage />}
-        {paginaActiva === "configuracion" && <ConfiguracionPage />}
+        {paginaActiva === "inicio"         && <InicioPage />}
+        {paginaActiva === "bandeja"        && <BandejaPage />}
+        {paginaActiva === "registros"      && <RegistrosPage />}
+        {paginaActiva === "busqueda"       && <BusquedaPage />}
+        {paginaActiva === "ia"             && <IAPage />}
+        {paginaActiva === "configuracion"  && <ConfiguracionPage />}
       </div>
 
-      {/* Drawers */}
-      {drawer.tipo === "registro" && <RecordDetailDrawer />}
+      {drawer.tipo === "registro"   && <RecordDetailDrawer />}
       {drawer.tipo === "persona360" && <Persona360Drawer />}
-      {drawer.tipo === "vehiculo360" && <Vehiculo360Drawer />}
-      {drawer.tipo === "guia360" && <Guia360Drawer />}
+      {drawer.tipo === "vehiculo360"&& <Vehiculo360Drawer />}
+      {drawer.tipo === "guia360"    && <Guia360Drawer />}
 
-      {/* Formulario nuevo registro */}
       {nuevaRegistroAbierto && <NewRecordForm onClose={() => setNuevaRegistroAbierto(false)} />}
     </AppLayout>
   );
