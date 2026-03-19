@@ -108,7 +108,7 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 
 // ── RegistrosPage ───────────────────────────────────────────────────────────
 export default function RegistrosPage() {
-  const { abrirRegistro, setNuevaRegistroAbierto, busquedaQuery } = useApp();
+  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery } = useApp();
   const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro] = useState<string>("todos");
   const [paisFiltro, setPaisFiltro] = useState("todos");

@@ -32,7 +32,7 @@ function sigoStepperToLocal(s: StepperInvestigacion): StepperState {
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
-  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, setNuevaRegistroAbierto } = useApp();
+  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto } = useApp();
   const [editando, setEditando] = useState(false);
   const [localRegistros, setLocalRegistros] = useState(registros);
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");

@@ -11,7 +11,7 @@ const METRICAS = [
 ];
 
 export default function IAPage() {
-  const { abrirPersona, abrirVehiculo, abrirRegistro } = useApp();
+  const { abrirPersona, abrirVehiculo, abrirRegistro, abrirTerminal } = useApp();
   const [filtroSeveridad, setFiltroSeveridad] = useState("todos");
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [filtroEstado, setFiltroEstado] = useState("todos");
