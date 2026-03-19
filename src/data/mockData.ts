@@ -1090,6 +1090,7 @@ export const registros: Registro[] = [
     valorRecaudo: 4500000,
     formaPago: "Efectivo",
     estadoRecaudo: "no_pagado",
+    porcentajeCobro: 85,
     checkpoint: "Terminal Bogotá — Caja 3",
     novedadesProceso: "Cliente argumenta no haber autorizado el envío.",
     diasAbierto: 41,
