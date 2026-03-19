@@ -111,6 +111,7 @@ export default function IAPage() {
                         onClick={() => {
                           if (e.tipo === "persona") abrirPersona(e.id);
                           else if (e.tipo === "vehiculo") abrirVehiculo(e.id);
+                          else if (e.tipo === "terminal") abrirTerminal(e.nombre);
                         }}
                       >
                         {e.nombre}

@@ -430,7 +430,12 @@ export function Persona360Drawer() {
             <AvatarInicial nombre={persona.nombre} size="lg" />
             <div>
               <h2 className="font-bold text-lg">{persona.nombre}</h2>
-              <div className="text-sm text-muted-foreground">{persona.tipo === "cliente" ? `NIT ${persona.nit}` : `CC ${persona.cedula}`} · {persona.cargo} · {persona.terminal}</div>
+              <div className="text-sm text-muted-foreground">
+                {persona.tipo === "cliente" ? `NIT ${persona.nit}` : `CC ${persona.cedula}`} · {persona.cargo} ·{" "}
+                <button onClick={() => abrirTerminal(persona.terminal)} className="text-coordinadora-blue hover:underline">
+                  {persona.terminal}
+                </button>
+              </div>
               <div className="mt-1">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${persona.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200" : persona.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-green-100 text-green-700 border border-green-200"}`}>
                   {persona.estado === "bloqueado" ? "🔴 Bloqueado" : persona.estado === "en_seguimiento" ? "🟡 En seguimiento" : "🟢 Sin novedad"}
