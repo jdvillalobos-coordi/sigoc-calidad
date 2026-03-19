@@ -273,13 +273,11 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
     return true;
   });
 
-  // Contar incidentes por persona
+  // Contar incidentes por persona usando personasVinculadas
   const personaCount: Record<string, number> = {};
   regFiltrados.forEach((r) => {
-    const pid = (r as any).personaResponsableId;
-    if (pid) personaCount[pid] = (personaCount[pid] ?? 0) + 1;
-    ((r as any).personasInvolucradasIds ?? []).forEach((id: string) => {
-      personaCount[id] = (personaCount[id] ?? 0) + 1;
+    (r.personasVinculadas ?? []).forEach(({ personaId }) => {
+      personaCount[personaId] = (personaCount[personaId] ?? 0) + 1;
     });
   });
 
@@ -289,11 +287,11 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
     .sort((a, b) => b.incidentes - a.incidentes)
     .slice(0, 8);
 
-  // Contar incidentes por vehículo
+  // Contar incidentes por vehículo usando vehiculosVinculados
   const vehiculoCount: Record<string, number> = {};
   regFiltrados.forEach((r) => {
-    ((r as any).vehiculosInvolucradosIds ?? []).forEach((id: string) => {
-      vehiculoCount[id] = (vehiculoCount[id] ?? 0) + 1;
+    (r.vehiculosVinculados ?? []).forEach(({ vehiculoId }) => {
+      vehiculoCount[vehiculoId] = (vehiculoCount[vehiculoId] ?? 0) + 1;
     });
   });
   const topVehiculos = vehiculos
