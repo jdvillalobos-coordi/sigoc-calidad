@@ -165,7 +165,9 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
               {!["lesiva", "contacto"].includes(tipo) && (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nro. Guía *</label>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                      Nro. Guía {tipo !== "posventa" ? "*" : ""}
+                    </label>
                     <input
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
                       placeholder="19900293001"
@@ -173,6 +175,9 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setGuiaInput(e.target.value)}
                       onBlur={() => guiaInput && buscarGuia(guiaInput)}
                     />
+                    {tipo === "posventa" && (
+                      <p className="text-xs text-muted-foreground/70 mt-1">Opcional — algunas reclamaciones no están asociadas a una guía en NyS</p>
+                    )}
                     {guiaError && <p className="text-xs text-red-500 mt-1">Guía no encontrada en el sistema — completa los datos manualmente</p>}
                     {guiaData && (
                       <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
