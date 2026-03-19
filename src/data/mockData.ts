@@ -749,7 +749,7 @@ export const registros: Registro[] = [
     diasAbierto: 13,
     stepper: mkStepper("verificacion", {
       investigacion: { completada: true, fechaCompletado: "2026-02-06T09:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Robo / Hurto", detalleInvestigacion: "Cargue confirmado en bodega Bucaramanga. No hay registro de llegada a Bogotá. Posible hurto en ruta." },
-      verificacion:  { completada: false, estadoVerificacion: "pendiente", terminalVerificacion: "Bogotá", observacionesAgente: "Verificando en bodega Bogotá y revisando cámaras de patio." },
+      verificacion:  { completada: false, estadoVerificacion: "pendiente", terminalVerificacion: "Bogotá", observacionesAgente: "Verificando en bodega Bogotá y revisando cámaras de patio.", cctvRevisado: true, cctvTerminal: "Bogotá", cctvTiposRevision: ["Faltantes"], cctvHallazgo: "Se identifica que el paquete sale escaneado en Bucaramanga pero no aparece en manifesto de llegada a Bogotá. Cámara de patio muestra vehículo PLT-456 sin apertura de carpa.", cctvReferencia: "FT-SG-003-BUC-20260205", cctvConclusion: "no_concluyente" },
     }),
   } as RegistroFaltante,
 
