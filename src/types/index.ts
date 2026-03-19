@@ -162,6 +162,7 @@ export interface RegistroFaltante extends RegistroBase {
   detalleUnidades?: string;
   clienteNoDespacha: boolean;
   stepper?: StepperInvestigacion;
+  nysAsociado?: string;
 }
 
 export interface RegistroEvento extends RegistroBase {
