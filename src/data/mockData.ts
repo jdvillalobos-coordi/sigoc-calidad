@@ -575,7 +575,8 @@ export const registros: Registro[] = [
       { id: "h2", fecha: "2026-01-05T10:30:00", usuarioNombre: "Jorge Castaño", accion: "Cambió estado a 'En investigación'" },
     ],
     personasVinculadas: [
-      { personaId: "p1", rol: "responsable" },
+      { personaId: "p1", rol: "involucrado" },
+      { personaId: "p9", rol: "responsable" },
     ],
     guia: "19900293001",
     codigoNovedad: "400",
