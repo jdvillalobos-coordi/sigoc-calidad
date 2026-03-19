@@ -75,6 +75,7 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
   const [codigoNovedad, setCodigoNovedad] = useState("");
   const [tipoRiesgo, setTipoRiesgo] = useState("");
   const [cedResp, setCedResp] = useState(""); const [cedRespNombre, setCedRespNombre] = useState(""); const [cedRespError, setCedRespError] = useState(false);
+  const [nysAsociado, setNysAsociado] = useState("");
   // Evento
   const [tipoEvento, setTipoEvento] = useState("");
   const [ubicacion, setUbicacion] = useState("sede");
@@ -84,6 +85,7 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
   const [valorRecaudo, setValorRecaudo] = useState("");
   const [formaPago, setFormaPago] = useState("");
   const [estadoRecaudo, setEstadoRecaudo] = useState("");
+  const [porcentajeCobro, setPorcentajeCobro] = useState("");
   // Posventa
   const [requerimiento, setRequerimiento] = useState("");
   const [rolSolicitante, setRolSolicitante] = useState("");
