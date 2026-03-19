@@ -9,6 +9,7 @@ import ConfiguracionPage from "@/pages/ConfiguracionPage";
 import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer } from "@/components/drawers/Drawers";
 import NewRecordForm from "@/components/forms/NewRecordForm";
 import { Toaster } from "@/components/ui/toaster";
+import LoginPage from "@/pages/LoginPage";
 
 function AppContent() {
   const { paginaActiva, drawer, nuevaRegistroAbierto, setNuevaRegistroAbierto } = useApp();
@@ -36,6 +37,17 @@ function AppContent() {
 }
 
 export default function Index() {
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  if (!loggedIn) {
+    return (
+      <>
+        <LoginPage onLogin={() => setLoggedIn(true)} />
+        <Toaster />
+      </>
+    );
+  }
+
   return (
     <AppProvider>
       <AppContent />
