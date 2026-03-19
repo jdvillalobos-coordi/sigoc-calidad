@@ -293,7 +293,7 @@ export default function InicioPage() {
           <BarChart
             data={porRegional}
             label="Registros por regional"
-            colorClass="bg-[hsl(var(--accent-blue))]"
+            colorClass="bg-accent-blue"
           />
           <DonutStat
             label="Distribución por estado"
