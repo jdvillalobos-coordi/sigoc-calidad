@@ -1139,6 +1139,7 @@ export const registros: Registro[] = [
     valorRecaudo: 2100000,
     formaPago: "Efectivo",
     estadoRecaudo: "en_proceso",
+    porcentajeCobro: 92,
     checkpoint: "Terminal Cali — Caja 2",
     desviaciones: "Billetes falsos detectados mediante detector UV",
     diasAbierto: 29,
