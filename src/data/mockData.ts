@@ -14,7 +14,32 @@ import type {
   Notificacion,
   UsuarioApp,
   EstudioSeguridad,
+  StepperInvestigacion,
 } from "@/types";
+
+// ── Mock stepper helpers ───────────────────────────────────────────────────
+
+const CHECKPOINTS_MOCK = [
+  { nombre: "Recogida en origen",      fecha: "10/01 08:30", terminal: "Bogotá",   responsable: "Juan Pérez" },
+  { nombre: "Ingreso bodega origen",   fecha: "10/01 14:15", terminal: "Bogotá",   responsable: "María López" },
+  { nombre: "Cargue a vehículo",       fecha: "10/01 22:00", terminal: "Bogotá",   responsable: "Carlos Ruiz" },
+  { nombre: "Descargue bodega destino",fecha: undefined,     terminal: "Medellín", responsable: undefined, esAnomalía: true },
+  { nombre: "En reparto",              fecha: undefined,     terminal: "Medellín", responsable: undefined },
+  { nombre: "Entregado",               fecha: undefined,     terminal: "Medellín", responsable: undefined },
+];
+
+function mkStepper(etapaActiva: "identificacion" | "investigacion" | "verificacion" | "resolucion", overrides: Partial<Record<string, any>> = {}): StepperInvestigacion {
+  const etapas: StepperInvestigacion["etapas"] = {
+    identificacion: { completada: true,  fechaCompletado: "2026-01-04T08:00:00", responsableNombre: "Ana Martínez" },
+    investigacion:  { completada: false },
+    verificacion:   { completada: false },
+    resolucion:     { completada: false },
+  };
+  if (overrides.investigacion) etapas.investigacion = { ...etapas.investigacion, ...overrides.investigacion };
+  if (overrides.verificacion)  etapas.verificacion  = { ...etapas.verificacion,  ...overrides.verificacion };
+  if (overrides.resolucion)    etapas.resolucion    = { ...etapas.resolucion,    ...overrides.resolucion };
+  return { etapaActiva, etapas, checkpoints: CHECKPOINTS_MOCK };
+}
 
 // ============================================================
 // USUARIO LOGUEADO
@@ -525,6 +550,9 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 45,
+    stepper: mkStepper("investigacion", {
+      investigacion: { completada: false, causaRaiz: "Robo / Hurto", detalleInvestigacion: "Revisión de turno del auxiliar Carlos Pérez. Último escaneo en bodega Bogotá checkpoint 3. Sin evidencia de descargue en Medellín." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -537,7 +565,7 @@ export const registros: Registro[] = [
     responsableNombre: "Jorge Castaño",
     observaciones: "Segundo faltante vinculado a la misma terminal. Posible patrón.",
     anotaciones: [
-      { id: "a10", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2026-01-16T09:00:00", texto: "Se abre investigación paralela al FAL-001 por similitud en el método.", tipo: "seguimiento" },
+      { id: "a10", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2026-01-16T09:00:00", texto: "Se abre investigación paralela al FAL-001 por similitud en el método.", tipo: "hallazgo_investigacion" },
     ],
     historial: [
       { id: "h10", fecha: "2026-01-15T08:00:00", usuarioNombre: "Ana Martínez", accion: "Creó el registro" },
@@ -554,6 +582,9 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 35,
+    stepper: mkStepper("investigacion", {
+      investigacion: { completada: false, causaRaiz: "Error de escaneo", detalleInvestigacion: "Patrón similar al FAL-001. Misma terminal, mismo horario de cargue. Se solicita revisión de cámaras." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -566,7 +597,7 @@ export const registros: Registro[] = [
     responsableNombre: "Jorge Castaño",
     observaciones: "Guía 19900293003 reportada con faltante parcial en destino Barranquilla.",
     anotaciones: [
-      { id: "a20", autorId: "u-lucia", autorNombre: "Lucía Gómez", autorRol: "Agente de Soporte Logístico", fecha: "2025-12-02T11:00:00", texto: "Verificación inicial realizada. No hay evidencia en bodega de Cali.", tipo: "seguimiento" },
+      { id: "a20", autorId: "u-lucia", autorNombre: "Lucía Gómez", autorRol: "Agente de Soporte Logístico", fecha: "2025-12-02T11:00:00", texto: "Verificación inicial realizada. No hay evidencia en bodega de Cali.", tipo: "hallazgo_investigacion" },
       { id: "a21", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2025-12-10T10:00:00", texto: "Sin respuesta del terminal destino. Caso escala a coordinación.", tipo: "nota_interna" },
     ],
     historial: [
@@ -584,6 +615,9 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 78,
+    stepper: mkStepper("investigacion", {
+      investigacion: { completada: true, fechaCompletado: "2025-12-10T10:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Otro", detalleInvestigacion: "No fue posible determinar causa raíz. Caso vencido sin respuesta del terminal." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -596,7 +630,7 @@ export const registros: Registro[] = [
     responsableNombre: "Jorge Castaño",
     observaciones: "Faltante parcial en guía con alto valor. Se confirmó contaminación de producto.",
     anotaciones: [
-      { id: "a30", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2026-01-21T10:00:00", texto: "Se constata contaminación química del contenido. Se activa protocolo de incautación.", tipo: "hallazgo" },
+      { id: "a30", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2026-01-21T10:00:00", texto: "Se constata contaminación química del contenido. Se activa protocolo de incautación.", tipo: "hallazgo_investigacion" },
       { id: "a31", autorId: "u-diego", autorNombre: "Diego Ramírez", autorRol: "Gestor de Calidad", fecha: "2026-01-28T16:00:00", texto: "Proceso de incautación completado. Caso cerrado con concepto fiscal.", tipo: "resolucion" },
     ],
     historial: [
@@ -615,6 +649,11 @@ export const registros: Registro[] = [
     detalleUnidades: "3 unidades recuperadas en bodega, pendiente análisis",
     clienteNoDespacha: false,
     diasAbierto: 8,
+    stepper: mkStepper("resolucion", {
+      investigacion: { completada: true, fechaCompletado: "2026-01-21T10:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Otro", detalleInvestigacion: "Contaminación química confirmada en bodega Bogotá." },
+      verificacion:  { completada: true, fechaCompletado: "2026-01-22T09:00:00", responsableNombre: "Lucía Gómez", estadoVerificacion: "dañada", terminalVerificacion: "Bogotá", fuentesVerificacion: ["Revisión física en bodega"], observacionesAgente: "Producto con contaminante visible. Sellado de emergencia aplicado." },
+      resolucion:    { completada: true, fechaCompletado: "2026-01-28T16:00:00", responsableNombre: "Diego Ramírez", tipoResolucion: "Cierre especial (código 529)", codigoLegalizacion: "529", observacionesFinales: "Caso cerrado con concepto fiscal. Contabilidad notificada." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -639,6 +678,7 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 17,
+    stepper: mkStepper("identificacion"),
   } as RegistroFaltante,
 
   {
@@ -651,7 +691,7 @@ export const registros: Registro[] = [
     responsableNombre: "Jorge Castaño",
     observaciones: "Faltante en ruta Bucaramanga-Bogotá. Conductor reportó irregularidad antes de despacho.",
     anotaciones: [
-      { id: "a50", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2026-02-06T09:00:00", texto: "Se revisa video de cámara de bodega Bucaramanga. Imagen clara del momento de cargue.", tipo: "seguimiento" },
+      { id: "a50", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2026-02-06T09:00:00", texto: "Se revisa video de cámara de bodega Bucaramanga. Imagen clara del momento de cargue.", tipo: "hallazgo_investigacion" },
     ],
     historial: [
       { id: "h50", fecha: "2026-02-05T08:00:00", usuarioNombre: "Ana Martínez", accion: "Creó el registro" },
@@ -669,6 +709,10 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 13,
+    stepper: mkStepper("verificacion", {
+      investigacion: { completada: true, fechaCompletado: "2026-02-06T09:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Robo / Hurto", detalleInvestigacion: "Cargue confirmado en bodega Bucaramanga. No hay registro de llegada a Bogotá. Posible hurto en ruta." },
+      verificacion:  { completada: false, estadoVerificacion: "pendiente", terminalVerificacion: "Bogotá", observacionesAgente: "Verificando en bodega Bogotá y revisando cámaras de patio." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -695,6 +739,10 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 8,
+    stepper: mkStepper("verificacion", {
+      investigacion: { completada: true, fechaCompletado: "2026-02-11T10:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Robo / Hurto", detalleInvestigacion: "Tercer faltante con mismo perfil. Patrón claro de reincidencia. Solicitud de revisión RRHH enviada." },
+      verificacion:  { completada: false, estadoVerificacion: "no_encontrada", observacionesAgente: "Revisión física en bodega completada. Unidad no localizada. CCTV en proceso de análisis." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -725,6 +773,11 @@ export const registros: Registro[] = [
     detalleUnidades: "Paquete completo recuperado sin daños",
     clienteNoDespacha: false,
     diasAbierto: 2,
+    stepper: mkStepper("resolucion", {
+      investigacion: { completada: true, fechaCompletado: "2026-01-10T16:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Error de escaneo", detalleInvestigacion: "Paquete presente en bodega Bogotá, sin escaneo de ingreso. Error de digitación en manifiesto." },
+      verificacion:  { completada: true, fechaCompletado: "2026-01-11T09:00:00", responsableNombre: "Lucía Gómez", estadoVerificacion: "encontrada", terminalVerificacion: "Bogotá", fuentesVerificacion: ["Revisión física en bodega"], observacionesAgente: "Paquete localizado en zona B, estante 12. Sin daños." },
+      resolucion:    { completada: true, fechaCompletado: "2026-01-12T10:00:00", responsableNombre: "Diego Ramírez", tipoResolucion: "Error operativo corregido", codigoLegalizacion: "403", observacionesFinales: "Entrega coordinada al cliente. Corrección en proceso de escaneo enviada a operaciones." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -737,7 +790,7 @@ export const registros: Registro[] = [
     responsableNombre: "Jorge Castaño",
     observaciones: "Contrabando detectado en guía de alto valor. Se activó protocolo de coordinación con autoridades.",
     anotaciones: [
-      { id: "a70", autorId: "u-ana", autorNombre: "Ana Martínez", autorRol: "Analista de Seguridad", fecha: "2026-02-13T09:00:00", texto: "Se coordina con autoridades aduaneras. Material incautado permanece en bodega Cartagena.", tipo: "hallazgo" },
+      { id: "a70", autorId: "u-ana", autorNombre: "Ana Martínez", autorRol: "Analista de Seguridad", fecha: "2026-02-13T09:00:00", texto: "Se coordina con autoridades aduaneras. Material incautado permanece en bodega Cartagena.", tipo: "hallazgo_campo" },
     ],
     historial: [
       { id: "h80", fecha: "2026-02-12T08:00:00", usuarioNombre: "Ana Martínez", accion: "Creó el registro" },
@@ -753,6 +806,9 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 6,
+    stepper: mkStepper("investigacion", {
+      investigacion: { completada: false, causaRaiz: "Otro", detalleInvestigacion: "Mercancía con doble fondo detectada en revisión de bodega. Se activa coordinación con DIAN." },
+    }),
   } as RegistroFaltante,
 
   {
@@ -779,6 +835,7 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 3,
+    stepper: mkStepper("investigacion"),
   } as RegistroFaltante,
 
   // ---- EVENTOS (8) ----

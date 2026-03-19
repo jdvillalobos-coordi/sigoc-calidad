@@ -433,6 +433,21 @@ export default function InicioPage() {
   const vehiculosBloqueados = vehiculos.filter((v) => v.estado === "bloqueado").length;
   const casosVencidos30d = registros.filter((r) => r.diasAbierto > 30 && r.estado !== "cerrado").length;
 
+  // KPIs operativos del flujo de calidad
+  const totalAbiertos = registros.filter((r) => r.estado !== "cerrado").length;
+  const registrosCerrados = registros.filter((r) => r.estado === "cerrado");
+  const promedioDias = registrosCerrados.length > 0
+    ? Math.round(registrosCerrados.reduce((sum, r) => sum + r.diasAbierto, 0) / registrosCerrados.length)
+    : 0;
+  // "En verificación" = faltantes con stepper en etapa verificacion
+  const enVerificacion = registros.filter((r) => {
+    if (r.tipo !== "faltante") return false;
+    const s = (r as any).stepper;
+    return s?.etapaActiva === "verificacion";
+  }).length;
+  // Casos vencidos sin anotación en 30d (aproximado con diasAbierto)
+  const casosVencidosSinGestion = registros.filter((r) => r.estado !== "cerrado" && r.diasAbierto > 30).length;
+
   const porTipo = [
     { name: "Faltantes",  value: registros.filter((r) => r.tipo === "faltante").length },
     { name: "Eventos",    value: registros.filter((r) => r.tipo === "evento").length },
@@ -478,6 +493,74 @@ export default function InicioPage() {
           <button onClick={() => setPaginaActiva("bandeja")} className="text-xs text-primary underline hover:no-underline">
             Ir a mi bandeja →
           </button>
+        </div>
+
+        {/* ── KPIs operativos del flujo de calidad (nuevos) ── */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Casos abiertos</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/8 text-primary">
+                <FileText className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-foreground">{totalAbiertos}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">de {total} registros totales</div>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-medium text-red-500">
+              <TrendingUp className="w-3 h-3" />
+              +3 vs mes anterior
+            </div>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Promedio días cierre</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-green-50 text-green-600">
+                <CheckCircle className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-foreground">{promedioDias}d</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Promedio en {registrosCerrados.length} casos cerrados</div>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-medium text-green-600">
+              <TrendingDown className="w-3 h-3" />
+              -2d vs mes anterior
+            </div>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">En verificación</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 text-blue-600">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-foreground">{enVerificacion}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Esperan agente en campo</div>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-medium text-amber-600">
+              <Clock className="w-3 h-3" />
+              Requieren seguimiento
+            </div>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Casos vencidos</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-50 text-red-600">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-foreground">{casosVencidosSinGestion}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Más de 30 días sin cierre</div>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-medium text-red-500">
+              <TrendingUp className="w-3 h-3" />
+              Atención urgente
+            </div>
+          </div>
         </div>
 
         {/* KPIs fila 1 */}

@@ -3,21 +3,57 @@ import { registros, personas, vehiculos, guias, getPersona, getVehiculo, getRegi
 import { TipoBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, tipoConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight } from "lucide-react";
-import type { Registro, EstadoRegistro } from "@/types";
+import type { Registro, EstadoRegistro, RegistroFaltante, StepperInvestigacion } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { InvestigacionStepper } from "@/components/drawers/InvestigacionStepper";
+import type { StepperState } from "@/components/drawers/InvestigacionStepper";
+
+// ── Stepper state helpers ─────────────────────────────────────────────────────
+
+function mkDefaultStepper(): StepperState {
+  return {
+    etapaActiva: "identificacion",
+    etapas: {
+      identificacion: { completada: true,  fechaCompletado: new Date().toISOString(), responsableNombre: "Sandra Herrera" },
+      investigacion:  { completada: false },
+      verificacion:   { completada: false },
+      resolucion:     { completada: false },
+    },
+  };
+}
+
+function sigoStepperToLocal(s: StepperInvestigacion): StepperState {
+  return {
+    etapaActiva: s.etapaActiva,
+    etapas: s.etapas as StepperState["etapas"],
+    checkpoints: s.checkpoints,
+  };
+}
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
-  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro } = useApp();
+  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, setNuevaRegistroAbierto } = useApp();
   const [editando, setEditando] = useState(false);
   const [localRegistros, setLocalRegistros] = useState(registros);
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");
-  const [tipoAnotacion, setTipoAnotacion] = useState("seguimiento");
+  const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo_investigacion");
+  const [stepperLocalState, setStepperLocalState] = useState<StepperState | null>(null);
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
   const reg = localRegistros.find((r) => r.id === drawer.id);
   if (!reg) return null;
+
+  const esFaltanteOPosventa = reg.tipo === "faltante" || reg.tipo === "posventa";
+  const faltanteReg = esFaltanteOPosventa && reg.tipo === "faltante" ? (reg as RegistroFaltante) : null;
+
+  // Inicializar stepper desde los datos del registro si no está en estado local
+  const initStepper = (): StepperState => {
+    if (faltanteReg?.stepper) return sigoStepperToLocal(faltanteReg.stepper);
+    return mkDefaultStepper();
+  };
+
+  const currentStepper = stepperLocalState ?? initStepper();
 
   const relacionados = getRegistrosRelacionados(reg.id);
   const guiaNum = "guia" in reg ? (reg as any).guia : null;
@@ -73,6 +109,42 @@ export function RecordDetailDrawer() {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+
+          {/* ── STEPPER DE INVESTIGACIÓN (solo Faltante y Posventa) ── */}
+          {esFaltanteOPosventa && (
+            <section>
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-primary inline-block" />
+                Flujo de investigación
+              </h3>
+              <InvestigacionStepper
+                stepperState={currentStepper}
+                onStepperChange={(s) => setStepperLocalState(s)}
+                onCerrarCaso={() => {
+                  setLocalRegistros((lst) =>
+                    lst.map((r) => r.id === reg!.id ? {
+                      ...r,
+                      estado: "cerrado" as const,
+                      historial: [...r.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: "Cerró el caso desde el stepper de resolución" }]
+                    } : r)
+                  );
+                  setStepperLocalState((prev) => prev ? {
+                    ...prev,
+                    etapas: {
+                      ...prev.etapas,
+                      resolucion: { ...prev.etapas.resolucion, completada: true, fechaCompletado: new Date().toISOString() }
+                    }
+                  } : null);
+                  toast({ title: "✅ Caso cerrado exitosamente" });
+                }}
+                onCrearPosventa={() => {
+                  setNuevaRegistroAbierto(true);
+                  toast({ title: "📋 Abriendo formulario de Posventa..." });
+                }}
+              />
+            </section>
+          )}
+
           {/* Info principal */}
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -170,22 +242,51 @@ export function RecordDetailDrawer() {
               <p className="text-sm text-muted-foreground italic">Sin anotaciones aún.</p>
             ) : (
               <div className="space-y-3 mb-4">
-                {[...reg.anotaciones].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((a) => (
-                  <div key={a.id} className="flex gap-3">
-                    <AvatarInicial nombre={a.autorNombre} size="sm" />
-                    <div className="flex-1 bg-muted/40 rounded-xl p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold">{a.autorNombre}</span>
-                        <span className="text-xs text-muted-foreground">{a.autorRol}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{formatDateTime(a.fecha)}</span>
+                {[...reg.anotaciones].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((a) => {
+                  const tipoIcono: Record<string, string> = {
+                    hallazgo_investigacion: "🔍",
+                    hallazgo_campo: "👁️",
+                    validacion_evidencia: "📋",
+                    resolucion: "✅",
+                    nota_interna: "📝",
+                    hallazgo: "🔍",
+                    seguimiento: "📝",
+                  };
+                  const tipoLabel: Record<string, string> = {
+                    hallazgo_investigacion: "Hallazgo de investigación",
+                    hallazgo_campo: "Hallazgo de campo",
+                    validacion_evidencia: "Validación de evidencia",
+                    resolucion: "Resolución",
+                    nota_interna: "Nota interna",
+                    hallazgo: "Hallazgo",
+                    seguimiento: "Seguimiento",
+                  };
+                  const tipoColor: Record<string, string> = {
+                    hallazgo_investigacion: "bg-amber-100 text-amber-700",
+                    hallazgo_campo: "bg-blue-100 text-blue-700",
+                    validacion_evidencia: "bg-purple-100 text-purple-700",
+                    resolucion: "bg-green-100 text-green-700",
+                    nota_interna: "bg-gray-100 text-gray-600",
+                    hallazgo: "bg-amber-100 text-amber-700",
+                    seguimiento: "bg-blue-100 text-blue-700",
+                  };
+                  return (
+                    <div key={a.id} className="flex gap-3">
+                      <AvatarInicial nombre={a.autorNombre} size="sm" />
+                      <div className="flex-1 bg-muted/40 rounded-xl p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold">{a.autorNombre}</span>
+                          <span className="text-xs text-muted-foreground">{a.autorRol}</span>
+                          <span className="text-xs text-muted-foreground ml-auto">{tipoIcono[a.tipo] ?? "📝"} {formatDateTime(a.fecha)}</span>
+                        </div>
+                        <p className="text-sm">{a.texto}</p>
+                        <span className={`text-xs mt-1 inline-block px-1.5 py-0.5 rounded ${tipoColor[a.tipo] ?? "bg-blue-100 text-blue-700"}`}>
+                          {tipoLabel[a.tipo] ?? a.tipo}
+                        </span>
                       </div>
-                      <p className="text-sm">{a.texto}</p>
-                      <span className={`text-xs mt-1 inline-block px-1.5 py-0.5 rounded ${a.tipo === "hallazgo" ? "bg-amber-100 text-amber-700" : a.tipo === "resolucion" ? "bg-green-100 text-green-700" : a.tipo === "nota_interna" ? "bg-gray-100 text-gray-600" : "bg-blue-100 text-blue-700"}`}>
-                        {a.tipo === "seguimiento" ? "Seguimiento" : a.tipo === "hallazgo" ? "Hallazgo" : a.tipo === "resolucion" ? "Resolución" : "Nota interna"}
-                      </span>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             {/* Mini form */}
@@ -199,10 +300,11 @@ export function RecordDetailDrawer() {
               />
               <div className="flex items-center gap-2 mt-2">
                 <select value={tipoAnotacion} onChange={(e) => setTipoAnotacion(e.target.value)} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none">
-                  <option value="seguimiento">Seguimiento</option>
-                  <option value="hallazgo">Hallazgo de campo</option>
-                  <option value="resolucion">Resolución</option>
-                  <option value="nota_interna">Nota interna</option>
+                  <option value="hallazgo_investigacion">🔍 Hallazgo de investigación</option>
+                  <option value="hallazgo_campo">👁️ Hallazgo de campo</option>
+                  <option value="validacion_evidencia">📋 Validación de evidencia</option>
+                  <option value="resolucion">✅ Resolución</option>
+                  <option value="nota_interna">📝 Nota interna</option>
                 </select>
                 <button onClick={agregarAnotacion} disabled={!nuevaAnotacion.trim()} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors">
                   Agregar
