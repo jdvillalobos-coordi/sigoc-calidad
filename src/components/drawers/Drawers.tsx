@@ -44,6 +44,17 @@ export function RecordDetailDrawer() {
   const reg = localRegistros.find((r) => r.id === drawer.id);
   if (!reg) return null;
 
+  const esFaltanteOPosventa = reg.tipo === "faltante" || reg.tipo === "posventa";
+  const faltanteReg = esFaltanteOPosventa && reg.tipo === "faltante" ? (reg as RegistroFaltante) : null;
+
+  // Inicializar stepper desde los datos del registro si no está en estado local
+  const initStepper = (): StepperState => {
+    if (faltanteReg?.stepper) return sigoStepperToLocal(faltanteReg.stepper);
+    return mkDefaultStepper();
+  };
+
+  const currentStepper = stepperLocalState ?? initStepper();
+
   const relacionados = getRegistrosRelacionados(reg.id);
   const guiaNum = "guia" in reg ? (reg as any).guia : null;
 
