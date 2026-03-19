@@ -8,13 +8,36 @@ import { toast } from "@/hooks/use-toast";
 import { InvestigacionStepper } from "@/components/drawers/InvestigacionStepper";
 import type { StepperState } from "@/components/drawers/InvestigacionStepper";
 
+// ── Stepper state helpers ─────────────────────────────────────────────────────
+
+function mkDefaultStepper(): StepperState {
+  return {
+    etapaActiva: "identificacion",
+    etapas: {
+      identificacion: { completada: true,  fechaCompletado: new Date().toISOString(), responsableNombre: "Sandra Herrera" },
+      investigacion:  { completada: false },
+      verificacion:   { completada: false },
+      resolucion:     { completada: false },
+    },
+  };
+}
+
+function sigoStepperToLocal(s: StepperInvestigacion): StepperState {
+  return {
+    etapaActiva: s.etapaActiva,
+    etapas: s.etapas as StepperState["etapas"],
+    checkpoints: s.checkpoints,
+  };
+}
+
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
-  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro } = useApp();
+  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, setNuevaRegistroAbierto } = useApp();
   const [editando, setEditando] = useState(false);
   const [localRegistros, setLocalRegistros] = useState(registros);
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");
-  const [tipoAnotacion, setTipoAnotacion] = useState("seguimiento");
+  const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo_investigacion");
+  const [stepperLocalState, setStepperLocalState] = useState<StepperState | null>(null);
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
