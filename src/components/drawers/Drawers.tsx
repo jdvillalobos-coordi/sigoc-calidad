@@ -355,7 +355,7 @@ export function RecordDetailDrawer() {
 
 // ---- Persona 360 ----
 export function Persona360Drawer() {
-  const { drawer, cerrarDrawer, abrirRegistro } = useApp();
+  const { drawer, cerrarDrawer, abrirRegistro, abrirTerminal } = useApp();
   const [open, setOpen] = useState<Record<string, boolean>>({
     faltantes: true, eventos: true, lesivas: true, estudios: true,
     rce: true, posventa: true, contacto: true, evidencias: true,
