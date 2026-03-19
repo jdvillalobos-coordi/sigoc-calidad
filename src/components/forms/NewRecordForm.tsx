@@ -309,6 +309,19 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                       {["Pagado", "No pagado", "En proceso"].map((e) => <option key={e} value={e}>{e}</option>)}
                     </select>
                   </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Porcentaje de cobro (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="Ej: 95.5"
+                      value={porcentajeCobro}
+                      onChange={(e) => setPorcentajeCobro(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -318,7 +331,11 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                     <label className="text-xs font-semibold text-muted-foreground mb-1 block">Requerimiento *</label>
                     <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={requerimiento} onChange={(e) => setRequerimiento(e.target.value)}>
                       <option value="">Seleccionar...</option>
-                      {["Certificación de entrega - mala entrega", "Incumplimiento", "Entrega trocada", "Novedad 300-400-403-829 superior a 72h", "Deterioro", "Faltante parcial", "Entrega no reconocida", "Pérdida total"].map((r) => <option key={r} value={r}>{r}</option>)}
+                      {REQUERIMIENTOS_POSVENTA.map((g) => (
+                        <optgroup key={g.grupo} label={g.grupo}>
+                          {g.opciones.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                   <div>
