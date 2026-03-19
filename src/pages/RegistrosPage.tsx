@@ -25,20 +25,45 @@ const ESTADOS: { value: EstadoRegistro | "todos"; label: string }[] = [
   { value: "bloqueado", label: "Bloqueado" },
 ];
 
+const REGIONALES: Record<string, string[]> = {
+  "Centro":    ["Bogotá"],
+  "Sur":       ["Cali", "Pereira"],
+  "Oriente":   ["Bucaramanga", "Cartagena"],
+  "Occidente": ["Medellín"],
+  "México":    ["México"],
+};
+
 export default function RegistrosPage() {
   const { abrirRegistro, setNuevaRegistroAbierto } = useApp();
   const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro] = useState<string>("todos");
+  const [regionalFiltro, setRegionalFiltro] = useState("todos");
   const [terminalFiltro, setTerminalFiltro] = useState("todos");
   const [sortField, setSortField] = useState<"fecha" | "diasAbierto" | "id">("fecha");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const PER_PAGE = 15;
 
+  // Al cambiar regional, resetear terminal si no pertenece
+  function handleRegionalChange(val: string) {
+    setRegionalFiltro(val);
+    setTerminalFiltro("todos");
+    setPage(1);
+  }
+
+  const terminalesDisponibles =
+    regionalFiltro !== "todos"
+      ? REGIONALES[regionalFiltro] ?? []
+      : terminales;
+
   const filtered = registros
     .filter((r) => tipoFiltro === "todos" || r.tipo === tipoFiltro)
     .filter((r) => estadoFiltro === "todos" || r.estado === estadoFiltro)
-    .filter((r) => terminalFiltro === "todos" || r.terminal === terminalFiltro)
+    .filter((r) => {
+      if (terminalFiltro !== "todos") return r.terminal === terminalFiltro;
+      if (regionalFiltro !== "todos") return (REGIONALES[regionalFiltro] ?? []).includes(r.terminal);
+      return true;
+    })
     .sort((a, b) => {
       let cmp = 0;
       if (sortField === "fecha") cmp = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
@@ -78,13 +103,23 @@ export default function RegistrosPage() {
         >
           {ESTADOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
         </select>
+        {/* Regional */}
+        <select
+          className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          value={regionalFiltro}
+          onChange={(e) => handleRegionalChange(e.target.value)}
+        >
+          <option value="todos">Todas las regionales</option>
+          {Object.keys(REGIONALES).map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {/* Terminal — se filtra según regional */}
         <select
           className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
           value={terminalFiltro}
           onChange={(e) => { setTerminalFiltro(e.target.value); setPage(1); }}
         >
           <option value="todos">Todas las terminales</option>
-          {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
+          {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
         <div className="flex-1" />
         <span className="text-xs text-muted-foreground">{filtered.length} registro{filtered.length !== 1 ? "s" : ""}</span>
