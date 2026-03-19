@@ -1184,6 +1184,7 @@ export const registros: Registro[] = [
     valorRecaudo: 4200000,
     formaPago: "Efectivo",
     estadoRecaudo: "no_pagado",
+    porcentajeCobro: 95,
     checkpoint: "Terminal Cartagena",
     diasAbierto: 8,
   } as RegistroRCE,
