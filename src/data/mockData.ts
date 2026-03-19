@@ -1954,13 +1954,13 @@ export const alertasIA: AlertaIA[] = [
     id: "AI-003",
     severidad: "alta",
     titulo: "Terminal Barranquilla: incremento del 40% en faltantes código 400",
-    descripcion: "La Terminal Barranquilla registra un incremento del 40% en faltantes con código de novedad 400 comparado con el mes anterior. 3 casos abiertos en los últimos 17 días sin responsable asignado.",
-    fechaDeteccion: "2026-02-05",
+    descripcion: "La Terminal Barranquilla registra un incremento del 40% en faltantes con código de novedad 400 comparado con el mes anterior. 4 casos abiertos o pendientes en los últimos 21 días sin responsable asignado en la mayoría.",
+    fechaDeteccion: "2026-02-07",
     tipo: "terminal_anomala",
     entidadesInvolucradas: [
       { tipo: "terminal", id: "barranquilla", nombre: "Terminal Barranquilla" },
     ],
-    fuentesCruzadas: ["FAL-005", "FAL-009"],
+    fuentesCruzadas: ["FAL-005", "FAL-011", "FAL-012", "FAL-013"],
     estado: "revisada",
   },
   {
@@ -1973,7 +1973,7 @@ export const alertasIA: AlertaIA[] = [
     entidadesInvolucradas: [
       { tipo: "cliente", id: "p15", nombre: "Distribuidora El Progreso Ltda." },
     ],
-    fuentesCruzadas: ["POS-002", "POS-004", "POS-006", "POS-008"],
+    fuentesCruzadas: ["POS-002", "POS-004", "POS-006", "POS-008", "POS-011"],
     estado: "nueva",
   },
   {
