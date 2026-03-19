@@ -201,6 +201,16 @@ export const personas: Persona[] = [
     nit: "800789123",
     razonSocial: "Distribuidora El Progreso Ltda.",
   },
+  // 1 persona México - Monterrey
+  {
+    id: "p16",
+    cedula: "MX-7654321",
+    nombre: "Rodrigo Enrique Vázquez Soto",
+    cargo: "Auxiliar de Bodega",
+    terminal: "Monterrey",
+    tipo: "empleado",
+    estado: "sin_novedad",
+  },
 ];
 
 // ============================================================
