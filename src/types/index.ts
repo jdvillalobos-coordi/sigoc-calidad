@@ -69,7 +69,7 @@ export interface Anotacion {
   autorRol: string;
   fecha: string;
   texto: string;
-  tipo: "seguimiento" | "hallazgo" | "resolucion" | "nota_interna";
+  tipo: "seguimiento" | "hallazgo" | "hallazgo_investigacion" | "hallazgo_campo" | "validacion_evidencia" | "resolucion" | "nota_interna";
 }
 
 // ---- Cambio de historial ----
