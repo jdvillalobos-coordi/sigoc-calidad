@@ -332,7 +332,7 @@ export default function InicioPage() {
           <div className="bg-card border border-border rounded-xl p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <span className="w-2 h-2 bg-destructive rounded-full animate-pulse" />
                 Alertas IA recientes
               </h3>
               <button
