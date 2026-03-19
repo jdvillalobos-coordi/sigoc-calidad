@@ -226,6 +226,14 @@ function PanelInvestigacion({
   );
 }
 
+const CCTV_TIPOS = [
+  "Faltantes",
+  "Averías / Deterioros",
+  "Activos Fijos CM",
+  "Accidentes",
+  "Objetos Personales",
+];
+
 // ── Sub-panel Verificación ────────────────────────────────────────────────────
 
 function PanelVerificacion({
@@ -235,6 +243,8 @@ function PanelVerificacion({
   onChange: (d: EtapaData) => void;
 }) {
   const [showPanel, setShowPanel] = useState(true);
+  const [showCCTV, setShowCCTV] = useState(true);
+
 
   const estadoOpts: Array<{ value: string; label: string; color: string }> = [
     { value: "encontrada",     label: "Unidad encontrada",        color: "border-green-400 bg-green-50 text-green-700" },

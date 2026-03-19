@@ -185,11 +185,13 @@ export interface RegistroRCE extends RegistroBase {
   checkpoint?: string;
   desviaciones?: string;
   novedadesProceso?: string;
+  porcentajeCobro?: number;
 }
 
 export interface RegistroPosventa extends RegistroBase {
   tipo: "posventa";
-  guia: string;
+  guia: string | "";
+
   requerimiento: string;
   descripcion: string;
   imagenUrl?: string;
