@@ -550,6 +550,9 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 45,
+    stepper: mkStepper("investigacion", {
+      investigacion: { completada: false, causaRaiz: "Robo / Hurto", detalleInvestigacion: "Revisión de turno del auxiliar Carlos Pérez. Último escaneo en bodega Bogotá checkpoint 3. Sin evidencia de descargue en Medellín." },
+    }),
   } as RegistroFaltante,
 
   {
