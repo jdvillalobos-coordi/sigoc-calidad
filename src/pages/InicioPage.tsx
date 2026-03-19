@@ -398,14 +398,13 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
                   <div className="text-[10px] text-muted-foreground">{v.tipo}</div>
                 </div>
                 <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0",
-                  v.estado === "bloqueado" ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-700"
+                  v.estado === "bloqueado" ? "bg-destructive/10 text-destructive" : "bg-secondary text-secondary-foreground"
                 )}>
                   {v.estado === "bloqueado" ? "Bloqueado" : "Activo"}
                 </span>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-secondary-foreground/30 rounded-full" style={{ width: `${pct(v.incidentes, topVehiculos[0]?.incidentes ?? 1)}%` }} />
-                  </div>
                   </div>
                   <span className="text-xs font-bold text-foreground w-4 text-right">{v.incidentes}</span>
                 </div>
