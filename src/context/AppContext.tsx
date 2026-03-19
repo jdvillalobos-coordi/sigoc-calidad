@@ -9,6 +9,7 @@ interface AppContextType {
   abrirPersona: (id: string) => void;
   abrirVehiculo: (id: string) => void;
   abrirGuia: (numero: string) => void;
+  abrirTerminal: (nombre: string) => void;
   cerrarDrawer: () => void;
   nuevaRegistroAbierto: boolean;
   setNuevaRegistroAbierto: (v: boolean) => void;
@@ -28,6 +29,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const abrirPersona = useCallback((id: string) => setDrawer({ tipo: "persona360", id }), []);
   const abrirVehiculo = useCallback((id: string) => setDrawer({ tipo: "vehiculo360", id }), []);
   const abrirGuia = useCallback((numero: string) => setDrawer({ tipo: "guia360", id: numero }), []);
+  const abrirTerminal = useCallback((nombre: string) => setDrawer({ tipo: "terminal360", id: nombre }), []);
   const cerrarDrawer = useCallback(() => setDrawer({ tipo: null, id: null }), []);
 
   return (
@@ -40,6 +42,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         abrirPersona,
         abrirVehiculo,
         abrirGuia,
+        abrirTerminal,
         cerrarDrawer,
         nuevaRegistroAbierto,
         setNuevaRegistroAbierto,
