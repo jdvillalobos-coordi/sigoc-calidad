@@ -54,7 +54,7 @@ function SearchBar() {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               setBusquedaQuery(query);
-              setPaginaActiva("busqueda");
+              setPaginaActiva("registros");
               setOpen(false);
             }
           }}
@@ -162,7 +162,7 @@ function SearchBar() {
 
           <button
             className="w-full px-3 py-2 text-xs text-coordinadora-blue hover:bg-muted text-center border-t border-border transition-colors"
-            onClick={() => { setBusquedaQuery(query); setPaginaActiva("busqueda"); setOpen(false); }}
+            onClick={() => { setBusquedaQuery(query); setPaginaActiva("registros"); setOpen(false); }}
           >
             Ver todos los resultados para "{query}" →
           </button>

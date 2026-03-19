@@ -2,9 +2,7 @@ import React, { useState } from "react";
 import { AppProvider, useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import InicioPage from "@/pages/InicioPage";
-import BandejaPage from "@/pages/BandejaPage";
 import RegistrosPage from "@/pages/RegistrosPage";
-import BusquedaPage from "@/pages/BusquedaPage";
 import IAPage from "@/pages/IAPage";
 import ConfiguracionPage from "@/pages/ConfiguracionPage";
 import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer } from "@/components/drawers/Drawers";
@@ -19,9 +17,7 @@ function AppContent() {
     <AppLayout>
       <div className="h-full overflow-hidden">
         {paginaActiva === "inicio"         && <InicioPage />}
-        {paginaActiva === "bandeja"        && <BandejaPage />}
         {paginaActiva === "registros"      && <RegistrosPage />}
-        {paginaActiva === "busqueda"       && <BusquedaPage />}
         {paginaActiva === "ia"             && <IAPage />}
         {paginaActiva === "configuracion"  && <ConfiguracionPage />}
       </div>
