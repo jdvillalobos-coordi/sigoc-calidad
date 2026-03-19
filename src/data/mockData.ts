@@ -1209,6 +1209,7 @@ export const registros: Registro[] = [
     valorRecaudo: 2400000,
     formaPago: "Efectivo",
     estadoRecaudo: "no_pagado",
+    porcentajeCobro: 88,
     checkpoint: "Terminal Bogotá — Caja 2",
     novedadesProceso: "Se trasladó a jurídica para cobro persuasivo",
     diasAbierto: 65,
