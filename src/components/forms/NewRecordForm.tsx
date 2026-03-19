@@ -121,6 +121,7 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
   const puedeCrear = tipo && observaciones && (
     tipo === "lesiva" ? (tipoEntidad && identificacion && motivoBloqueo) :
     tipo === "contacto" ? (cedContacto && motivoSeg) :
+    tipo === "posventa" ? (fecha) :
     (guiaInput && fecha)
   );
 
