@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { registros, personas, vehiculos, guias, getPersona, getVehiculo, getRegistrosPorGuia, getRegistrosRelacionados, estudiosSeguridad } from "@/data/mockData";
+import { registros, personas, vehiculos, guias, getPersona, getVehiculo, getRegistrosPorGuia, getRegistrosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES } from "@/data/mockData";
 import { TipoBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, tipoConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight } from "lucide-react";
