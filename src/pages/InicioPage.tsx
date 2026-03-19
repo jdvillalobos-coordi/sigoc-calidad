@@ -491,7 +491,7 @@ export default function InicioPage() {
         </div>
 
         {/* ── KPIs operativos del flujo de calidad (nuevos) ── */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Casos abiertos</span>
