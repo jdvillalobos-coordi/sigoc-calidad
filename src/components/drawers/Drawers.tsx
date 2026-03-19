@@ -109,6 +109,42 @@ export function RecordDetailDrawer() {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+
+          {/* ── STEPPER DE INVESTIGACIÓN (solo Faltante y Posventa) ── */}
+          {esFaltanteOPosventa && (
+            <section>
+              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-4 rounded-full bg-primary inline-block" />
+                Flujo de investigación
+              </h3>
+              <InvestigacionStepper
+                stepperState={currentStepper}
+                onStepperChange={(s) => setStepperLocalState(s)}
+                onCerrarCaso={() => {
+                  setLocalRegistros((lst) =>
+                    lst.map((r) => r.id === reg!.id ? {
+                      ...r,
+                      estado: "cerrado" as const,
+                      historial: [...r.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: "Cerró el caso desde el stepper de resolución" }]
+                    } : r)
+                  );
+                  setStepperLocalState((prev) => prev ? {
+                    ...prev,
+                    etapas: {
+                      ...prev.etapas,
+                      resolucion: { ...prev.etapas.resolucion, completada: true, fechaCompletado: new Date().toISOString() }
+                    }
+                  } : null);
+                  toast({ title: "✅ Caso cerrado exitosamente" });
+                }}
+                onCrearPosventa={() => {
+                  setNuevaRegistroAbierto(true);
+                  toast({ title: "📋 Abriendo formulario de Posventa..." });
+                }}
+              />
+            </section>
+          )}
+
           {/* Info principal */}
           <section>
             <div className="flex items-center justify-between mb-3">
