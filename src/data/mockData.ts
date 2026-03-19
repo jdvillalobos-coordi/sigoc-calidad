@@ -619,6 +619,7 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 35,
+    nysAsociado: "NYS-2026-00287",
     stepper: mkStepper("investigacion", {
       investigacion: { completada: false, causaRaiz: "Error de escaneo", detalleInvestigacion: "Patrón similar al FAL-001. Misma terminal, mismo horario de cargue. Se solicita revisión de cámaras." },
     }),
