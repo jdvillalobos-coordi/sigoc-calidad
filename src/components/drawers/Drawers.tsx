@@ -354,29 +354,62 @@ export function RecordDetailDrawer() {
 // ---- Persona 360 ----
 export function Persona360Drawer() {
   const { drawer, cerrarDrawer, abrirRegistro } = useApp();
-  const [open, setOpen] = useState<Record<string, boolean>>({ faltantes: true, eventos: true, lesivas: true });
+  const [open, setOpen] = useState<Record<string, boolean>>({
+    faltantes: true, eventos: true, lesivas: true, estudios: true,
+    rce: true, posventa: true, contacto: true, evidencias: true,
+  });
 
   if (drawer.tipo !== "persona360" || !drawer.id) return null;
   const persona = personas.find((p) => p.id === drawer.id);
   if (!persona) return null;
 
   const regsPersona = registros.filter((r) => r.personasVinculadas?.some((pv) => pv.personaId === persona.id));
-  const faltantes = regsPersona.filter((r) => r.tipo === "faltante");
-  const eventos = regsPersona.filter((r) => r.tipo === "evento");
-  const lesivas = regsPersona.filter((r) => r.tipo === "lesiva");
-  const estudios = estudiosSeguridad.filter((e) => e.personaId === persona.id);
-  const totalReg = regsPersona.length;
+  const faltantes  = regsPersona.filter((r) => r.tipo === "faltante");
+  const eventos    = regsPersona.filter((r) => r.tipo === "evento");
+  const lesivas    = regsPersona.filter((r) => r.tipo === "lesiva");
+  const estudios   = estudiosSeguridad.filter((e) => e.personaId === persona.id);
 
+  // RCE vinculados por personasVinculadas
+  const rces = registros.filter(
+    (r) => r.tipo === "rce" && r.personasVinculadas?.some((pv) => pv.personaId === persona.id)
+  );
+
+  // Posventa: por nitCliente (si cliente) O por personasVinculadas
+  const posventas = registros.filter((r) => {
+    if (r.tipo !== "posventa") return false;
+    const rv = r as any;
+    if (persona.tipo === "cliente" && persona.nit && rv.nitCliente === persona.nit) return true;
+    return r.personasVinculadas?.some((pv) => pv.personaId === persona.id);
+  });
+
+  // Cuadro de contacto: por cedula
+  const contactos = registros.filter(
+    (r) => r.tipo === "contacto" && (r as any).cedula === persona.cedula
+  );
+
+  // Evidencias: guías de posventas del cliente → evidencias de esas guías
+  const guiasCliente = posventas.map((r) => (r as any).guia).filter(Boolean) as string[];
+  const evidencias = persona.tipo === "cliente" && guiasCliente.length > 0
+    ? registros.filter((r) => r.tipo === "evidencia" && guiasCliente.includes((r as any).guia))
+    : [];
+
+  const totalReg = regsPersona.length;
   const riskScore = Math.min(100, totalReg * 15 + (persona.estado === "bloqueado" ? 40 : persona.estado === "en_seguimiento" ? 20 : 0));
   const riskColor = riskScore >= 70 ? "bg-red-500" : riskScore >= 40 ? "bg-amber-500" : riskScore >= 20 ? "bg-yellow-400" : "bg-green-500";
   const riskLabel = riskScore >= 70 ? "Alto" : riskScore >= 40 ? "Medio" : riskScore >= 20 ? "Bajo" : "Sin riesgo";
 
-  function Section({ id, title, count, children }: { id: string; title: string; count: number; children: React.ReactNode }) {
+  function Section({ id, title, count, source, children }: { id: string; title: string; count: number; source?: string; children: React.ReactNode }) {
     return (
       <div className="border border-border rounded-xl overflow-hidden">
-        <button className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted transition-colors" onClick={() => setOpen((s) => ({ ...s, [id]: !s[id] }))}>
-          <span className="font-semibold text-sm">{title}</span>
-          <div className="flex items-center gap-2">
+        <button
+          className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted transition-colors"
+          onClick={() => setOpen((s) => ({ ...s, [id]: !s[id] }))}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-semibold text-sm">{title}</span>
+            {source && <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded truncate hidden sm:block">Fuente: {source}</span>}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-xs text-muted-foreground">{count}</span>
             {open[id] ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
           </div>
@@ -425,25 +458,29 @@ export function Persona360Drawer() {
             </p>
           </div>
 
+          {/* ── Faltantes ── */}
           {faltantes.length > 0 && (
             <Section id="faltantes" title="🔵 Faltantes asociados" count={faltantes.length}>
               <table className="w-full text-xs">
                 <thead><tr className="text-muted-foreground border-b border-border">{["ID", "Guía", "Terminal", "Fecha", "Estado", "Rol"].map((h) => <th key={h} className="text-left py-1.5 font-semibold">{h}</th>)}</tr></thead>
                 <tbody>{faltantes.map((r) => {
                   const pv = r.personasVinculadas?.find((pv) => pv.personaId === persona.id);
-                  return <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                    <td className="py-2 font-mono">{r.id}</td>
-                    <td className="py-2 font-mono">{(r as any).guia}</td>
-                    <td className="py-2">{r.terminal}</td>
-                    <td className="py-2">{r.fecha}</td>
-                    <td className="py-2"><EstadoBadge estado={r.estado} /></td>
-                    <td className="py-2 capitalize">{pv?.rol}</td>
-                  </tr>;
+                  return (
+                    <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
+                      <td className="py-2 font-mono">{r.id}</td>
+                      <td className="py-2 font-mono">{(r as any).guia}</td>
+                      <td className="py-2">{r.terminal}</td>
+                      <td className="py-2">{r.fecha}</td>
+                      <td className="py-2"><EstadoBadge estado={r.estado} /></td>
+                      <td className="py-2 capitalize">{pv?.rol}</td>
+                    </tr>
+                  );
                 })}</tbody>
               </table>
             </Section>
           )}
 
+          {/* ── Eventos ── */}
           {eventos.length > 0 && (
             <Section id="eventos" title="🔴 Eventos asociados" count={eventos.length}>
               <table className="w-full text-xs">
@@ -461,10 +498,11 @@ export function Persona360Drawer() {
             </Section>
           )}
 
+          {/* ── Lesivas ── */}
           {lesivas.length > 0 && (
             <Section id="lesivas" title="⚫ Actividades lesivas" count={lesivas.length}>
               {lesivas.map((r) => (
-                <div key={r.id} className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2">
+                <div key={r.id} className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2 last:mb-0">
                   <div className="text-xs font-semibold text-red-700 mb-1">{(r as any).motivoBloqueo}</div>
                   <div className="text-xs text-muted-foreground">Fecha bloqueo: {(r as any).fechaBloqueo} · Caso: <button onClick={() => abrirRegistro(r.id)} className="text-coordinadora-blue underline">{r.id}</button></div>
                 </div>
@@ -472,10 +510,11 @@ export function Persona360Drawer() {
             </Section>
           )}
 
+          {/* ── Estudios de seguridad ── */}
           {estudios.length > 0 && (
             <Section id="estudios" title="🔎 Estudios de seguridad" count={estudios.length}>
               {estudios.map((e) => (
-                <div key={e.id} className={`border rounded-lg p-3 mb-2 ${e.resultado === "hallazgos_encontrados" ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
+                <div key={e.id} className={`border rounded-lg p-3 mb-2 last:mb-0 ${e.resultado === "hallazgos_encontrados" ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-semibold">{e.proveedor}</span>
                     <span className="text-xs text-muted-foreground">{e.fecha}</span>
@@ -486,6 +525,133 @@ export function Persona360Drawer() {
                   <p className="text-xs text-muted-foreground">{e.observaciones}</p>
                 </div>
               ))}
+            </Section>
+          )}
+
+          {/* ── RCE asociados ── */}
+          {rces.length > 0 && (
+            <Section id="rce" title="🟢 RCE asociados" count={rces.length} source="Bitácora Matriz RCE">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    {["Guía", "Valor recaudo", "Forma pago", "Estado recaudo", "Terminal"].map((h) => (
+                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rces.map((r) => {
+                    const rv = r as any;
+                    const estadoColor = rv.estadoRecaudo === "pagado"
+                      ? "bg-green-100 text-green-700"
+                      : rv.estadoRecaudo === "en_proceso"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-red-100 text-red-700";
+                    return (
+                      <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
+                        <td className="py-2 font-mono">{rv.guia ?? "—"}</td>
+                        <td className="py-2">{formatCurrency(rv.valorRecaudo)}</td>
+                        <td className="py-2">{rv.formaPago}</td>
+                        <td className="py-2">
+                          <span className={`px-1.5 py-0.5 rounded-full font-medium text-[11px] ${estadoColor}`}>
+                            {rv.estadoRecaudo === "pagado" ? "Pagado" : rv.estadoRecaudo === "en_proceso" ? "En proceso" : "No pagado"}
+                          </span>
+                        </td>
+                        <td className="py-2">{r.terminal}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Section>
+          )}
+
+          {/* ── Solicitudes posventa ── */}
+          {posventas.length > 0 && (
+            <Section id="posventa" title="🟣 Solicitudes posventa" count={posventas.length} source="AppSheet Solicitudes Posventa">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    {["Guía", "Requerimiento", "Fecha", "Estado"].map((h) => (
+                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {posventas.map((r) => {
+                    const rv = r as any;
+                    return (
+                      <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
+                        <td className="py-2 font-mono">{rv.guia ?? "—"}</td>
+                        <td className="py-2 max-w-[160px] truncate">{rv.requerimiento}</td>
+                        <td className="py-2">{r.fecha}</td>
+                        <td className="py-2"><EstadoBadge estado={r.estado} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </Section>
+          )}
+
+          {/* ── Cuadro de contacto ── */}
+          {contactos.length > 0 && (
+            <Section id="contacto" title="🟡 Cuadro de contacto" count={contactos.length} source="Bitácora Cuadro de Contacto">
+              <div className="space-y-3">
+                {contactos.map((r) => {
+                  const rv = r as any;
+                  const diasSeguimiento = Math.floor((new Date().getTime() - new Date(r.fecha).getTime()) / (1000 * 60 * 60 * 24));
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => abrirRegistro(r.id)}
+                      className="w-full text-left bg-amber-50 border border-amber-200 rounded-lg p-3 hover:bg-amber-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <span className="text-xs font-semibold text-amber-800">{rv.motivoSeguimiento}</span>
+                        <EstadoBadge estado={r.estado} />
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span>📅 Desde {r.fecha}</span>
+                        <span>⏱ {diasSeguimiento} días en seguimiento</span>
+                        <span className="font-mono text-amber-700">{r.id}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+
+          {/* ── Evidencias ── */}
+          {evidencias.length > 0 && (
+            <Section id="evidencias" title="🟠 Evidencias" count={evidencias.length} source="Evidencias - Validación IA">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    {["Guía", "Tipo evidencia", "Resultado IA", "Fecha"].map((h) => (
+                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidencias.map((r) => {
+                    const rv = r as any;
+                    return (
+                      <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
+                        <td className="py-2 font-mono">{rv.guia ?? "—"}</td>
+                        <td className="py-2">{rv.tipoEvidencia}</td>
+                        <td className="py-2">
+                          <span className={`px-1.5 py-0.5 rounded-full font-medium text-[11px] ${rv.resultadoIA === "cumple" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            {rv.resultadoIA === "cumple" ? "✅ Cumple" : "❌ No cumple"}
+                          </span>
+                        </td>
+                        <td className="py-2">{r.fecha}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </Section>
           )}
         </div>
