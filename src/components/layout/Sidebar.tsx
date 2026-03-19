@@ -6,6 +6,7 @@ import type { PaginaActiva } from "@/types";
 
 const items: { id: PaginaActiva; icon: React.ElementType; label: string }[] = [
   { id: "inicio", icon: Home, label: "Inicio" },
+  { id: "bandeja", icon: Inbox, label: "Bandeja" },
   { id: "registros", icon: FileText, label: "Registros" },
   { id: "busqueda", icon: Search, label: "Búsqueda avanzada" },
   { id: "ia", icon: Bot, label: "Asistente IA" },
