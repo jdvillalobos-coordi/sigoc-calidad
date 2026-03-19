@@ -135,6 +135,13 @@ export interface EtapaData {
   tipoResolucion?: string;
   codigoLegalizacion?: string;
   observacionesFinales?: string;
+  // CCTV
+  cctvRevisado?: boolean;
+  cctvTerminal?: string;
+  cctvTiposRevision?: string[];
+  cctvHallazgo?: string;
+  cctvReferencia?: string;
+  cctvConclusion?: "confirma" | "no_concluyente" | "sin_evidencia";
 }
 
 export interface StepperInvestigacion {
