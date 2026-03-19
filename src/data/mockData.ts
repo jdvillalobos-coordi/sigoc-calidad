@@ -777,6 +777,7 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 8,
+    nysAsociado: "NYS-2026-00531",
     stepper: mkStepper("verificacion", {
       investigacion: { completada: true, fechaCompletado: "2026-02-11T10:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Robo / Hurto", detalleInvestigacion: "Tercer faltante con mismo perfil. Patrón claro de reincidencia. Solicitud de revisión RRHH enviada." },
       verificacion:  { completada: false, estadoVerificacion: "no_encontrada", observacionesAgente: "Revisión física en bodega completada. Unidad no localizada. CCTV en proceso de análisis." },
