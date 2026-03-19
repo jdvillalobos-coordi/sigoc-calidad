@@ -54,7 +54,7 @@ function SearchBar() {
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               setBusquedaQuery(query);
-              setPaginaActiva("busqueda");
+              setPaginaActiva("registros");
               setOpen(false);
             }
           }}

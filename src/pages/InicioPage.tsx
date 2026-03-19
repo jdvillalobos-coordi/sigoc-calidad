@@ -490,8 +490,8 @@ export default function InicioPage() {
               {" · "}Resumen general del sistema
             </p>
           </div>
-          <button onClick={() => setPaginaActiva("bandeja")} className="text-xs text-primary underline hover:no-underline">
-            Ir a mi bandeja →
+          <button onClick={() => setPaginaActiva("registros")} className="text-xs text-primary underline hover:no-underline">
+            Ver registros →
           </button>
         </div>
 
