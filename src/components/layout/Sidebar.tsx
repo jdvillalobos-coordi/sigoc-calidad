@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, FileText, Search, Bot, Settings, ChevronRight, ChevronLeft } from "lucide-react";
+import { Home, FileText, Search, Bot, Settings, ChevronRight, ChevronLeft, Inbox } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useSidebarState } from "@/context/SidebarContext";
 import type { PaginaActiva } from "@/types";
