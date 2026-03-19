@@ -498,6 +498,31 @@ export const guias: Guia[] = [
     fechaCreacion: "2026-02-14",
     estadoGeneral: "con_novedad",
   },
+  // Guías México
+  {
+    numero: "MX0001000001",
+    terminalOrigen: "CDMX",
+    ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Bogotá",
+    ciudadDestino: "Bogotá",
+    nitCliente: "MX-RFC-TXL001",
+    nombreCliente: "Textil Export MX S.A. de C.V.",
+    valorDeclarado: 4800000,
+    fechaCreacion: "2026-02-20",
+    estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "MX0001000002",
+    terminalOrigen: "CDMX",
+    ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Monterrey",
+    ciudadDestino: "Monterrey",
+    nitCliente: "MX-RFC-DLN002",
+    nombreCliente: "Distribuidora del Norte S.A. de C.V.",
+    valorDeclarado: 2200000,
+    fechaCreacion: "2026-02-22",
+    estadoGeneral: "sin_novedad",
+  },
 ];
 
 // ============================================================

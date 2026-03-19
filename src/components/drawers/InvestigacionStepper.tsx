@@ -72,7 +72,7 @@ const TIPOS_RESOLUCION = [
   "Sobrante devuelto a flujo",
 ];
 
-const TERMINALES = ["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Cartagena", "Pereira", "México"];
+const TERMINALES = ["Bogotá", "Medellín", "Cali", "Barranquilla", "Bucaramanga", "Cartagena", "Pereira", "CDMX", "Monterrey"];
 
 const FUENTES_VERIFICACION = [
   "Revisión física en bodega",
