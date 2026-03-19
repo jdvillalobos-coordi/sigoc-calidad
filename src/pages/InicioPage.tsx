@@ -250,7 +250,7 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
 
   function handleRegional(v: string) { setRegional(v); setTerminal(""); }
 
-  const terminalesDisponibles = regional ? REGIONALES[regional] ?? [] : TODAS_TERMINALES;
+  const terminalesDisponibles = regional ? REGIONALES_FLAT[regional] ?? [] : TODAS_TERMINALES;
 
   // Filtrar registros por zona y fecha
   const regFiltrados = registros.filter((r) => {
