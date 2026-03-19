@@ -257,7 +257,7 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
     const enZona = terminal
       ? r.terminal === terminal
       : regional
-        ? (REGIONALES[regional] ?? []).includes(r.terminal)
+        ? (REGIONALES_FLAT[regional] ?? []).includes(r.terminal)
         : true;
     if (!enZona) return false;
     if (dateRange?.from) {
