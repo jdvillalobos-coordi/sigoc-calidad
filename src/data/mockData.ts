@@ -1116,6 +1116,7 @@ export const registros: Registro[] = [
     valorRecaudo: 2900000,
     formaPago: "Transferencia",
     estadoRecaudo: "pagado",
+    porcentajeCobro: 100,
     cortePago: "20/01/2026",
     checkpoint: "Terminal Medellín — Caja 1",
     diasAbierto: 5,
