@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { registros, alertasIA, personas, vehiculos } from "@/data/mockData";
+import { registros, alertasIA, personas, vehiculos, PAISES_REGIONALES, TODAS_TERMINALES, REGIONALES_FLAT } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { TrendingUp, TrendingDown, FileText, AlertTriangle, Clock, CheckCircle, Users, Truck, CalendarIcon, ChevronDown, X } from "lucide-react";
 import { format, isWithinInterval, parseISO, subDays } from "date-fns";
@@ -16,18 +16,13 @@ function pct(a: number, b: number) {
   return Math.round((a / b) * 100);
 }
 
-const REGIONALES: Record<string, string[]> = {
-  "Centro":    ["Bogotá"],
-  "Sur":       ["Cali", "Pereira"],
-  "Oriente":   ["Bucaramanga", "Cartagena"],
-  "Occidente": ["Medellín"],
-  "México":    ["México"],
-};
-
-const TODAS_TERMINALES = Object.values(REGIONALES).flat().sort();
-
 function regionalDeTerminal(terminal: string): string {
-  return Object.entries(REGIONALES).find(([, ts]) => ts.includes(terminal))?.[0] ?? "Otras";
+  for (const [, regionales] of Object.entries(PAISES_REGIONALES)) {
+    for (const [regional, terminalesList] of Object.entries(regionales)) {
+      if (terminalesList.includes(terminal)) return regional;
+    }
+  }
+  return "Otras";
 }
 
 // ── sub-componentes ───────────────────────────────────────────────────────────
@@ -255,14 +250,14 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
 
   function handleRegional(v: string) { setRegional(v); setTerminal(""); }
 
-  const terminalesDisponibles = regional ? REGIONALES[regional] ?? [] : TODAS_TERMINALES;
+  const terminalesDisponibles = regional ? REGIONALES_FLAT[regional] ?? [] : TODAS_TERMINALES;
 
   // Filtrar registros por zona y fecha
   const regFiltrados = registros.filter((r) => {
     const enZona = terminal
       ? r.terminal === terminal
       : regional
-        ? (REGIONALES[regional] ?? []).includes(r.terminal)
+        ? (REGIONALES_FLAT[regional] ?? []).includes(r.terminal)
         : true;
     if (!enZona) return false;
     if (dateRange?.from) {
@@ -313,7 +308,7 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
         {/* Filtros */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <DateRangeButton range={dateRange} onChange={setDateRange} />
-          <SimpleDropdown label="Regional" options={Object.keys(REGIONALES)} value={regional} onChange={handleRegional} placeholder="Todas las regionales" />
+          <SimpleDropdown label="Regional" options={Object.keys(REGIONALES_FLAT)} value={regional} onChange={handleRegional} placeholder="Todas las regionales" />
           <SimpleDropdown label="Terminal" options={terminalesDisponibles} value={terminal} onChange={setTerminal} placeholder="Todas las terminales" />
           {hayFiltros && (
             <button onClick={() => { setRegional(""); setTerminal(""); setDateRange(undefined); }}
@@ -458,10 +453,10 @@ export default function InicioPage() {
     { name: "Contacto",   value: registros.filter((r) => r.tipo === "contacto").length },
   ].sort((a, b) => b.value - a.value);
 
-  const porRegional = Object.keys(REGIONALES).map((reg) => ({
+  const porRegional = Object.entries(REGIONALES_FLAT).map(([reg, terms]) => ({
     name: reg,
-    value: registros.filter((r) => REGIONALES[reg].includes(r.terminal)).length,
-  })).sort((a, b) => b.value - a.value);
+    value: registros.filter((r) => terms.includes(r.terminal)).length,
+  })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
 
   const estadosSegmentos = [
     { name: "En investigación", value: enInvestigacion, color: "bg-blue-500" },

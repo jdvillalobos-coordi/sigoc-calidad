@@ -201,6 +201,16 @@ export const personas: Persona[] = [
     nit: "800789123",
     razonSocial: "Distribuidora El Progreso Ltda.",
   },
+  // 1 persona México - Monterrey
+  {
+    id: "p16",
+    cedula: "MX-7654321",
+    nombre: "Rodrigo Enrique Vázquez Soto",
+    cargo: "Auxiliar de Bodega",
+    terminal: "Monterrey",
+    tipo: "empleado",
+    estado: "sin_novedad",
+  },
 ];
 
 // ============================================================
@@ -487,6 +497,31 @@ export const guias: Guia[] = [
     valorDeclarado: 1500000,
     fechaCreacion: "2026-02-14",
     estadoGeneral: "con_novedad",
+  },
+  // Guías México
+  {
+    numero: "MX0001000001",
+    terminalOrigen: "CDMX",
+    ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Bogotá",
+    ciudadDestino: "Bogotá",
+    nitCliente: "MX-RFC-TXL001",
+    nombreCliente: "Textil Export MX S.A. de C.V.",
+    valorDeclarado: 4800000,
+    fechaCreacion: "2026-02-20",
+    estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "MX0001000002",
+    terminalOrigen: "CDMX",
+    ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Monterrey",
+    ciudadDestino: "Monterrey",
+    nitCliente: "MX-RFC-DLN002",
+    nombreCliente: "Distribuidora del Norte S.A. de C.V.",
+    valorDeclarado: 2200000,
+    fechaCreacion: "2026-02-22",
+    estadoGeneral: "sin_novedad",
   },
 ];
 
@@ -1956,12 +1991,38 @@ export function getRegistrosRelacionados(registroId: string): Registro[] {
   return resultado.slice(0, 5);
 }
 
-export const terminales = [
-  "Bogotá",
-  "Medellín",
-  "Cali",
-  "Barranquilla",
-  "Bucaramanga",
-  "Cartagena",
-  "Pereira",
-];
+// ============================================================
+// GEOGRAFÍA CENTRALIZADA
+// ============================================================
+
+export const PAISES_REGIONALES: Record<string, Record<string, string[]>> = {
+  "Colombia": {
+    "Centro":        ["Bogotá"],
+    "Antioquia":     ["Medellín"],
+    "Sur-occidente": ["Cali"],
+    "Costa":         ["Barranquilla", "Cartagena"],
+    "Santanderes":   ["Bucaramanga"],
+    "Eje Cafetero":  ["Pereira"],
+  },
+  "México": {
+    "Centro MX": ["CDMX"],
+    "Norte MX":  ["Monterrey"],
+  },
+};
+
+export const TODAS_TERMINALES: string[] = Object.values(PAISES_REGIONALES)
+  .flatMap((regionales) => Object.values(regionales).flat())
+  .sort();
+
+export const TERMINALES_POR_PAIS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(PAISES_REGIONALES).map(([pais, regionales]) => [
+    pais,
+    Object.values(regionales).flat(),
+  ])
+);
+
+// Alias plano para compatibilidad interna (regional → terminales de ese país)
+export const REGIONALES_FLAT: Record<string, string[]> = Object.values(PAISES_REGIONALES)
+  .reduce((acc, regionales) => ({ ...acc, ...regionales }), {} as Record<string, string[]>);
+
+export const terminales = TODAS_TERMINALES;

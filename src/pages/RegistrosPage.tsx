@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { registros, terminales } from "@/data/mockData";
+import { registros, terminales, PAISES_REGIONALES, TODAS_TERMINALES, REGIONALES_FLAT } from "@/data/mockData";
 import { TipoBadge, EstadoBadge, descripcionCorta, formatDate } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { Plus, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
@@ -30,14 +30,6 @@ const ESTADOS: { value: EstadoRegistro | "todos"; label: string }[] = [
   { value: "pendiente", label: "Pendiente" },
   { value: "bloqueado", label: "Bloqueado" },
 ];
-
-const REGIONALES: Record<string, string[]> = {
-  "Centro":    ["Bogotá"],
-  "Sur":       ["Cali", "Pereira"],
-  "Oriente":   ["Bucaramanga", "Cartagena"],
-  "Occidente": ["Medellín"],
-  "México":    ["México"],
-};
 
 const PRESETS = [
   { label: "Hoy",             days: 0 },
@@ -119,6 +111,7 @@ export default function RegistrosPage() {
   const { abrirRegistro, setNuevaRegistroAbierto, busquedaQuery } = useApp();
   const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro] = useState<string>("todos");
+  const [paisFiltro, setPaisFiltro] = useState("todos");
   const [regionalFiltro, setRegionalFiltro] = useState("todos");
   const [terminalFiltro, setTerminalFiltro] = useState("todos");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -127,17 +120,32 @@ export default function RegistrosPage() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 15;
 
+  // ── Cascada País → Regional → Terminal ──────────────────────────────────
+  function handlePaisChange(val: string) {
+    setPaisFiltro(val);
+    setRegionalFiltro("todos");
+    setTerminalFiltro("todos");
+    setPage(1);
+  }
   function handleRegionalChange(val: string) {
     setRegionalFiltro(val);
     setTerminalFiltro("todos");
     setPage(1);
   }
 
-  const terminalesDisponibles =
-    regionalFiltro !== "todos"
-      ? REGIONALES[regionalFiltro] ?? []
-      : terminales;
+  const regionalesDisponibles: string[] =
+    paisFiltro !== "todos"
+      ? Object.keys(PAISES_REGIONALES[paisFiltro] ?? {})
+      : Object.values(PAISES_REGIONALES).flatMap((r) => Object.keys(r));
 
+  const terminalesDisponibles: string[] =
+    regionalFiltro !== "todos"
+      ? REGIONALES_FLAT[regionalFiltro] ?? []
+      : paisFiltro !== "todos"
+        ? Object.values(PAISES_REGIONALES[paisFiltro] ?? {}).flat()
+        : terminales;
+
+  // ── Filtrado ─────────────────────────────────────────────────────────────
   const q = busquedaQuery.toLowerCase().trim();
 
   const filtered = registros
@@ -145,7 +153,11 @@ export default function RegistrosPage() {
     .filter((r) => estadoFiltro === "todos" || r.estado === estadoFiltro)
     .filter((r) => {
       if (terminalFiltro !== "todos") return r.terminal === terminalFiltro;
-      if (regionalFiltro !== "todos") return (REGIONALES[regionalFiltro] ?? []).includes(r.terminal);
+      if (regionalFiltro !== "todos") return (REGIONALES_FLAT[regionalFiltro] ?? []).includes(r.terminal);
+      if (paisFiltro !== "todos") {
+        const terminalesPais = Object.values(PAISES_REGIONALES[paisFiltro] ?? {}).flat();
+        return terminalesPais.includes(r.terminal);
+      }
       return true;
     })
     .filter((r) => {
@@ -185,9 +197,10 @@ export default function RegistrosPage() {
     return sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
   }
 
-  const hayFiltrosActivos = regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
+  const hayFiltrosActivos = paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
 
   function limpiarFiltros() {
+    setPaisFiltro("todos");
     setRegionalFiltro("todos");
     setTerminalFiltro("todos");
     setDateRange(undefined);
@@ -199,6 +212,7 @@ export default function RegistrosPage() {
       {/* Filtros */}
       <div className="border-b border-border bg-card px-6 py-3 flex-shrink-0 space-y-2.5">
         <div className="flex items-center gap-3 flex-wrap">
+          {/* Tipo y Estado */}
           <select
             className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             value={tipoFiltro}
@@ -213,13 +227,23 @@ export default function RegistrosPage() {
           >
             {ESTADOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
           </select>
+
+          {/* Cascada País → Regional → Terminal */}
+          <select
+            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={paisFiltro}
+            onChange={(e) => handlePaisChange(e.target.value)}
+          >
+            <option value="todos">Todos los países</option>
+            {Object.keys(PAISES_REGIONALES).map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
           <select
             className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             value={regionalFiltro}
             onChange={(e) => handleRegionalChange(e.target.value)}
           >
             <option value="todos">Todas las regionales</option>
-            {Object.keys(REGIONALES).map((r) => <option key={r} value={r}>{r}</option>)}
+            {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
           <select
             className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
@@ -229,6 +253,7 @@ export default function RegistrosPage() {
             <option value="todos">Todas las terminales</option>
             {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
+
           <DateRangeFilter range={dateRange} onChange={(r) => { setDateRange(r); setPage(1); }} />
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground">{filtered.length} registro{filtered.length !== 1 ? "s" : ""}</span>
@@ -244,7 +269,8 @@ export default function RegistrosPage() {
         {hayFiltrosActivos && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground">Filtrando por:</span>
-            {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => { /* busquedaQuery se limpia sola */ }} />}
+            {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => {}} />}
+            {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
             {dateRange?.from && (
@@ -253,7 +279,7 @@ export default function RegistrosPage() {
                 onRemove={() => { setDateRange(undefined); setPage(1); }}
               />
             )}
-            {(regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from) && (
+            {(paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from) && (
               <button onClick={limpiarFiltros} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">
                 Limpiar filtros
               </button>
