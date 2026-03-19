@@ -404,7 +404,8 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
                 </span>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${pct(v.incidentes, topVehiculos[0]?.incidentes ?? 1)}%` }} />
+                    <div className="h-full bg-secondary-foreground/30 rounded-full" style={{ width: `${pct(v.incidentes, topVehiculos[0]?.incidentes ?? 1)}%` }} />
+                  </div>
                   </div>
                   <span className="text-xs font-bold text-foreground w-4 text-right">{v.incidentes}</span>
                 </div>
