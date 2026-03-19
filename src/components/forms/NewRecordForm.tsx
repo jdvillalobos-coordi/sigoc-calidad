@@ -25,6 +25,41 @@ const EVENTOS_TIPOS = [
   { grupo: "Otros", opciones: ["Afectaciones a la seguridad híbrida"] },
 ];
 
+const REQUERIMIENTOS_POSVENTA = [
+  { grupo: "Entregas", opciones: [
+    "Certificación de entrega - mala entrega",
+    "Entrega no reconocida",
+    "Entrega trocada",
+    "Entrega a tercero no autorizado",
+    "Entrega en dirección incorrecta",
+    "Entrega parcial",
+  ]},
+  { grupo: "Faltantes y pérdidas", opciones: [
+    "Faltante parcial",
+    "Faltante total",
+    "Pérdida total",
+    "Pérdida parcial",
+  ]},
+  { grupo: "Daños y deterioro", opciones: [
+    "Deterioro",
+    "Avería por manipulación",
+    "Daño por humedad",
+    "Empaque inadecuado",
+  ]},
+  { grupo: "Novedades operativas", opciones: [
+    "Novedad 300-400-403-829 superior a 72h sin gestión",
+    "Incumplimiento de SLA",
+    "Devolución no gestionada",
+    "Reexpedición fallida",
+  ]},
+  { grupo: "Fraude y sospecha", opciones: [
+    "Suplantación de identidad en entrega",
+    "Reclamación fraudulenta",
+    "Incumplimiento",
+    "Manipulación de evidencia fotográfica",
+  ]},
+];
+
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
 
 export default function NewRecordForm({ onClose }: { onClose: () => void }) {
