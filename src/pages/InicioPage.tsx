@@ -550,10 +550,33 @@ export default function InicioPage() {
             <div>
               <div className="text-3xl font-bold text-foreground">{casosVencidosSinGestion}</div>
               <div className="text-xs text-muted-foreground mt-0.5">Más de 30 días sin cierre</div>
+              <div className="text-xs text-amber-600 font-medium mt-1">({registros.filter((r) => r.diasAbierto > 3 && r.estado !== "cerrado").length} con más de 72h sin gestión)</div>
             </div>
             <div className="flex items-center gap-1 text-xs font-medium text-red-500">
               <TrendingUp className="w-3 h-3" />
               Atención urgente
+            </div>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Productividad promedio</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/8 text-primary">
+                <Users className="w-4 h-4" />
+              </div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-foreground">
+                {(registros.filter((r) => {
+                  const d = new Date(r.fecha);
+                  const hace30 = new Date(); hace30.setDate(hace30.getDate() - 30);
+                  return d >= hace30;
+                }).length / 5).toFixed(1)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">registros/agente este mes</div>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-medium text-green-600">
+              <TrendingUp className="w-3 h-3" />
+              Basado en 5 agentes activos
             </div>
           </div>
         </div>
