@@ -585,6 +585,7 @@ export const registros: Registro[] = [
   } as RegistroFaltante,
 
   {
+    // FAL-002 placeholder — stepper added below
     id: "FAL-003",
     tipo: "faltante",
     estado: "vencido",
