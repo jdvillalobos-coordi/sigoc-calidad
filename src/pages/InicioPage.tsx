@@ -115,7 +115,7 @@ function AlertaCard({
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function InicioPage() {
-  const { setPaginaActiva, abrirRegistro, abrirPersona, abrirTerminal } = useApp();
+  const { setPaginaActiva, abrirRegistro, abrirPersona, abrirVehiculo, abrirTerminal } = useApp();
   const [alertas, setAlertas] = React.useState<AlertaIA[]>(alertasIA);
 
   // ── KPI calculations ──────────────────────────────────────────────────────
