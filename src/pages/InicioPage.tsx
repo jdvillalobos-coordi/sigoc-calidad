@@ -453,10 +453,10 @@ export default function InicioPage() {
     { name: "Contacto",   value: registros.filter((r) => r.tipo === "contacto").length },
   ].sort((a, b) => b.value - a.value);
 
-  const porRegional = Object.keys(REGIONALES).map((reg) => ({
+  const porRegional = Object.entries(REGIONALES_FLAT).map(([reg, terms]) => ({
     name: reg,
-    value: registros.filter((r) => REGIONALES[reg].includes(r.terminal)).length,
-  })).sort((a, b) => b.value - a.value);
+    value: registros.filter((r) => terms.includes(r.terminal)).length,
+  })).filter((x) => x.value > 0).sort((a, b) => b.value - a.value);
 
   const estadosSegmentos = [
     { name: "En investigación", value: enInvestigacion, color: "bg-blue-500" },
