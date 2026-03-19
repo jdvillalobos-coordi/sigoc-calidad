@@ -308,7 +308,7 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: {
         {/* Filtros */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
           <DateRangeButton range={dateRange} onChange={setDateRange} />
-          <SimpleDropdown label="Regional" options={Object.keys(REGIONALES)} value={regional} onChange={handleRegional} placeholder="Todas las regionales" />
+          <SimpleDropdown label="Regional" options={Object.keys(REGIONALES_FLAT)} value={regional} onChange={handleRegional} placeholder="Todas las regionales" />
           <SimpleDropdown label="Terminal" options={terminalesDisponibles} value={terminal} onChange={setTerminal} placeholder="Todas las terminales" />
           {hayFiltros && (
             <button onClick={() => { setRegional(""); setTerminal(""); setDateRange(undefined); }}
