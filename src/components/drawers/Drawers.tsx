@@ -3,8 +3,10 @@ import { registros, personas, vehiculos, guias, getPersona, getVehiculo, getRegi
 import { TipoBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, tipoConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight } from "lucide-react";
-import type { Registro, EstadoRegistro } from "@/types";
+import type { Registro, EstadoRegistro, RegistroFaltante, StepperInvestigacion } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { InvestigacionStepper } from "@/components/drawers/InvestigacionStepper";
+import type { StepperState } from "@/components/drawers/InvestigacionStepper";
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {

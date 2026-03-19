@@ -14,7 +14,32 @@ import type {
   Notificacion,
   UsuarioApp,
   EstudioSeguridad,
+  StepperInvestigacion,
 } from "@/types";
+
+// ── Mock stepper helpers ───────────────────────────────────────────────────
+
+const CHECKPOINTS_MOCK = [
+  { nombre: "Recogida en origen",      fecha: "10/01 08:30", terminal: "Bogotá",   responsable: "Juan Pérez" },
+  { nombre: "Ingreso bodega origen",   fecha: "10/01 14:15", terminal: "Bogotá",   responsable: "María López" },
+  { nombre: "Cargue a vehículo",       fecha: "10/01 22:00", terminal: "Bogotá",   responsable: "Carlos Ruiz" },
+  { nombre: "Descargue bodega destino",fecha: undefined,     terminal: "Medellín", responsable: undefined, esAnomalía: true },
+  { nombre: "En reparto",              fecha: undefined,     terminal: "Medellín", responsable: undefined },
+  { nombre: "Entregado",               fecha: undefined,     terminal: "Medellín", responsable: undefined },
+];
+
+function mkStepper(etapaActiva: "identificacion" | "investigacion" | "verificacion" | "resolucion", overrides: Partial<Record<string, any>> = {}): StepperInvestigacion {
+  const etapas: StepperInvestigacion["etapas"] = {
+    identificacion: { completada: true,  fechaCompletado: "2026-01-04T08:00:00", responsableNombre: "Ana Martínez" },
+    investigacion:  { completada: false },
+    verificacion:   { completada: false },
+    resolucion:     { completada: false },
+  };
+  if (overrides.investigacion) etapas.investigacion = { ...etapas.investigacion, ...overrides.investigacion };
+  if (overrides.verificacion)  etapas.verificacion  = { ...etapas.verificacion,  ...overrides.verificacion };
+  if (overrides.resolucion)    etapas.resolucion    = { ...etapas.resolucion,    ...overrides.resolucion };
+  return { etapaActiva, etapas, checkpoints: CHECKPOINTS_MOCK };
+}
 
 // ============================================================
 // USUARIO LOGUEADO
