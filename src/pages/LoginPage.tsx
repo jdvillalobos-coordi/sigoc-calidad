@@ -51,7 +51,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="relative z-10 space-y-6">
           <blockquote className="space-y-3">
             <p className="text-2xl font-semibold leading-snug text-white/90">
-              "La plataforma centralizada que reemplaza tus hojas de cálculo y te da control total sobre las investigaciones de calidad."
+              "La centralización de calidad que tu equipo necesita: registros, investigaciones y alertas inteligentes en un solo lugar."
             </p>
           </blockquote>
 
