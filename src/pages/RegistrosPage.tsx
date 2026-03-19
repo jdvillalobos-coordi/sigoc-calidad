@@ -329,9 +329,12 @@ export default function RegistrosPage() {
                 <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[120px]">{r.responsableNombre}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.fecha}</td>
                 <td className="px-4 py-3 text-xs">
-                  <span className={r.diasAbierto > 30 ? "text-red-600 font-semibold" : r.diasAbierto > 14 ? "text-amber-600 font-medium" : "text-muted-foreground"}>
-                    {r.diasAbierto}d
-                  </span>
+                  {r.estado !== "cerrado" && r.diasAbierto > 30
+                    ? <span className="text-destructive font-semibold flex items-center gap-1">🔴 {r.diasAbierto}d</span>
+                    : r.estado !== "cerrado" && r.diasAbierto > 3
+                    ? <span className="text-amber-600 font-medium flex items-center gap-1">⏰ {r.diasAbierto}d</span>
+                    : <span className={r.diasAbierto > 30 ? "text-destructive font-semibold" : r.diasAbierto > 14 ? "text-amber-600 font-medium" : "text-muted-foreground"}>{r.diasAbierto}d</span>
+                  }
                 </td>
               </tr>
             ))}

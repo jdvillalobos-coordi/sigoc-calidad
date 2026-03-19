@@ -161,8 +161,10 @@ export function RecordDetailDrawer() {
                 ["Días abierto", `${reg.diasAbierto} días`],
                 ...(guiaNum ? [["Guía", guiaNum]] : []),
                 ...(("codigoNovedad" in reg) ? [["Código novedad", (reg as any).codigoNovedad]] : []),
+                ...(("nysAsociado" in reg && (reg as any).nysAsociado) ? [["NyS asociado", (reg as any).nysAsociado]] : []),
                 ...(("tipoEvento" in reg) ? [["Tipo de evento", (reg as any).tipoEvento]] : []),
                 ...(("valorRecaudo" in reg) ? [["Valor recaudo", formatCurrency((reg as any).valorRecaudo)]] : []),
+                ...(("porcentajeCobro" in reg && (reg as any).porcentajeCobro !== undefined) ? [["% Cobro", `${(reg as any).porcentajeCobro}%`]] : []),
                 ...(("requerimiento" in reg) ? [["Requerimiento", (reg as any).requerimiento]] : []),
               ].map(([l, v]) => (
                 <div key={l}>
@@ -171,6 +173,10 @@ export function RecordDetailDrawer() {
                     <button onClick={() => abrirGuia(v!)} className="text-sm font-medium text-coordinadora-blue font-mono hover:underline">{v}</button>
                   ) : l === "Terminal" ? (
                     <button onClick={() => abrirTerminal(v!)} className="text-sm font-medium text-coordinadora-blue hover:underline">{v}</button>
+                  ) : l === "Días abierto" ? (
+                    <div className="text-sm font-medium flex items-center gap-1">
+                      {reg.estado !== "cerrado" && reg.diasAbierto > 30 ? "🔴 " : reg.estado !== "cerrado" && reg.diasAbierto > 3 ? "⏰ " : ""}{v}
+                    </div>
                   ) : (
                     <div className="text-sm font-medium">{v}</div>
                   )}

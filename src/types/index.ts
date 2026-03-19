@@ -135,6 +135,13 @@ export interface EtapaData {
   tipoResolucion?: string;
   codigoLegalizacion?: string;
   observacionesFinales?: string;
+  // CCTV
+  cctvRevisado?: boolean;
+  cctvTerminal?: string;
+  cctvTiposRevision?: string[];
+  cctvHallazgo?: string;
+  cctvReferencia?: string;
+  cctvConclusion?: "confirma" | "no_concluyente" | "sin_evidencia";
 }
 
 export interface StepperInvestigacion {
@@ -155,6 +162,7 @@ export interface RegistroFaltante extends RegistroBase {
   detalleUnidades?: string;
   clienteNoDespacha: boolean;
   stepper?: StepperInvestigacion;
+  nysAsociado?: string;
 }
 
 export interface RegistroEvento extends RegistroBase {
@@ -177,11 +185,13 @@ export interface RegistroRCE extends RegistroBase {
   checkpoint?: string;
   desviaciones?: string;
   novedadesProceso?: string;
+  porcentajeCobro?: number;
 }
 
 export interface RegistroPosventa extends RegistroBase {
   tipo: "posventa";
-  guia: string;
+  guia: string | "";
+
   requerimiento: string;
   descripcion: string;
   imagenUrl?: string;

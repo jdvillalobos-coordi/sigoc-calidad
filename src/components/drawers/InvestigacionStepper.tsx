@@ -33,7 +33,15 @@ export interface EtapaData {
   tipoResolucion?: string;
   codigoLegalizacion?: string;
   observacionesFinales?: string;
+  // CCTV
+  cctvRevisado?: boolean;
+  cctvTerminal?: string;
+  cctvTiposRevision?: string[];
+  cctvHallazgo?: string;
+  cctvReferencia?: string;
+  cctvConclusion?: "confirma" | "no_concluyente" | "sin_evidencia";
 }
+
 
 export interface StepperState {
   etapaActiva: EtapaId;
@@ -226,6 +234,14 @@ function PanelInvestigacion({
   );
 }
 
+const CCTV_TIPOS = [
+  "Faltantes",
+  "Averías / Deterioros",
+  "Activos Fijos CM",
+  "Accidentes",
+  "Objetos Personales",
+];
+
 // ── Sub-panel Verificación ────────────────────────────────────────────────────
 
 function PanelVerificacion({
@@ -235,6 +251,8 @@ function PanelVerificacion({
   onChange: (d: EtapaData) => void;
 }) {
   const [showPanel, setShowPanel] = useState(true);
+  const [showCCTV, setShowCCTV] = useState(true);
+
 
   const estadoOpts: Array<{ value: string; label: string; color: string }> = [
     { value: "encontrada",     label: "Unidad encontrada",        color: "border-green-400 bg-green-50 text-green-700" },
@@ -328,6 +346,139 @@ function PanelVerificacion({
                   </label>
                 ))}
               </div>
+            </div>
+
+            {/* ── Soporte CCTV colapsable ── */}
+            <div className="border border-border rounded-xl overflow-hidden">
+              <button
+                onClick={() => setShowCCTV((s) => !s)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-muted/20 hover:bg-muted transition-colors text-sm font-semibold"
+              >
+                <span>📹 Soporte CCTV</span>
+                {showCCTV ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              {showCCTV && (
+                <div className="p-4 space-y-4">
+                  {/* Toggle revisado */}
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-medium text-muted-foreground">¿Se revisaron cámaras?</label>
+                    <div className="flex gap-2 ml-auto">
+                      {[["true", "Sí"], ["false", "No"]].map(([v, l]) => (
+                        <button
+                          key={v}
+                          onClick={() => onChange({ ...data, cctvRevisado: v === "true" })}
+                          className={cn(
+                            "px-3 py-1 rounded-lg text-xs font-medium border transition-all",
+                            (data.cctvRevisado === (v === "true"))
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "border-border hover:bg-muted"
+                          )}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Campos si sí revisó */}
+                  {data.cctvRevisado && (
+                    <div className="space-y-3 slide-down">
+                      {/* Terminal CCTV */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground block mb-1.5">Terminal donde se revisó CCTV</label>
+                        <select
+                          value={data.cctvTerminal ?? ""}
+                          onChange={(e) => onChange({ ...data, cctvTerminal: e.target.value })}
+                          className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">Seleccionar terminal...</option>
+                          {TERMINALES.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+
+                      {/* Tipos de revisión */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground block mb-2">Tipo de revisión (selección múltiple)</label>
+                        <div className="space-y-1.5">
+                          {CCTV_TIPOS.map((tipo) => {
+                            const current = data.cctvTiposRevision ?? [];
+                            return (
+                              <label key={tipo} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={current.includes(tipo)}
+                                  onChange={() => {
+                                    const updated = current.includes(tipo)
+                                      ? current.filter((x) => x !== tipo)
+                                      : [...current, tipo];
+                                    onChange({ ...data, cctvTiposRevision: updated });
+                                  }}
+                                  className="rounded border-border"
+                                />
+                                <span className="text-sm text-foreground">{tipo}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Hallazgo CCTV */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground block mb-1.5">Hallazgo CCTV</label>
+                        <textarea
+                          value={data.cctvHallazgo ?? ""}
+                          onChange={(e) => onChange({ ...data, cctvHallazgo: e.target.value })}
+                          className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                          rows={2}
+                          placeholder="Descripción de lo encontrado en cámaras..."
+                        />
+                      </div>
+
+                      {/* Referencia CCTV */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground block mb-1.5">Referencia CCTV</label>
+                        <input
+                          type="text"
+                          value={data.cctvReferencia ?? ""}
+                          onChange={(e) => onChange({ ...data, cctvReferencia: e.target.value })}
+                          className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                          placeholder="Código de cámara o número de archivo FT-SG-003"
+                        />
+                      </div>
+
+                      {/* Conclusión CCTV */}
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground block mb-2">Conclusión CCTV</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {([
+                            ["confirma",       "Confirma hallazgo",  "border-green-400 bg-green-50 text-green-700"],
+                            ["no_concluyente", "No concluyente",     "border-amber-400 bg-amber-50 text-amber-700"],
+                            ["sin_evidencia",  "Sin evidencia",      "border-gray-300 bg-gray-50 text-gray-600"],
+                          ] as const).map(([val, lbl, cls]) => (
+                            <label
+                              key={val}
+                              className={cn(
+                                "flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border-2 cursor-pointer text-xs font-medium transition-all text-center",
+                                data.cctvConclusion === val ? cls : "border-border bg-background text-foreground hover:bg-muted"
+                              )}
+                            >
+                              <input
+                                type="radio"
+                                name="cctvConclusion"
+                                value={val}
+                                checked={data.cctvConclusion === val}
+                                onChange={() => onChange({ ...data, cctvConclusion: val })}
+                                className="sr-only"
+                              />
+                              {lbl}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Observaciones */}

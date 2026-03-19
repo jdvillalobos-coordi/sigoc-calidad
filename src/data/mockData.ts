@@ -586,6 +586,7 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 45,
+    nysAsociado: "NYS-2026-00412",
     stepper: mkStepper("investigacion", {
       investigacion: { completada: false, causaRaiz: "Robo / Hurto", detalleInvestigacion: "Revisión de turno del auxiliar Carlos Pérez. Último escaneo en bodega Bogotá checkpoint 3. Sin evidencia de descargue en Medellín." },
     }),
@@ -618,6 +619,7 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 35,
+    nysAsociado: "NYS-2026-00287",
     stepper: mkStepper("investigacion", {
       investigacion: { completada: false, causaRaiz: "Error de escaneo", detalleInvestigacion: "Patrón similar al FAL-001. Misma terminal, mismo horario de cargue. Se solicita revisión de cámaras." },
     }),
@@ -634,7 +636,8 @@ export const registros: Registro[] = [
     observaciones: "Guía 19900293003 reportada con faltante parcial en destino Barranquilla.",
     anotaciones: [
       { id: "a20", autorId: "u-lucia", autorNombre: "Lucía Gómez", autorRol: "Agente de Soporte Logístico", fecha: "2025-12-02T11:00:00", texto: "Verificación inicial realizada. No hay evidencia en bodega de Cali.", tipo: "hallazgo_investigacion" },
-      { id: "a21", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2025-12-10T10:00:00", texto: "Sin respuesta del terminal destino. Caso escala a coordinación.", tipo: "nota_interna" },
+  { id: "a21", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2025-12-10T10:00:00", texto: "Sin respuesta del terminal destino. Caso escala a coordinación.", tipo: "nota_interna" },
+      { id: "a22", autorId: "u-nicolas", autorNombre: "Nicolás Ríos Castaño", autorRol: "Contralor Nacional de Calidad", fecha: "2025-12-15T09:00:00", texto: "Revisado en comité semanal. Tendencia confirmada en Barranquilla. Solicitar auditoría presencial si no se resuelve antes del viernes.", tipo: "nota_interna" },
     ],
     historial: [
       { id: "h20", fecha: "2025-12-01T08:00:00", usuarioNombre: "Ana Martínez", accion: "Creó el registro" },
@@ -747,7 +750,7 @@ export const registros: Registro[] = [
     diasAbierto: 13,
     stepper: mkStepper("verificacion", {
       investigacion: { completada: true, fechaCompletado: "2026-02-06T09:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Robo / Hurto", detalleInvestigacion: "Cargue confirmado en bodega Bucaramanga. No hay registro de llegada a Bogotá. Posible hurto en ruta." },
-      verificacion:  { completada: false, estadoVerificacion: "pendiente", terminalVerificacion: "Bogotá", observacionesAgente: "Verificando en bodega Bogotá y revisando cámaras de patio." },
+      verificacion:  { completada: false, estadoVerificacion: "pendiente", terminalVerificacion: "Bogotá", observacionesAgente: "Verificando en bodega Bogotá y revisando cámaras de patio.", cctvRevisado: true, cctvTerminal: "Bogotá", cctvTiposRevision: ["Faltantes"], cctvHallazgo: "Se identifica que el paquete sale escaneado en Bucaramanga pero no aparece en manifesto de llegada a Bogotá. Cámara de patio muestra vehículo PLT-456 sin apertura de carpa.", cctvReferencia: "FT-SG-003-BUC-20260205", cctvConclusion: "no_concluyente" },
     }),
   } as RegistroFaltante,
 
@@ -775,9 +778,10 @@ export const registros: Registro[] = [
     unidadesRecuperadas: false,
     clienteNoDespacha: false,
     diasAbierto: 8,
+    nysAsociado: "NYS-2026-00531",
     stepper: mkStepper("verificacion", {
       investigacion: { completada: true, fechaCompletado: "2026-02-11T10:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Robo / Hurto", detalleInvestigacion: "Tercer faltante con mismo perfil. Patrón claro de reincidencia. Solicitud de revisión RRHH enviada." },
-      verificacion:  { completada: false, estadoVerificacion: "no_encontrada", observacionesAgente: "Revisión física en bodega completada. Unidad no localizada. CCTV en proceso de análisis." },
+      verificacion:  { completada: false, estadoVerificacion: "no_encontrada", observacionesAgente: "Revisión física en bodega completada. Unidad no localizada. CCTV en proceso de análisis.", cctvRevisado: true, cctvTerminal: "Medellín", cctvTiposRevision: ["Faltantes", "Activos Fijos CM"], cctvHallazgo: "Cámara bodega noche: se observa a Carlos Pérez cerca de la zona de empaque aproximadamente a las 23:40h. Imagen de baja resolución pero identificable por chaleco.", cctvReferencia: "CAM-BOD-MED-02-20260210", cctvConclusion: "confirma" },
     }),
   } as RegistroFaltante,
 
@@ -1087,6 +1091,7 @@ export const registros: Registro[] = [
     valorRecaudo: 4500000,
     formaPago: "Efectivo",
     estadoRecaudo: "no_pagado",
+    porcentajeCobro: 85,
     checkpoint: "Terminal Bogotá — Caja 3",
     novedadesProceso: "Cliente argumenta no haber autorizado el envío.",
     diasAbierto: 41,
@@ -1112,6 +1117,7 @@ export const registros: Registro[] = [
     valorRecaudo: 2900000,
     formaPago: "Transferencia",
     estadoRecaudo: "pagado",
+    porcentajeCobro: 100,
     cortePago: "20/01/2026",
     checkpoint: "Terminal Medellín — Caja 1",
     diasAbierto: 5,
@@ -1134,6 +1140,7 @@ export const registros: Registro[] = [
     valorRecaudo: 2100000,
     formaPago: "Efectivo",
     estadoRecaudo: "en_proceso",
+    porcentajeCobro: 92,
     checkpoint: "Terminal Cali — Caja 2",
     desviaciones: "Billetes falsos detectados mediante detector UV",
     diasAbierto: 29,
@@ -1157,6 +1164,7 @@ export const registros: Registro[] = [
     valorRecaudo: 5200000,
     formaPago: "Cheque",
     estadoRecaudo: "pagado",
+    porcentajeCobro: 78,
     cortePago: "03/02/2026",
     checkpoint: "Terminal Bucaramanga — Caja 1",
     diasAbierto: 2,
@@ -1177,6 +1185,7 @@ export const registros: Registro[] = [
     valorRecaudo: 4200000,
     formaPago: "Efectivo",
     estadoRecaudo: "no_pagado",
+    porcentajeCobro: 95,
     checkpoint: "Terminal Cartagena",
     diasAbierto: 8,
   } as RegistroRCE,
@@ -1201,6 +1210,7 @@ export const registros: Registro[] = [
     valorRecaudo: 2400000,
     formaPago: "Efectivo",
     estadoRecaudo: "no_pagado",
+    porcentajeCobro: 88,
     checkpoint: "Terminal Bogotá — Caja 2",
     novedadesProceso: "Se trasladó a jurídica para cobro persuasivo",
     diasAbierto: 65,

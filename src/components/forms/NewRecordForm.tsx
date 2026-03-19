@@ -25,6 +25,41 @@ const EVENTOS_TIPOS = [
   { grupo: "Otros", opciones: ["Afectaciones a la seguridad híbrida"] },
 ];
 
+const REQUERIMIENTOS_POSVENTA = [
+  { grupo: "Entregas", opciones: [
+    "Certificación de entrega - mala entrega",
+    "Entrega no reconocida",
+    "Entrega trocada",
+    "Entrega a tercero no autorizado",
+    "Entrega en dirección incorrecta",
+    "Entrega parcial",
+  ]},
+  { grupo: "Faltantes y pérdidas", opciones: [
+    "Faltante parcial",
+    "Faltante total",
+    "Pérdida total",
+    "Pérdida parcial",
+  ]},
+  { grupo: "Daños y deterioro", opciones: [
+    "Deterioro",
+    "Avería por manipulación",
+    "Daño por humedad",
+    "Empaque inadecuado",
+  ]},
+  { grupo: "Novedades operativas", opciones: [
+    "Novedad 300-400-403-829 superior a 72h sin gestión",
+    "Incumplimiento de SLA",
+    "Devolución no gestionada",
+    "Reexpedición fallida",
+  ]},
+  { grupo: "Fraude y sospecha", opciones: [
+    "Suplantación de identidad en entrega",
+    "Reclamación fraudulenta",
+    "Incumplimiento",
+    "Manipulación de evidencia fotográfica",
+  ]},
+];
+
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
 
 export default function NewRecordForm({ onClose }: { onClose: () => void }) {
@@ -40,6 +75,7 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
   const [codigoNovedad, setCodigoNovedad] = useState("");
   const [tipoRiesgo, setTipoRiesgo] = useState("");
   const [cedResp, setCedResp] = useState(""); const [cedRespNombre, setCedRespNombre] = useState(""); const [cedRespError, setCedRespError] = useState(false);
+  const [nysAsociado, setNysAsociado] = useState("");
   // Evento
   const [tipoEvento, setTipoEvento] = useState("");
   const [ubicacion, setUbicacion] = useState("sede");
@@ -49,6 +85,7 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
   const [valorRecaudo, setValorRecaudo] = useState("");
   const [formaPago, setFormaPago] = useState("");
   const [estadoRecaudo, setEstadoRecaudo] = useState("");
+  const [porcentajeCobro, setPorcentajeCobro] = useState("");
   // Posventa
   const [requerimiento, setRequerimiento] = useState("");
   const [rolSolicitante, setRolSolicitante] = useState("");
@@ -84,6 +121,7 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
   const puedeCrear = tipo && observaciones && (
     tipo === "lesiva" ? (tipoEntidad && identificacion && motivoBloqueo) :
     tipo === "contacto" ? (cedContacto && motivoSeg) :
+    tipo === "posventa" ? (fecha) :
     (guiaInput && fecha)
   );
 
@@ -127,7 +165,9 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
               {!["lesiva", "contacto"].includes(tipo) && (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nro. Guía *</label>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                      Nro. Guía {tipo !== "posventa" ? "*" : ""}
+                    </label>
                     <input
                       className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
                       placeholder="19900293001"
@@ -135,6 +175,9 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setGuiaInput(e.target.value)}
                       onBlur={() => guiaInput && buscarGuia(guiaInput)}
                     />
+                    {tipo === "posventa" && (
+                      <p className="text-xs text-muted-foreground/70 mt-1">Opcional — algunas reclamaciones no están asociadas a una guía en NyS</p>
+                    )}
                     {guiaError && <p className="text-xs text-red-500 mt-1">Guía no encontrada en el sistema — completa los datos manualmente</p>}
                     {guiaData && (
                       <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -197,6 +240,15 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                     {cedRespNombre && <span className="field-chip text-xs mt-1 inline-block slide-down">{cedRespNombre}</span>}
                     {cedRespError && <p className="text-xs text-red-500 mt-1">Cédula no encontrada en el sistema</p>}
                   </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">NyS asociado</label>
+                    <input
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                      placeholder="Número de novedad en SIGO (ej: NYS-2026-00412)"
+                      value={nysAsociado}
+                      onChange={(e) => setNysAsociado(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -257,6 +309,19 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                       {["Pagado", "No pagado", "En proceso"].map((e) => <option key={e} value={e}>{e}</option>)}
                     </select>
                   </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Porcentaje de cobro (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="Ej: 95.5"
+                      value={porcentajeCobro}
+                      onChange={(e) => setPorcentajeCobro(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -266,7 +331,11 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                     <label className="text-xs font-semibold text-muted-foreground mb-1 block">Requerimiento *</label>
                     <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={requerimiento} onChange={(e) => setRequerimiento(e.target.value)}>
                       <option value="">Seleccionar...</option>
-                      {["Certificación de entrega - mala entrega", "Incumplimiento", "Entrega trocada", "Novedad 300-400-403-829 superior a 72h", "Deterioro", "Faltante parcial", "Entrega no reconocida", "Pérdida total"].map((r) => <option key={r} value={r}>{r}</option>)}
+                      {REQUERIMIENTOS_POSVENTA.map((g) => (
+                        <optgroup key={g.grupo} label={g.grupo}>
+                          {g.opciones.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                   <div>
