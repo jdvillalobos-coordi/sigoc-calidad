@@ -240,6 +240,15 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                     {cedRespNombre && <span className="field-chip text-xs mt-1 inline-block slide-down">{cedRespNombre}</span>}
                     {cedRespError && <p className="text-xs text-red-500 mt-1">Cédula no encontrada en el sistema</p>}
                   </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">NyS asociado</label>
+                    <input
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                      placeholder="Número de novedad en SIGO (ej: NYS-2026-00412)"
+                      value={nysAsociado}
+                      onChange={(e) => setNysAsociado(e.target.value)}
+                    />
+                  </div>
                 </div>
               )}
 
