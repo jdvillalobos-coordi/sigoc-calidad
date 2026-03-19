@@ -1,0 +1,123 @@
+import React from "react";
+import type { TipoRegistro, EstadoRegistro, SeveridadIA, EstadoPersona } from "@/types";
+
+// ---- Colores por tipo ----
+export const tipoConfig: Record<TipoRegistro, { label: string; color: string; dot: string; icon: string }> = {
+  faltante: { label: "Faltante", color: "badge-faltante", dot: "bg-blue-500", icon: "📦" },
+  evento: { label: "Evento", color: "badge-evento", dot: "bg-red-500", icon: "⚠️" },
+  rce: { label: "RCE", color: "badge-rce", dot: "bg-green-500", icon: "💰" },
+  posventa: { label: "Posventa", color: "badge-posventa", dot: "bg-purple-500", icon: "🛒" },
+  lesiva: { label: "Act. Lesiva", color: "badge-lesiva", dot: "bg-gray-600", icon: "🔒" },
+  contacto: { label: "Cuadro Contacto", color: "badge-contacto", dot: "bg-amber-500", icon: "👁️" },
+  evidencia: { label: "Evidencia", color: "badge-evidencia", dot: "bg-orange-500", icon: "📎" },
+};
+
+export const estadoConfig: Record<EstadoRegistro, { label: string; color: string }> = {
+  en_investigacion: { label: "En investigación", color: "estado-investigacion" },
+  cerrado: { label: "Cerrado", color: "estado-cerrado" },
+  vencido: { label: "Vencido", color: "estado-vencido" },
+  pendiente: { label: "Pendiente por asignar", color: "estado-pendiente" },
+  bloqueado: { label: "Bloqueado", color: "estado-bloqueado" },
+};
+
+export const severidadConfig: Record<SeveridadIA, { label: string; color: string; icon: string; bg: string }> = {
+  critica: { label: "Crítica", color: "text-red-600", icon: "🔴", bg: "bg-red-50 border-red-200" },
+  alta: { label: "Alta", color: "text-amber-600", icon: "🟡", bg: "bg-amber-50 border-amber-200" },
+  media: { label: "Media", color: "text-blue-600", icon: "🔵", bg: "bg-blue-50 border-blue-200" },
+  baja: { label: "Baja", color: "text-green-600", icon: "🟢", bg: "bg-green-50 border-green-200" },
+};
+
+export const estadoPersonaConfig: Record<EstadoPersona, { label: string; color: string }> = {
+  sin_novedad: { label: "Sin novedad", color: "bg-green-100 text-green-700 border border-green-200" },
+  en_seguimiento: { label: "En seguimiento", color: "bg-amber-100 text-amber-700 border border-amber-200" },
+  bloqueado: { label: "Bloqueado", color: "bg-red-100 text-red-700 border border-red-200" },
+};
+
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    minimumFractionDigits: 0,
+  }).format(value);
+}
+
+export function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+export function formatDateTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function descripcionCorta(registro: any): string {
+  if (registro.tipo === "faltante") return `Faltante código ${registro.codigoNovedad} — Guía ${registro.guia}`;
+  if (registro.tipo === "evento") return registro.tipoEvento;
+  if (registro.tipo === "rce") return `RCE ${formatCurrency(registro.valorRecaudo)} — Guía ${registro.guia}`;
+  if (registro.tipo === "posventa") return `${registro.requerimiento} — Guía ${registro.guia}`;
+  if (registro.tipo === "lesiva") return `Bloqueo: ${registro.entidadNombre}`;
+  if (registro.tipo === "contacto") return `Seguimiento: ${registro.personaNombre}`;
+  if (registro.tipo === "evidencia") return `Evidencia ${registro.tipoEvidencia} — Guía ${registro.guia}`;
+  return registro.id;
+}
+
+// Badge component
+export function TipoBadge({ tipo, className = "" }: { tipo: TipoRegistro; className?: string }) {
+  const cfg = tipoConfig[tipo];
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color} ${className}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
+      {cfg.label}
+    </span>
+  );
+}
+
+export function EstadoBadge({ estado, className = "" }: { estado: EstadoRegistro; className?: string }) {
+  const cfg = estadoConfig[estado];
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color} ${className}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+export function SeveridadBadge({ severidad }: { severidad: SeveridadIA }) {
+  const cfg = severidadConfig[severidad];
+  return (
+    <span className={`inline-flex items-center gap-1 text-sm font-semibold ${cfg.color}`}>
+      {cfg.icon} {cfg.label}
+    </span>
+  );
+}
+
+export function EstadoPersonaBadge({ estado }: { estado: EstadoPersona }) {
+  const cfg = estadoPersonaConfig[estado];
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+// Avatar inicial
+export function AvatarInicial({ nombre, size = "sm" }: { nombre: string; size?: "sm" | "md" | "lg" }) {
+  const initials = nombre
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+  const sizes = { sm: "w-7 h-7 text-xs", md: "w-9 h-9 text-sm", lg: "w-12 h-12 text-base" };
+  return (
+    <div className={`${sizes[size]} rounded-full bg-coordinadora-blue text-white font-semibold flex items-center justify-center flex-shrink-0`}>
+      {initials}
+    </div>
+  );
+}
