@@ -404,7 +404,7 @@ function RankingIncidentes({ onAbrirPersona, onAbrirVehiculo }: { onAbrirPersona
                 <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-sm flex-shrink-0">🚛</div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">{v.placa}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{v.tipo} · {v.empresa}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{v.tipo}</div>
                 </div>
                 <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${v.estado === "bloqueado" ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-700"}`}>{v.estado === "bloqueado" ? "Bloqueado" : "Activo"}</span>
                 <div className="flex items-center gap-1 flex-shrink-0">
