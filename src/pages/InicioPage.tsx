@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { registros, alertasIA, personas, vehiculos } from "@/data/mockData";
+import { registros, alertasIA, personas, vehiculos, PAISES_REGIONALES, TODAS_TERMINALES, REGIONALES_FLAT } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { TrendingUp, TrendingDown, FileText, AlertTriangle, Clock, CheckCircle, Users, Truck, CalendarIcon, ChevronDown, X } from "lucide-react";
 import { format, isWithinInterval, parseISO, subDays } from "date-fns";
