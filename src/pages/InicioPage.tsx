@@ -1,11 +1,16 @@
-import React from "react";
-import { registros, alertasIA } from "@/data/mockData";
+import React, { useState } from "react";
+import { registros, alertasIA, personas, vehiculos, PAISES_REGIONALES, TODAS_TERMINALES, REGIONALES_FLAT } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
-import { TipoBadge, EstadoBadge, descripcionCorta, SeveridadBadge } from "@/lib/utils-app";
-import { FolderOpen, Clock, Search, Bot, ChevronRight } from "lucide-react";
-import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { TipoBadge, EstadoBadge, descripcionCorta } from "@/lib/utils-app";
+import { FolderOpen, Clock, Search, Bot, ChevronRight, Users, Truck } from "lucide-react";
+import { format, parseISO, isWithinInterval, subDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { AlertaIA } from "@/types";
+import type { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, X, ChevronDown } from "lucide-react";
 
 // ── KPI card ──────────────────────────────────────────────────────────────────
 
