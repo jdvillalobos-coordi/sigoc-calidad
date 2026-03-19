@@ -16,18 +16,13 @@ function pct(a: number, b: number) {
   return Math.round((a / b) * 100);
 }
 
-const REGIONALES: Record<string, string[]> = {
-  "Centro":    ["Bogotá"],
-  "Sur":       ["Cali", "Pereira"],
-  "Oriente":   ["Bucaramanga", "Cartagena"],
-  "Occidente": ["Medellín"],
-  "México":    ["México"],
-};
-
-const TODAS_TERMINALES = Object.values(REGIONALES).flat().sort();
-
 function regionalDeTerminal(terminal: string): string {
-  return Object.entries(REGIONALES).find(([, ts]) => ts.includes(terminal))?.[0] ?? "Otras";
+  for (const [, regionales] of Object.entries(PAISES_REGIONALES)) {
+    for (const [regional, terminalesList] of Object.entries(regionales)) {
+      if (terminalesList.includes(terminal)) return regional;
+    }
+  }
+  return "Otras";
 }
 
 // ── sub-componentes ───────────────────────────────────────────────────────────
