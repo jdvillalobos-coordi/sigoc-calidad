@@ -636,7 +636,8 @@ export const registros: Registro[] = [
     observaciones: "Guía 19900293003 reportada con faltante parcial en destino Barranquilla.",
     anotaciones: [
       { id: "a20", autorId: "u-lucia", autorNombre: "Lucía Gómez", autorRol: "Agente de Soporte Logístico", fecha: "2025-12-02T11:00:00", texto: "Verificación inicial realizada. No hay evidencia en bodega de Cali.", tipo: "hallazgo_investigacion" },
-      { id: "a21", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2025-12-10T10:00:00", texto: "Sin respuesta del terminal destino. Caso escala a coordinación.", tipo: "nota_interna" },
+  { id: "a21", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor de Faltantes", fecha: "2025-12-10T10:00:00", texto: "Sin respuesta del terminal destino. Caso escala a coordinación.", tipo: "nota_interna" },
+      { id: "a22", autorId: "u-nicolas", autorNombre: "Nicolás Ríos Castaño", autorRol: "Contralor Nacional de Calidad", fecha: "2025-12-15T09:00:00", texto: "Revisado en comité semanal. Tendencia confirmada en Barranquilla. Solicitar auditoría presencial si no se resuelve antes del viernes.", tipo: "nota_interna" },
     ],
     historial: [
       { id: "h20", fecha: "2025-12-01T08:00:00", usuarioNombre: "Ana Martínez", accion: "Creó el registro" },
