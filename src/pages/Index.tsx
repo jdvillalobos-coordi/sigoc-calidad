@@ -1,16 +1,45 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React, { useState } from "react";
+import { AppProvider, useApp } from "@/context/AppContext";
+import { AppLayout } from "@/components/layout/AppLayout";
+import InicioPage from "@/pages/InicioPage";
+import RegistrosPage from "@/pages/RegistrosPage";
+import BusquedaPage from "@/pages/BusquedaPage";
+import IAPage from "@/pages/IAPage";
+import ConfiguracionPage from "@/pages/ConfiguracionPage";
+import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer } from "@/components/drawers/Drawers";
+import NewRecordForm from "@/components/forms/NewRecordForm";
+import { Toaster } from "@/components/ui/toaster";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+function AppContent() {
+  const { paginaActiva, drawer, nuevaRegistroAbierto, setNuevaRegistroAbierto } = useApp();
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <AppLayout>
+      <div className="h-full overflow-hidden">
+        {paginaActiva === "inicio" && <InicioPage />}
+        {paginaActiva === "registros" && <RegistrosPage />}
+        {paginaActiva === "busqueda" && <BusquedaPage />}
+        {paginaActiva === "ia" && <IAPage />}
+        {paginaActiva === "configuracion" && <ConfiguracionPage />}
+      </div>
+
+      {/* Drawers */}
+      {drawer.tipo === "registro" && <RecordDetailDrawer />}
+      {drawer.tipo === "persona360" && <Persona360Drawer />}
+      {drawer.tipo === "vehiculo360" && <Vehiculo360Drawer />}
+      {drawer.tipo === "guia360" && <Guia360Drawer />}
+
+      {/* Formulario nuevo registro */}
+      {nuevaRegistroAbierto && <NewRecordForm onClose={() => setNuevaRegistroAbierto(false)} />}
+    </AppLayout>
   );
-};
+}
 
-const Index = PlaceholderIndex;
-
-export default Index;
+export default function Index() {
+  return (
+    <AppProvider>
+      <AppContent />
+      <Toaster />
+    </AppProvider>
+  );
+}
