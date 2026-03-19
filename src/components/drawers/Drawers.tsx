@@ -169,6 +169,8 @@ export function RecordDetailDrawer() {
                   <div className="text-xs text-muted-foreground mb-0.5">{l}</div>
                   {l === "Guía" ? (
                     <button onClick={() => abrirGuia(v!)} className="text-sm font-medium text-coordinadora-blue font-mono hover:underline">{v}</button>
+                  ) : l === "Terminal" ? (
+                    <button onClick={() => abrirTerminal(v!)} className="text-sm font-medium text-coordinadora-blue hover:underline">{v}</button>
                   ) : (
                     <div className="text-sm font-medium">{v}</div>
                   )}
