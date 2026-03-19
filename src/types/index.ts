@@ -111,6 +111,38 @@ export interface RegistroBase {
   diasAbierto: number;
 }
 
+// ---- Stepper de investigación ----
+export type EtapaInvestigacion = "identificacion" | "investigacion" | "verificacion" | "resolucion";
+
+export interface CheckpointGuia {
+  nombre: string;
+  fecha?: string;
+  terminal: string;
+  responsable?: string;
+  esAnomalía?: boolean;
+}
+
+export interface EtapaData {
+  completada: boolean;
+  fechaCompletado?: string;
+  responsableNombre?: string;
+  causaRaiz?: string;
+  detalleInvestigacion?: string;
+  estadoVerificacion?: "encontrada" | "no_encontrada" | "dañada" | "pendiente";
+  terminalVerificacion?: string;
+  fuentesVerificacion?: string[];
+  observacionesAgente?: string;
+  tipoResolucion?: string;
+  codigoLegalizacion?: string;
+  observacionesFinales?: string;
+}
+
+export interface StepperInvestigacion {
+  etapaActiva: EtapaInvestigacion;
+  etapas: Record<EtapaInvestigacion, EtapaData>;
+  checkpoints?: CheckpointGuia[];
+}
+
 // ---- Tipos específicos ----
 export interface RegistroFaltante extends RegistroBase {
   tipo: "faltante";
@@ -122,6 +154,7 @@ export interface RegistroFaltante extends RegistroBase {
   unidadesRecuperadas: boolean;
   detalleUnidades?: string;
   clienteNoDespacha: boolean;
+  stepper?: StepperInvestigacion;
 }
 
 export interface RegistroEvento extends RegistroBase {
