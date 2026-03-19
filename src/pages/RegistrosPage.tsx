@@ -108,7 +108,7 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 
 // ── RegistrosPage ───────────────────────────────────────────────────────────
 export default function RegistrosPage() {
-  const { abrirRegistro, setNuevaRegistroAbierto, busquedaQuery } = useApp();
+  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery } = useApp();
   const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro] = useState<string>("todos");
   const [paisFiltro, setPaisFiltro] = useState("todos");
@@ -317,7 +317,14 @@ export default function RegistrosPage() {
                 <td className="px-4 py-3 max-w-xs">
                   <span className="truncate block text-foreground">{descripcionCorta(r)}</span>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{r.terminal}</td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); abrirTerminal(r.terminal); }}
+                    className="text-sm text-coordinadora-blue hover:underline font-medium"
+                  >
+                    {r.terminal}
+                  </button>
+                </td>
                 <td className="px-4 py-3"><EstadoBadge estado={r.estado} /></td>
                 <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[120px]">{r.responsableNombre}</td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">{r.fecha}</td>

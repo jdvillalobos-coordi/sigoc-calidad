@@ -5,7 +5,7 @@ import InicioPage from "@/pages/InicioPage";
 import RegistrosPage from "@/pages/RegistrosPage";
 import IAPage from "@/pages/IAPage";
 import ConfiguracionPage from "@/pages/ConfiguracionPage";
-import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer } from "@/components/drawers/Drawers";
+import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer, Terminal360Drawer } from "@/components/drawers/Drawers";
 import NewRecordForm from "@/components/forms/NewRecordForm";
 import { Toaster } from "@/components/ui/toaster";
 import LoginPage from "@/pages/LoginPage";
@@ -22,10 +22,11 @@ function AppContent() {
         {paginaActiva === "configuracion"  && <ConfiguracionPage />}
       </div>
 
-      {drawer.tipo === "registro"   && <RecordDetailDrawer />}
-      {drawer.tipo === "persona360" && <Persona360Drawer />}
-      {drawer.tipo === "vehiculo360"&& <Vehiculo360Drawer />}
-      {drawer.tipo === "guia360"    && <Guia360Drawer />}
+      {drawer.tipo === "registro"    && <RecordDetailDrawer />}
+      {drawer.tipo === "persona360"  && <Persona360Drawer />}
+      {drawer.tipo === "vehiculo360" && <Vehiculo360Drawer />}
+      {drawer.tipo === "guia360"     && <Guia360Drawer />}
+      {drawer.tipo === "terminal360" && <Terminal360Drawer />}
 
       {nuevaRegistroAbierto && <NewRecordForm onClose={() => setNuevaRegistroAbierto(false)} />}
     </AppLayout>

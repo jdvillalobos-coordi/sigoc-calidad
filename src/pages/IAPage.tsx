@@ -11,7 +11,7 @@ const METRICAS = [
 ];
 
 export default function IAPage() {
-  const { abrirPersona, abrirVehiculo, abrirRegistro } = useApp();
+  const { abrirPersona, abrirVehiculo, abrirRegistro, abrirTerminal } = useApp();
   const [filtroSeveridad, setFiltroSeveridad] = useState("todos");
   const [filtroTipo, setFiltroTipo] = useState("todos");
   const [filtroEstado, setFiltroEstado] = useState("todos");
@@ -111,6 +111,7 @@ export default function IAPage() {
                         onClick={() => {
                           if (e.tipo === "persona") abrirPersona(e.id);
                           else if (e.tipo === "vehiculo") abrirVehiculo(e.id);
+                          else if (e.tipo === "terminal") abrirTerminal(e.nombre);
                         }}
                       >
                         {e.nombre}

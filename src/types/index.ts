@@ -281,7 +281,7 @@ export interface UsuarioApp {
 
 // ---- Navegación ----
 export type PaginaActiva = "inicio" | "registros" | "ia" | "configuracion";
-export type DrawerTipo = "registro" | "persona360" | "vehiculo360" | "guia360" | null;
+export type DrawerTipo = "registro" | "persona360" | "vehiculo360" | "guia360" | "terminal360" | null;
 
 export interface DrawerState {
   tipo: DrawerTipo;
