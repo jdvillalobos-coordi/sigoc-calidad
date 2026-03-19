@@ -780,7 +780,7 @@ export const registros: Registro[] = [
     nysAsociado: "NYS-2026-00531",
     stepper: mkStepper("verificacion", {
       investigacion: { completada: true, fechaCompletado: "2026-02-11T10:00:00", responsableNombre: "Jorge Castaño", causaRaiz: "Robo / Hurto", detalleInvestigacion: "Tercer faltante con mismo perfil. Patrón claro de reincidencia. Solicitud de revisión RRHH enviada." },
-      verificacion:  { completada: false, estadoVerificacion: "no_encontrada", observacionesAgente: "Revisión física en bodega completada. Unidad no localizada. CCTV en proceso de análisis." },
+      verificacion:  { completada: false, estadoVerificacion: "no_encontrada", observacionesAgente: "Revisión física en bodega completada. Unidad no localizada. CCTV en proceso de análisis.", cctvRevisado: true, cctvTerminal: "Medellín", cctvTiposRevision: ["Faltantes", "Activos Fijos CM"], cctvHallazgo: "Cámara bodega noche: se observa a Carlos Pérez cerca de la zona de empaque aproximadamente a las 23:40h. Imagen de baja resolución pero identificable por chaleco.", cctvReferencia: "CAM-BOD-MED-02-20260210", cctvConclusion: "confirma" },
     }),
   } as RegistroFaltante,
 
