@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { alertasIA, registros } from "@/data/mockData";
-import { SeveridadBadge, TipoBadge, EstadoBadge, descripcionCorta } from "@/lib/utils-app";
+import { alertasIA } from "@/data/mockData";
+import { SeveridadBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import type { AlertaIA } from "@/types";
 

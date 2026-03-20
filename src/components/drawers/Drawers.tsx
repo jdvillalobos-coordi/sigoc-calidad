@@ -1,81 +1,61 @@
 import React, { useState } from "react";
-import { registros, personas, vehiculos, guias, getPersona, getVehiculo, getRegistrosPorGuia, getRegistrosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES } from "@/data/mockData";
-import { TipoBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, tipoConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES } from "@/data/mockData";
+import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight } from "lucide-react";
-import type { Registro, EstadoRegistro, RegistroFaltante, StepperInvestigacion } from "@/types";
+import type { Evento, EstadoEvento } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import { InvestigacionStepper } from "@/components/drawers/InvestigacionStepper";
-import type { StepperState } from "@/components/drawers/InvestigacionStepper";
-
-// ── Stepper state helpers ─────────────────────────────────────────────────────
-
-function mkDefaultStepper(): StepperState {
-  return {
-    etapaActiva: "identificacion",
-    etapas: {
-      identificacion: { completada: true,  fechaCompletado: new Date().toISOString(), responsableNombre: "Sandra Herrera" },
-      investigacion:  { completada: false },
-      verificacion:   { completada: false },
-      resolucion:     { completada: false },
-    },
-  };
-}
-
-function sigoStepperToLocal(s: StepperInvestigacion): StepperState {
-  return {
-    etapaActiva: s.etapaActiva,
-    etapas: s.etapas as StepperState["etapas"],
-    checkpoints: s.checkpoints,
-  };
-}
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
   const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto } = useApp();
-  const [editando, setEditando] = useState(false);
-  const [localRegistros, setLocalRegistros] = useState(registros);
+  const [localEventos, setLocalEventos] = useState(eventos);
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");
-  const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo_investigacion");
-  const [stepperLocalState, setStepperLocalState] = useState<StepperState | null>(null);
+  const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo");
+  const [complementando, setComplementando] = useState(false);
+  const [complementoTexto, setComplementoTexto] = useState("");
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
-  const reg = localRegistros.find((r) => r.id === drawer.id);
-  if (!reg) return null;
+  const ev = localEventos.find((e) => e.id === drawer.id);
+  if (!ev) return null;
 
-  const esFaltanteOPosventa = reg.tipo === "faltante" || reg.tipo === "posventa";
-  const faltanteReg = esFaltanteOPosventa && reg.tipo === "faltante" ? (reg as RegistroFaltante) : null;
+  const relacionados = getEventosRelacionados(ev.id);
 
-  // Inicializar stepper desde los datos del registro si no está en estado local
-  const initStepper = (): StepperState => {
-    if (faltanteReg?.stepper) return sigoStepperToLocal(faltanteReg.stepper);
-    return mkDefaultStepper();
-  };
-
-  const currentStepper = stepperLocalState ?? initStepper();
-
-  const relacionados = getRegistrosRelacionados(reg.id);
-  const guiaNum = "guia" in reg ? (reg as any).guia : null;
-
-  function cambiarEstado(nuevoEstado: EstadoRegistro) {
-    const prev = estadoConfig[reg!.estado].label;
-    setLocalRegistros((lst) =>
-      lst.map((r) => r.id === reg!.id ? { ...r, estado: nuevoEstado, historial: [...r.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Cambió estado de '${prev}' a '${estadoConfig[nuevoEstado].label}'` }] } : r)
+  function cambiarEstado(nuevoEstado: EstadoEvento) {
+    const prev = estadoConfig[ev!.estado].label;
+    setLocalEventos((lst) =>
+      lst.map((e) => e.id === ev!.id ? {
+        ...e, estado: nuevoEstado,
+        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Cambió estado de '${prev}' a '${estadoConfig[nuevoEstado].label}'` }]
+      } : e)
     );
     toast({ title: `✅ Estado actualizado a "${estadoConfig[nuevoEstado].label}"` });
   }
 
   function agregarAnotacion() {
     if (!nuevaAnotacion.trim()) return;
-    setLocalRegistros((lst) =>
-      lst.map((r) => r.id === reg!.id ? {
-        ...r,
-        anotaciones: [...r.anotaciones, { id: `a${Date.now()}`, autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Coordinadora Nacional de Calidad", fecha: new Date().toISOString(), texto: nuevaAnotacion, tipo: tipoAnotacion as any }]
-      } : r)
+    setLocalEventos((lst) =>
+      lst.map((e) => e.id === ev!.id ? {
+        ...e,
+        anotaciones: [...e.anotaciones, { id: `a${Date.now()}`, autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Coordinadora Nacional de Calidad", fecha: new Date().toISOString(), texto: nuevaAnotacion, tipo: tipoAnotacion as any }]
+      } : e)
     );
     setNuevaAnotacion("");
     toast({ title: "✅ Anotación agregada" });
+  }
+
+  function guardarComplemento() {
+    if (!complementoTexto.trim()) return;
+    setLocalEventos((lst) =>
+      lst.map((e) => e.id === ev!.id ? {
+        ...e,
+        anotaciones: [...e.anotaciones, { id: `a${Date.now()}`, autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Coordinadora Nacional de Calidad", fecha: new Date().toISOString(), texto: complementoTexto, tipo: "hallazgo" as any }]
+      } : e)
+    );
+    setComplementoTexto("");
+    setComplementando(false);
+    toast({ title: "✅ Hallazgo agregado a la investigación" });
   }
 
   return (
@@ -86,16 +66,17 @@ export function RecordDetailDrawer() {
         <div className="border-b border-border px-6 py-4 flex items-start justify-between gap-4 flex-shrink-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <TipoBadge tipo={reg.tipo} />
-              <span className="font-mono text-sm font-bold">{reg.id}</span>
+              <CategoriaBadge categoria={ev.categoria} />
+              <span className="font-mono text-sm font-bold">{ev.id}</span>
             </div>
-            <p className="font-semibold text-base">{descripcionCorta(reg)}</p>
+            <p className="font-semibold text-base">{ev.tipoEvento}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{ev.descripcionHechos}</p>
           </div>
           <div className="flex items-center gap-2">
             <select
-              value={reg.estado}
-              onChange={(e) => cambiarEstado(e.target.value as EstadoRegistro)}
-              className={`text-xs px-2 py-1 rounded-full border font-medium focus:outline-none cursor-pointer ${estadoConfig[reg.estado].color}`}
+              value={ev.estado}
+              onChange={(e) => cambiarEstado(e.target.value as EstadoEvento)}
+              className={`text-xs px-2 py-1 rounded-full border font-medium focus:outline-none cursor-pointer ${estadoConfig[ev.estado].color}`}
             >
               {Object.entries(estadoConfig).map(([k, v]) => (
                 <option key={k} value={k}>{v.label}</option>
@@ -110,72 +91,53 @@ export function RecordDetailDrawer() {
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
 
-          {/* ── STEPPER DE INVESTIGACIÓN (solo Faltante y Posventa) ── */}
-          {esFaltanteOPosventa && (
+          {/* Eventos asociados */}
+          {ev.eventosAsociados && ev.eventosAsociados.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-primary inline-block" />
-                Flujo de investigación
-              </h3>
-              <InvestigacionStepper
-                stepperState={currentStepper}
-                onStepperChange={(s) => setStepperLocalState(s)}
-                onCerrarCaso={() => {
-                  setLocalRegistros((lst) =>
-                    lst.map((r) => r.id === reg!.id ? {
-                      ...r,
-                      estado: "cerrado" as const,
-                      historial: [...r.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: "Cerró el caso desde el stepper de resolución" }]
-                    } : r)
-                  );
-                  setStepperLocalState((prev) => prev ? {
-                    ...prev,
-                    etapas: {
-                      ...prev.etapas,
-                      resolucion: { ...prev.etapas.resolucion, completada: true, fechaCompletado: new Date().toISOString() }
-                    }
-                  } : null);
-                  toast({ title: "✅ Caso cerrado exitosamente" });
-                }}
-                onCrearPosventa={() => {
-                  setNuevaRegistroAbierto(true);
-                  toast({ title: "📋 Abriendo formulario de Posventa..." });
-                }}
-              />
+              <h3 className="text-sm font-semibold mb-2">🔗 Eventos asociados</h3>
+              <div className="flex flex-wrap gap-2">
+                {ev.eventosAsociados.map((id) => (
+                  <button key={id} onClick={() => abrirRegistro(id)} className="text-xs font-mono px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                    {id}
+                  </button>
+                ))}
+              </div>
             </section>
           )}
 
           {/* Info principal */}
           <section>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">Información del registro</h3>
-              <button onClick={() => setEditando(!editando)} className="text-xs text-coordinadora-blue hover:underline">
-                {editando ? "Cancelar" : "Editar"}
-              </button>
-            </div>
+            <h3 className="text-sm font-semibold mb-3">Información del evento</h3>
             <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
               {[
-                ["Terminal", reg.terminal],
-                ["Fecha", formatDate(reg.fecha)],
-                ["Responsable", reg.responsableNombre],
-                ["Días abierto", `${reg.diasAbierto} días`],
-                ...(guiaNum ? [["Guía", guiaNum]] : []),
-                ...(("codigoNovedad" in reg) ? [["Código novedad", (reg as any).codigoNovedad]] : []),
-                ...(("nysAsociado" in reg && (reg as any).nysAsociado) ? [["NyS asociado", (reg as any).nysAsociado]] : []),
-                ...(("tipoEvento" in reg) ? [["Tipo de evento", (reg as any).tipoEvento]] : []),
-                ...(("valorRecaudo" in reg) ? [["Valor recaudo", formatCurrency((reg as any).valorRecaudo)]] : []),
-                ...(("porcentajeCobro" in reg && (reg as any).porcentajeCobro !== undefined) ? [["% Cobro", `${(reg as any).porcentajeCobro}%`]] : []),
-                ...(("requerimiento" in reg) ? [["Requerimiento", (reg as any).requerimiento]] : []),
+                ["Categoría", categoriaConfig[ev.categoria].label],
+                ["Tipo de evento", ev.tipoEvento],
+                ["Tipo entidad", ev.tipoEntidad],
+                ["Terminal", ev.terminal],
+                ["Ciudad", ev.ciudad],
+                ...(ev.regional ? [["Regional", ev.regional]] : []),
+                ["Fecha", formatDate(ev.fecha)],
+                ...(ev.hora ? [["Hora", ev.hora]] : []),
+                ["Días abierto", `${ev.diasAbierto} días`],
+                ...(ev.fuenteExterna ? [["Fuente", ev.fuenteExterna]] : []),
+                ...(ev.valorAfectacion ? [["Valor afectación", formatCurrency(ev.valorAfectacion)]] : []),
+                ...(ev.codigoNovedad ? [["Código novedad", ev.codigoNovedad]] : []),
+                ...(ev.gravedadFalta ? [["Gravedad falta", ev.gravedadFalta]] : []),
+                ...(ev.decisionGH ? [["Decisión GH", ev.decisionGH]] : []),
+                ...(ev.rolSolicitante ? [["Rol solicitante", ev.rolSolicitante]] : []),
+                ...(ev.nitCliente ? [["NIT cliente", ev.nitCliente]] : []),
+                ...(ev.nombreCliente ? [["Nombre cliente", ev.nombreCliente]] : []),
+                ...(ev.resultadoIA ? [["Resultado IA", ev.resultadoIA]] : []),
+                ...(ev.veredictoOperador ? [["Veredicto operador", ev.veredictoOperador]] : []),
+                ...(ev.direccion ? [["Dirección", ev.direccion]] : []),
               ].map(([l, v]) => (
                 <div key={l}>
                   <div className="text-xs text-muted-foreground mb-0.5">{l}</div>
-                  {l === "Guía" ? (
-                    <button onClick={() => abrirGuia(v!)} className="text-sm font-medium text-coordinadora-blue font-mono hover:underline">{v}</button>
-                  ) : l === "Terminal" ? (
+                  {l === "Terminal" ? (
                     <button onClick={() => abrirTerminal(v!)} className="text-sm font-medium text-coordinadora-blue hover:underline">{v}</button>
                   ) : l === "Días abierto" ? (
                     <div className="text-sm font-medium flex items-center gap-1">
-                      {reg.estado !== "cerrado" && reg.diasAbierto > 30 ? "🔴 " : reg.estado !== "cerrado" && reg.diasAbierto > 3 ? "⏰ " : ""}{v}
+                      {ev.estado !== "cerrado" && ev.diasAbierto > 30 ? "🔴 " : ev.estado !== "cerrado" && ev.diasAbierto > 3 ? "⏰ " : ""}{v}
                     </div>
                   ) : (
                     <div className="text-sm font-medium">{v}</div>
@@ -183,20 +145,42 @@ export function RecordDetailDrawer() {
                 </div>
               ))}
             </div>
-            {reg.observaciones && (
-              <div className="mt-3 bg-muted/40 rounded-xl p-4">
-                <div className="text-xs text-muted-foreground mb-1">Observaciones</div>
-                <p className="text-sm">{reg.observaciones}</p>
+
+            {/* Descripción de hechos */}
+            <div className="mt-3 bg-muted/40 rounded-xl p-4">
+              <div className="text-xs text-muted-foreground mb-1">Descripción de los hechos</div>
+              <p className="text-sm leading-relaxed">{ev.descripcionHechos}</p>
+            </div>
+
+            {/* Justificación operador */}
+            {ev.justificacionOperador && (
+              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="text-xs text-muted-foreground mb-1">Justificación operador</div>
+                <p className="text-sm">{ev.justificacionOperador}</p>
               </div>
             )}
           </section>
 
-          {/* Personas vinculadas */}
-          {reg.personasVinculadas && reg.personasVinculadas.length > 0 && (
+          {/* Guías */}
+          {ev.guias && ev.guias.length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold mb-3">Personas vinculadas ({reg.personasVinculadas.length})</h3>
+              <h3 className="text-sm font-semibold mb-2">Guías asociadas ({ev.guias.length})</h3>
+              <div className="flex flex-wrap gap-2">
+                {ev.guias.map((g) => (
+                  <button key={g} onClick={() => abrirGuia(g)} className="text-sm font-mono px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors text-coordinadora-blue">
+                    📦 {g}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Personas responsables */}
+          {ev.personasResponsables.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold mb-3">Personas responsables ({ev.personasResponsables.length})</h3>
               <div className="space-y-2">
-                {reg.personasVinculadas.map((pv) => {
+                {ev.personasResponsables.map((pv) => {
                   const p = getPersona(pv.personaId);
                   if (!p) return null;
                   return (
@@ -210,9 +194,35 @@ export function RecordDetailDrawer() {
                         <div className="font-medium text-sm">{p.nombre}</div>
                         <div className="text-xs text-muted-foreground">CC {p.cedula} · {p.cargo}</div>
                       </div>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                        {pv.rol === "responsable" ? "Responsable" : "Involucrado"}
-                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Responsable</span>
+                      <EstadoPersonaBadge estado={p.estado} />
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Personas participantes */}
+          {ev.personasParticipantes.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold mb-3">Personas participantes ({ev.personasParticipantes.length})</h3>
+              <div className="space-y-2">
+                {ev.personasParticipantes.map((pv) => {
+                  const p = getPersona(pv.personaId);
+                  if (!p) return null;
+                  return (
+                    <button
+                      key={pv.personaId}
+                      onClick={() => abrirPersona(p.id)}
+                      className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted transition-colors"
+                    >
+                      <AvatarInicial nombre={p.nombre} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm">{p.nombre}</div>
+                        <div className="text-xs text-muted-foreground">CC {p.cedula} · {p.cargo}</div>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Participante</span>
                       <EstadoPersonaBadge estado={p.estado} />
                     </button>
                   );
@@ -222,11 +232,11 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Vehículos vinculados */}
-          {reg.vehiculosVinculados && reg.vehiculosVinculados.length > 0 && (
+          {ev.vehiculosVinculados && ev.vehiculosVinculados.length > 0 && (
             <section>
               <h3 className="text-sm font-semibold mb-3">Vehículos vinculados</h3>
               <div className="space-y-2">
-                {reg.vehiculosVinculados.map((vv) => {
+                {ev.vehiculosVinculados.map((vv) => {
                   const v = getVehiculo(vv.vehiculoId);
                   if (!v) return null;
                   return (
@@ -243,40 +253,62 @@ export function RecordDetailDrawer() {
             </section>
           )}
 
+          {/* Complementar investigación */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">Complementar investigación</h3>
+              {!complementando && (
+                <button onClick={() => setComplementando(true)} className="text-xs px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium">
+                  + Complementar investigación
+                </button>
+              )}
+            </div>
+            {complementando && (
+              <div className="border border-primary/30 rounded-xl p-4 bg-primary/5 space-y-3">
+                <textarea
+                  value={complementoTexto}
+                  onChange={(e) => setComplementoTexto(e.target.value)}
+                  className="w-full text-sm bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  rows={3}
+                  placeholder="Describe los nuevos hechos o hallazgos encontrados en la investigación..."
+                />
+                <div className="flex gap-2">
+                  <button onClick={guardarComplemento} disabled={!complementoTexto.trim()} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors">
+                    Guardar hallazgo
+                  </button>
+                  <button onClick={() => { setComplementando(false); setComplementoTexto(""); }} className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+
           {/* Timeline seguimiento */}
           <section>
-            <h3 className="text-sm font-semibold mb-3">Timeline de seguimiento ({reg.anotaciones.length})</h3>
-            {reg.anotaciones.length === 0 ? (
+            <h3 className="text-sm font-semibold mb-3">Timeline de seguimiento ({ev.anotaciones.length})</h3>
+            {ev.anotaciones.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">Sin anotaciones aún.</p>
             ) : (
               <div className="space-y-3 mb-4">
-                {[...reg.anotaciones].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((a) => {
+                {[...ev.anotaciones].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((a) => {
                   const tipoIcono: Record<string, string> = {
-                    hallazgo_investigacion: "🔍",
-                    hallazgo_campo: "👁️",
-                    validacion_evidencia: "📋",
-                    resolucion: "✅",
-                    nota_interna: "📝",
                     hallazgo: "🔍",
                     seguimiento: "📝",
+                    resolucion: "✅",
+                    nota_interna: "📝",
                   };
                   const tipoLabel: Record<string, string> = {
-                    hallazgo_investigacion: "Hallazgo de investigación",
-                    hallazgo_campo: "Hallazgo de campo",
-                    validacion_evidencia: "Validación de evidencia",
-                    resolucion: "Resolución",
-                    nota_interna: "Nota interna",
                     hallazgo: "Hallazgo",
                     seguimiento: "Seguimiento",
+                    resolucion: "Resolución",
+                    nota_interna: "Nota interna",
                   };
                   const tipoColor: Record<string, string> = {
-                    hallazgo_investigacion: "bg-amber-100 text-amber-700",
-                    hallazgo_campo: "bg-blue-100 text-blue-700",
-                    validacion_evidencia: "bg-purple-100 text-purple-700",
-                    resolucion: "bg-green-100 text-green-700",
-                    nota_interna: "bg-gray-100 text-gray-600",
                     hallazgo: "bg-amber-100 text-amber-700",
                     seguimiento: "bg-blue-100 text-blue-700",
+                    resolucion: "bg-green-100 text-green-700",
+                    nota_interna: "bg-gray-100 text-gray-600",
                   };
                   return (
                     <div key={a.id} className="flex gap-3">
@@ -308,11 +340,10 @@ export function RecordDetailDrawer() {
               />
               <div className="flex items-center gap-2 mt-2">
                 <select value={tipoAnotacion} onChange={(e) => setTipoAnotacion(e.target.value)} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none">
-                  <option value="hallazgo_investigacion">🔍 Hallazgo de investigación</option>
-                  <option value="hallazgo_campo">👁️ Hallazgo de campo</option>
-                  <option value="validacion_evidencia">📋 Validación de evidencia</option>
+                  <option value="seguimiento">📝 Seguimiento</option>
+                  <option value="hallazgo">🔍 Hallazgo</option>
                   <option value="resolucion">✅ Resolución</option>
-                  <option value="nota_interna">📝 Nota interna</option>
+                  <option value="nota_interna">🔒 Nota interna</option>
                 </select>
                 <button onClick={agregarAnotacion} disabled={!nuevaAnotacion.trim()} className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors">
                   Agregar
@@ -325,7 +356,7 @@ export function RecordDetailDrawer() {
           <section>
             <h3 className="text-sm font-semibold mb-3">Historial de cambios</h3>
             <div className="space-y-1.5">
-              {[...reg.historial].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((h) => (
+              {[...ev.historial].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((h) => (
                 <div key={h.id} className="flex items-start gap-3 text-xs text-muted-foreground">
                   <span className="flex-shrink-0 w-32">{formatDateTime(h.fecha)}</span>
                   <span className="font-medium text-foreground/70">{h.usuarioNombre}</span>
@@ -337,21 +368,34 @@ export function RecordDetailDrawer() {
 
           {/* Relacionados */}
           <section>
-            <h3 className="text-sm font-semibold mb-3">Registros relacionados ({relacionados.length})</h3>
+            <h3 className="text-sm font-semibold mb-3">Eventos relacionados ({relacionados.length})</h3>
             {relacionados.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">No se encontraron registros relacionados.</p>
+              <p className="text-sm text-muted-foreground italic">No se encontraron eventos relacionados.</p>
             ) : (
               <div className="space-y-2">
                 {relacionados.map((r) => (
                   <button key={r.id} onClick={() => abrirRegistro(r.id)} className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted transition-colors">
-                    <TipoBadge tipo={r.tipo} />
+                    <CategoriaBadge categoria={r.categoria} />
                     <span className="font-mono text-xs text-muted-foreground">{r.id}</span>
-                    <span className="text-sm flex-1 truncate">{descripcionCorta(r)}</span>
+                    <span className="text-sm flex-1 truncate">{r.tipoEvento}</span>
                     <EstadoBadge estado={r.estado} />
                   </button>
                 ))}
               </div>
             )}
+          </section>
+
+          {/* Registro por */}
+          <section>
+            <h3 className="text-sm font-semibold mb-2">Registrado por</h3>
+            <div className="bg-muted/40 rounded-xl p-4 flex items-center gap-3">
+              <AvatarInicial nombre={ev.usuarioRegistro} size="sm" />
+              <div>
+                <div className="text-sm font-medium">{ev.usuarioRegistro}</div>
+                <div className="text-xs text-muted-foreground">{ev.perfilUsuario} · {ev.terminalUsuario}</div>
+                <div className="text-xs text-muted-foreground">{formatDateTime(ev.fechaRegistro)}</div>
+              </div>
+            </div>
           </section>
         </div>
       </div>
@@ -363,46 +407,30 @@ export function RecordDetailDrawer() {
 export function Persona360Drawer() {
   const { drawer, cerrarDrawer, abrirRegistro, abrirTerminal } = useApp();
   const [open, setOpen] = useState<Record<string, boolean>>({
-    faltantes: true, eventos: true, lesivas: true, estudios: true,
-    rce: true, posventa: true, contacto: true, evidencias: true,
+    dineros: true, unidades: true, listas: true, evidencias: true,
+    pqr: true, disciplinarios: true, estudios: true,
   });
 
   if (drawer.tipo !== "persona360" || !drawer.id) return null;
   const persona = personas.find((p) => p.id === drawer.id);
   if (!persona) return null;
 
-  const regsPersona = registros.filter((r) => r.personasVinculadas?.some((pv) => pv.personaId === persona.id));
-  const faltantes  = regsPersona.filter((r) => r.tipo === "faltante");
-  const eventos    = regsPersona.filter((r) => r.tipo === "evento");
-  const lesivas    = regsPersona.filter((r) => r.tipo === "lesiva");
-  const estudios   = estudiosSeguridad.filter((e) => e.personaId === persona.id);
-
-  // RCE vinculados por personasVinculadas
-  const rces = registros.filter(
-    (r) => r.tipo === "rce" && r.personasVinculadas?.some((pv) => pv.personaId === persona.id)
+  const evPersona = eventos.filter((e) =>
+    e.personasResponsables.some((pv) => pv.personaId === persona.id) ||
+    e.personasParticipantes.some((pv) => pv.personaId === persona.id)
   );
+  const evDineros = evPersona.filter((e) => e.categoria === "dineros");
+  const evUnidades = evPersona.filter((e) => e.categoria === "unidades");
+  const evListas = evPersona.filter((e) => e.categoria === "listas_vinculantes");
+  const evEvidencias = evPersona.filter((e) => e.categoria === "proceso_evidencias");
+  const evPQR = persona.tipo === "cliente" && persona.nit
+    ? eventos.filter((e) => e.categoria === "pqr" && e.nitCliente === persona.nit)
+    : evPersona.filter((e) => e.categoria === "pqr");
+  const evDisciplinarios = evPersona.filter((e) => e.categoria === "disciplinarios");
+  const estudios = estudiosSeguridad.filter((e) => e.personaId === persona.id);
 
-  // Posventa: por nitCliente (si cliente) O por personasVinculadas
-  const posventas = registros.filter((r) => {
-    if (r.tipo !== "posventa") return false;
-    const rv = r as any;
-    if (persona.tipo === "cliente" && persona.nit && rv.nitCliente === persona.nit) return true;
-    return r.personasVinculadas?.some((pv) => pv.personaId === persona.id);
-  });
-
-  // Cuadro de contacto: por cedula
-  const contactos = registros.filter(
-    (r) => r.tipo === "contacto" && (r as any).cedula === persona.cedula
-  );
-
-  // Evidencias: guías de posventas del cliente → evidencias de esas guías
-  const guiasCliente = posventas.map((r) => (r as any).guia).filter(Boolean) as string[];
-  const evidencias = persona.tipo === "cliente" && guiasCliente.length > 0
-    ? registros.filter((r) => r.tipo === "evidencia" && guiasCliente.includes((r as any).guia))
-    : [];
-
-  const totalReg = regsPersona.length;
-  const riskScore = Math.min(100, totalReg * 15 + (persona.estado === "bloqueado" ? 40 : persona.estado === "en_seguimiento" ? 20 : 0));
+  const totalEv = evPersona.length;
+  const riskScore = Math.min(100, totalEv * 15 + (persona.estado === "bloqueado" ? 40 : persona.estado === "en_seguimiento" ? 20 : 0));
   const riskColor = riskScore >= 70 ? "bg-red-500" : riskScore >= 40 ? "bg-amber-500" : riskScore >= 20 ? "bg-yellow-400" : "bg-green-500";
   const riskLabel = riskScore >= 70 ? "Alto" : riskScore >= 40 ? "Medio" : riskScore >= 20 ? "Bajo" : "Sin riesgo";
 
@@ -427,6 +455,35 @@ export function Persona360Drawer() {
     );
   }
 
+  function EventosMiniTabla({ evs }: { evs: Evento[] }) {
+    return (
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-muted-foreground border-b border-border">
+            {["ID", "Tipo", "Terminal", "Fecha", "Estado", "Rol"].map((h) => (
+              <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {evs.map((e) => {
+            const esResp = e.personasResponsables.some((pv) => pv.personaId === persona.id);
+            return (
+              <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
+                <td className="py-2 font-mono">{e.id}</td>
+                <td className="py-2 max-w-[120px] truncate">{e.tipoEvento}</td>
+                <td className="py-2">{e.terminal}</td>
+                <td className="py-2">{e.fecha}</td>
+                <td className="py-2"><EstadoBadge estado={e.estado} /></td>
+                <td className="py-2 capitalize">{esResp ? "Responsable" : "Participante"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    );
+  }
+
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={cerrarDrawer} />
@@ -443,7 +500,11 @@ export function Persona360Drawer() {
                 </button>
               </div>
               <div className="mt-1">
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${persona.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200" : persona.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200" : "bg-green-100 text-green-700 border border-green-200"}`}>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                  persona.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200"
+                  : persona.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200"
+                  : "bg-green-100 text-green-700 border border-green-200"
+                }`}>
                   {persona.estado === "bloqueado" ? "🔴 Bloqueado" : persona.estado === "en_seguimiento" ? "🟡 En seguimiento" : "🟢 Sin novedad"}
                 </span>
               </div>
@@ -465,65 +526,89 @@ export function Persona360Drawer() {
               <div className={`h-full rounded-full transition-all ${riskColor}`} style={{ width: `${riskScore}%` }} />
             </div>
             <p className="text-xs text-muted-foreground">
-              {totalReg === 0
-                ? "Esta persona no aparece en ningún evento o registro. Perfil sin novedad."
-                : `Esta persona aparece en ${totalReg} registro${totalReg !== 1 ? "s" : ""} del sistema. ${persona.estado === "en_seguimiento" ? "Se encuentra en cuadro de contacto activo." : persona.estado === "bloqueado" ? "Tiene bloqueo activo. Acceso a operaciones restringido." : "Sin indicadores de riesgo crítico."}`}
+              {totalEv === 0
+                ? "Esta persona no aparece en ningún evento. Perfil sin novedad."
+                : `Esta persona aparece en ${totalEv} evento${totalEv !== 1 ? "s" : ""} del sistema. ${
+                    persona.estado === "en_seguimiento" ? "Se encuentra en cuadro de seguimiento activo."
+                    : persona.estado === "bloqueado" ? "Tiene bloqueo activo. Acceso restringido."
+                    : "Sin indicadores de riesgo crítico."
+                  }`
+              }
             </p>
           </div>
 
-          {/* ── Faltantes ── */}
-          {faltantes.length > 0 && (
-            <Section id="faltantes" title="🔵 Faltantes asociados" count={faltantes.length}>
-              <table className="w-full text-xs">
-                <thead><tr className="text-muted-foreground border-b border-border">{["ID", "Guía", "Terminal", "Fecha", "Estado", "Rol"].map((h) => <th key={h} className="text-left py-1.5 font-semibold">{h}</th>)}</tr></thead>
-                <tbody>{faltantes.map((r) => {
-                  const pv = r.personasVinculadas?.find((pv) => pv.personaId === persona.id);
-                  return (
-                    <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                      <td className="py-2 font-mono">{r.id}</td>
-                      <td className="py-2 font-mono">{(r as any).guia}</td>
-                      <td className="py-2">{r.terminal}</td>
-                      <td className="py-2">{r.fecha}</td>
-                      <td className="py-2"><EstadoBadge estado={r.estado} /></td>
-                      <td className="py-2 capitalize">{pv?.rol}</td>
-                    </tr>
-                  );
-                })}</tbody>
-              </table>
+          {evDineros.length > 0 && (
+            <Section id="dineros" title="💰 Eventos de Dineros" count={evDineros.length} source="SIGO Dineros">
+              <EventosMiniTabla evs={evDineros} />
             </Section>
           )}
-
-          {/* ── Eventos ── */}
-          {eventos.length > 0 && (
-            <Section id="eventos" title="🔴 Eventos asociados" count={eventos.length}>
+          {evUnidades.length > 0 && (
+            <Section id="unidades" title="📦 Eventos de Unidades" count={evUnidades.length} source="SIGO NyS">
+              <EventosMiniTabla evs={evUnidades} />
+            </Section>
+          )}
+          {evListas.length > 0 && (
+            <Section id="listas" title="📋 Listas Vinculantes" count={evListas.length} source="Truora / ClickCloud">
+              <EventosMiniTabla evs={evListas} />
+            </Section>
+          )}
+          {evEvidencias.length > 0 && (
+            <Section id="evidencias" title="📸 Proceso Evidencias" count={evEvidencias.length} source="Módulo Evidencias">
               <table className="w-full text-xs">
-                <thead><tr className="text-muted-foreground border-b border-border">{["ID", "Tipo", "Terminal", "Fecha", "Estado"].map((h) => <th key={h} className="text-left py-1.5 font-semibold">{h}</th>)}</tr></thead>
-                <tbody>{eventos.map((r) => (
-                  <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                    <td className="py-2 font-mono">{r.id}</td>
-                    <td className="py-2">{(r as any).tipoEvento}</td>
-                    <td className="py-2">{r.terminal}</td>
-                    <td className="py-2">{r.fecha}</td>
-                    <td className="py-2"><EstadoBadge estado={r.estado} /></td>
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    {["ID", "Tipo", "Resultado IA", "Veredicto", "Fecha"].map((h) => (
+                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
+                    ))}
                   </tr>
-                ))}</tbody>
+                </thead>
+                <tbody>
+                  {evEvidencias.map((e) => (
+                    <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
+                      <td className="py-2 font-mono">{e.id}</td>
+                      <td className="py-2 max-w-[100px] truncate">{e.tipoEvento}</td>
+                      <td className="py-2">
+                        <span className={`px-1.5 py-0.5 rounded-full font-medium text-[11px] ${e.resultadoIA === "cumple" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                          {e.resultadoIA === "cumple" ? "✅ Cumple" : "❌ No cumple"}
+                        </span>
+                      </td>
+                      <td className="py-2 capitalize">{e.veredictoOperador ?? "—"}</td>
+                      <td className="py-2">{e.fecha}</td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </Section>
           )}
-
-          {/* ── Lesivas ── */}
-          {lesivas.length > 0 && (
-            <Section id="lesivas" title="⚫ Actividades lesivas" count={lesivas.length}>
-              {lesivas.map((r) => (
-                <div key={r.id} className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2 last:mb-0">
-                  <div className="text-xs font-semibold text-red-700 mb-1">{(r as any).motivoBloqueo}</div>
-                  <div className="text-xs text-muted-foreground">Fecha bloqueo: {(r as any).fechaBloqueo} · Caso: <button onClick={() => abrirRegistro(r.id)} className="text-coordinadora-blue underline">{r.id}</button></div>
-                </div>
-              ))}
+          {evPQR.length > 0 && (
+            <Section id="pqr" title="📞 PQR asociadas" count={evPQR.length} source="Clientes / Agente CAL">
+              <EventosMiniTabla evs={evPQR} />
             </Section>
           )}
-
-          {/* ── Estudios de seguridad ── */}
+          {evDisciplinarios.length > 0 && (
+            <Section id="disciplinarios" title="⚖️ Disciplinarios" count={evDisciplinarios.length} source="SuccessFactors / GH">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border">
+                    {["ID", "Tipo falta", "Gravedad", "Decisión GH", "Fecha"].map((h) => (
+                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {evDisciplinarios.map((e) => (
+                    <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
+                      <td className="py-2 font-mono">{e.id}</td>
+                      <td className="py-2 max-w-[120px] truncate">{e.tipoEvento}</td>
+                      <td className="py-2 capitalize">{e.gravedadFalta ?? "—"}</td>
+                      <td className="py-2 max-w-[120px] truncate">{e.decisionGH ?? "Sin decisión"}</td>
+                      <td className="py-2">{e.fecha}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Section>
+          )}
           {estudios.length > 0 && (
             <Section id="estudios" title="🔎 Estudios de seguridad" count={estudios.length}>
               {estudios.map((e) => (
@@ -541,131 +626,11 @@ export function Persona360Drawer() {
             </Section>
           )}
 
-          {/* ── RCE asociados ── */}
-          {rces.length > 0 && (
-            <Section id="rce" title="🟢 RCE asociados" count={rces.length} source="Bitácora Matriz RCE">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-muted-foreground border-b border-border">
-                    {["Guía", "Valor recaudo", "Forma pago", "Estado recaudo", "Terminal"].map((h) => (
-                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rces.map((r) => {
-                    const rv = r as any;
-                    const estadoColor = rv.estadoRecaudo === "pagado"
-                      ? "bg-green-100 text-green-700"
-                      : rv.estadoRecaudo === "en_proceso"
-                      ? "bg-amber-100 text-amber-700"
-                      : "bg-red-100 text-red-700";
-                    return (
-                      <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                        <td className="py-2 font-mono">{rv.guia ?? "—"}</td>
-                        <td className="py-2">{formatCurrency(rv.valorRecaudo)}</td>
-                        <td className="py-2">{rv.formaPago}</td>
-                        <td className="py-2">
-                          <span className={`px-1.5 py-0.5 rounded-full font-medium text-[11px] ${estadoColor}`}>
-                            {rv.estadoRecaudo === "pagado" ? "Pagado" : rv.estadoRecaudo === "en_proceso" ? "En proceso" : "No pagado"}
-                          </span>
-                        </td>
-                        <td className="py-2">{r.terminal}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Section>
-          )}
-
-          {/* ── Solicitudes posventa ── */}
-          {posventas.length > 0 && (
-            <Section id="posventa" title="🟣 Solicitudes posventa" count={posventas.length} source="AppSheet Solicitudes Posventa">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-muted-foreground border-b border-border">
-                    {["Guía", "Requerimiento", "Fecha", "Estado"].map((h) => (
-                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {posventas.map((r) => {
-                    const rv = r as any;
-                    return (
-                      <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                        <td className="py-2 font-mono">{rv.guia ?? "—"}</td>
-                        <td className="py-2 max-w-[160px] truncate">{rv.requerimiento}</td>
-                        <td className="py-2">{r.fecha}</td>
-                        <td className="py-2"><EstadoBadge estado={r.estado} /></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Section>
-          )}
-
-          {/* ── Cuadro de contacto ── */}
-          {contactos.length > 0 && (
-            <Section id="contacto" title="🟡 Cuadro de contacto" count={contactos.length} source="Bitácora Cuadro de Contacto">
-              <div className="space-y-3">
-                {contactos.map((r) => {
-                  const rv = r as any;
-                  const diasSeguimiento = Math.floor((new Date().getTime() - new Date(r.fecha).getTime()) / (1000 * 60 * 60 * 24));
-                  return (
-                    <button
-                      key={r.id}
-                      onClick={() => abrirRegistro(r.id)}
-                      className="w-full text-left bg-amber-50 border border-amber-200 rounded-lg p-3 hover:bg-amber-100 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <span className="text-xs font-semibold text-amber-800">{rv.motivoSeguimiento}</span>
-                        <EstadoBadge estado={r.estado} />
-                      </div>
-                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                        <span>📅 Desde {r.fecha}</span>
-                        <span>⏱ {diasSeguimiento} días en seguimiento</span>
-                        <span className="font-mono text-amber-700">{r.id}</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </Section>
-          )}
-
-          {/* ── Evidencias ── */}
-          {evidencias.length > 0 && (
-            <Section id="evidencias" title="🟠 Evidencias" count={evidencias.length} source="Evidencias - Validación IA">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-muted-foreground border-b border-border">
-                    {["Guía", "Tipo evidencia", "Resultado IA", "Fecha"].map((h) => (
-                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {evidencias.map((r) => {
-                    const rv = r as any;
-                    return (
-                      <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                        <td className="py-2 font-mono">{rv.guia ?? "—"}</td>
-                        <td className="py-2">{rv.tipoEvidencia}</td>
-                        <td className="py-2">
-                          <span className={`px-1.5 py-0.5 rounded-full font-medium text-[11px] ${rv.resultadoIA === "cumple" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                            {rv.resultadoIA === "cumple" ? "✅ Cumple" : "❌ No cumple"}
-                          </span>
-                        </td>
-                        <td className="py-2">{r.fecha}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Section>
+          {totalEv === 0 && estudios.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground">
+              <span className="text-4xl">👤</span>
+              <p className="mt-2 text-sm">Esta persona no tiene eventos registrados.</p>
+            </div>
           )}
         </div>
       </div>
@@ -680,10 +645,8 @@ export function Vehiculo360Drawer() {
   const vehiculo = vehiculos.find((v) => v.id === drawer.id);
   if (!vehiculo) return null;
   const conductor = vehiculo.conductorId ? personas.find((p) => p.id === vehiculo.conductorId) : null;
-  const regsV = registros.filter((r) => r.vehiculosVinculados?.some((vv) => vv.vehiculoId === vehiculo.id));
-  const eventos = regsV.filter((r) => r.tipo === "evento");
-  const lesivas = regsV.filter((r) => r.tipo === "lesiva");
-  const rutas = [...new Set(regsV.flatMap((r) => r.vehiculosVinculados?.filter((vv) => vv.vehiculoId === vehiculo.id && vv.ruta).map((vv) => vv.ruta!) || []))];
+  const evVehiculo = eventos.filter((e) => e.vehiculosVinculados?.some((vv) => vv.vehiculoId === vehiculo.id));
+  const rutas = [...new Set(evVehiculo.flatMap((e) => e.vehiculosVinculados?.filter((vv) => vv.vehiculoId === vehiculo.id && vv.ruta).map((vv) => vv.ruta!) || []))];
 
   return (
     <>
@@ -709,30 +672,34 @@ export function Vehiculo360Drawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {/* IA */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <div className="font-semibold text-sm mb-2">🤖 Análisis de riesgo IA</div>
             <p className="text-xs text-muted-foreground">
-              {regsV.length === 0 ? "Vehículo sin eventos asociados. Perfil limpio." :
-                `Vehículo vinculado a ${regsV.length} registro${regsV.length !== 1 ? "s" : ""}. ${eventos.length > 1 ? `Patrón detectado: ${eventos.length} eventos en rutas diferentes, con conductores distintos. El riesgo podría estar asociado a la ruta, no al conductor.` : "Sin patrones críticos detectados."}`}
+              {evVehiculo.length === 0 ? "Vehículo sin eventos asociados. Perfil limpio." :
+                `Vehículo vinculado a ${evVehiculo.length} evento${evVehiculo.length !== 1 ? "s" : ""}. ${evVehiculo.length > 1 ? `Patrón detectado: ${evVehiculo.length} eventos en rutas diferentes. El riesgo podría estar asociado a la ruta.` : "Sin patrones críticos detectados."}`}
             </p>
           </div>
 
-          {eventos.length > 0 && (
+          {evVehiculo.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">Eventos asociados ({eventos.length})</div>
+              <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">Eventos asociados ({evVehiculo.length})</div>
               <table className="w-full text-xs p-4">
-                <thead className="bg-muted/20"><tr>{["ID", "Tipo evento", "Ruta", "Fecha", "Estado"].map((h) => <th key={h} className="text-left px-4 py-2 font-semibold text-muted-foreground">{h}</th>)}</tr></thead>
+                <thead className="bg-muted/20">
+                  <tr>{["ID", "Categoría", "Tipo evento", "Ruta", "Fecha", "Estado"].map((h) => <th key={h} className="text-left px-4 py-2 font-semibold text-muted-foreground">{h}</th>)}</tr>
+                </thead>
                 <tbody className="divide-y divide-border">
-                  {eventos.map((r) => {
-                    const vv = r.vehiculosVinculados?.find((vv) => vv.vehiculoId === vehiculo.id);
-                    return <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="cursor-pointer hover:bg-muted transition-colors">
-                      <td className="px-4 py-2.5 font-mono">{r.id}</td>
-                      <td className="px-4 py-2.5">{(r as any).tipoEvento}</td>
-                      <td className="px-4 py-2.5">{vv?.ruta || "—"}</td>
-                      <td className="px-4 py-2.5">{r.fecha}</td>
-                      <td className="px-4 py-2.5"><EstadoBadge estado={r.estado} /></td>
-                    </tr>;
+                  {evVehiculo.map((e) => {
+                    const vv = e.vehiculosVinculados?.find((vv) => vv.vehiculoId === vehiculo.id);
+                    return (
+                      <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors">
+                        <td className="px-4 py-2.5 font-mono">{e.id}</td>
+                        <td className="px-4 py-2.5"><CategoriaBadge categoria={e.categoria} /></td>
+                        <td className="px-4 py-2.5 max-w-[120px] truncate">{e.tipoEvento}</td>
+                        <td className="px-4 py-2.5">{vv?.ruta || "—"}</td>
+                        <td className="px-4 py-2.5">{e.fecha}</td>
+                        <td className="px-4 py-2.5"><EstadoBadge estado={e.estado} /></td>
+                      </tr>
+                    );
                   })}
                 </tbody>
               </table>
@@ -744,25 +711,15 @@ export function Vehiculo360Drawer() {
               <div className="font-semibold text-sm mb-3">Rutas involucradas</div>
               <div className="space-y-1.5">
                 {rutas.map((ruta) => {
-                  const cnt = regsV.filter((r) => r.vehiculosVinculados?.some((vv) => vv.vehiculoId === vehiculo.id && vv.ruta === ruta)).length;
-                  return <div key={ruta} className="flex items-center justify-between text-sm bg-muted/40 rounded-lg px-3 py-2">
-                    <span>📍 {ruta}</span>
-                    <span className="text-xs text-muted-foreground">{cnt} vez{cnt !== 1 ? "es" : ""}</span>
-                  </div>;
+                  const cnt = evVehiculo.filter((e) => e.vehiculosVinculados?.some((vv) => vv.vehiculoId === vehiculo.id && vv.ruta === ruta)).length;
+                  return (
+                    <div key={ruta} className="flex items-center justify-between text-sm bg-muted/40 rounded-lg px-3 py-2">
+                      <span>📍 {ruta}</span>
+                      <span className="text-xs text-muted-foreground">{cnt} vez{cnt !== 1 ? "es" : ""}</span>
+                    </div>
+                  );
                 })}
               </div>
-            </div>
-          )}
-
-          {lesivas.length > 0 && (
-            <div className="border border-red-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 bg-red-50 font-semibold text-sm text-red-700">Actividades lesivas</div>
-              {lesivas.map((r) => (
-                <div key={r.id} className="px-4 py-3 text-sm">
-                  <div className="font-medium text-red-700">{(r as any).motivoBloqueo}</div>
-                  <div className="text-xs text-muted-foreground mt-1">Fecha: {(r as any).fechaBloqueo}</div>
-                </div>
-              ))}
             </div>
           )}
         </div>
@@ -777,11 +734,11 @@ export function Guia360Drawer() {
   if (drawer.tipo !== "guia360" || !drawer.id) return null;
   const guia = guias.find((g) => g.numero === drawer.id);
   if (!guia) return null;
-  const regsGuia = getRegistrosPorGuia(guia.numero);
+  const evGuia = getEventosPorGuia(guia.numero);
 
-  const timeline = regsGuia.flatMap((r) => [
-    { fecha: r.fecha, texto: `${tipoConfig[r.tipo].label} registrado (${r.id})`, registroId: r.id },
-    ...r.anotaciones.map((a) => ({ fecha: a.fecha.split("T")[0], texto: `Anotación de ${a.autorNombre} — ${a.texto.slice(0, 60)}...`, registroId: r.id })),
+  const timeline = evGuia.flatMap((e) => [
+    { fecha: e.fecha, texto: `${categoriaConfig[e.categoria].label} — ${e.tipoEvento} (${e.id})`, eventoId: e.id },
+    ...e.anotaciones.map((a) => ({ fecha: a.fecha.split("T")[0], texto: `Anotación de ${a.autorNombre} — ${a.texto.slice(0, 60)}...`, eventoId: e.id })),
   ]).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 
   return (
@@ -800,7 +757,6 @@ export function Guia360Drawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {/* Datos guía */}
           <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
             {[
               ["Origen", `${guia.terminalOrigen} (${guia.ciudadOrigen})`],
@@ -814,31 +770,29 @@ export function Guia360Drawer() {
             ))}
           </div>
 
-          {/* Registros */}
-          {regsGuia.length > 0 && (
+          {evGuia.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">Registros asociados ({regsGuia.length})</div>
+              <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">Eventos asociados ({evGuia.length})</div>
               <div className="divide-y divide-border">
-                {regsGuia.map((r) => (
-                  <button key={r.id} onClick={() => abrirRegistro(r.id)} className="w-full text-left px-4 py-3 hover:bg-muted transition-colors flex items-center gap-3">
-                    <TipoBadge tipo={r.tipo} />
-                    <span className="font-mono text-xs text-muted-foreground">{r.id}</span>
-                    <span className="text-sm flex-1 truncate">{descripcionCorta(r)}</span>
-                    <EstadoBadge estado={r.estado} />
+                {evGuia.map((e) => (
+                  <button key={e.id} onClick={() => abrirRegistro(e.id)} className="w-full text-left px-4 py-3 hover:bg-muted transition-colors flex items-center gap-3">
+                    <CategoriaBadge categoria={e.categoria} />
+                    <span className="font-mono text-xs text-muted-foreground">{e.id}</span>
+                    <span className="text-sm flex-1 truncate">{e.tipoEvento}</span>
+                    <EstadoBadge estado={e.estado} />
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Timeline */}
           {timeline.length > 0 && (
             <div className="border border-border rounded-xl p-4">
               <div className="font-semibold text-sm mb-3">Timeline de la guía</div>
               <div className="relative pl-4 space-y-3">
                 <div className="absolute left-1 top-2 bottom-2 w-0.5 bg-border" />
                 {timeline.map((item, i) => (
-                  <button key={i} onClick={() => abrirRegistro(item.registroId)} className="w-full text-left flex items-start gap-3 group">
+                  <button key={i} onClick={() => abrirRegistro(item.eventoId)} className="w-full text-left flex items-start gap-3 group">
                     <div className="absolute left-0 mt-1 w-2.5 h-2.5 rounded-full bg-coordinadora-blue border-2 border-white -translate-x-[3px]" />
                     <div className="pl-3">
                       <span className="text-xs font-mono text-muted-foreground">{item.fecha}</span>
@@ -850,10 +804,10 @@ export function Guia360Drawer() {
             </div>
           )}
 
-          {regsGuia.length === 0 && (
+          {evGuia.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
               <p className="text-4xl mb-2">📦</p>
-              <p className="text-sm">No se encontraron registros asociados a esta guía.</p>
+              <p className="text-sm">No se encontraron eventos asociados a esta guía.</p>
             </div>
           )}
         </div>
@@ -869,38 +823,35 @@ export function Terminal360Drawer() {
   if (drawer.tipo !== "terminal360" || !drawer.id) return null;
   const terminalNombre = drawer.id;
 
-  // Encontrar país y regional
   let pais = "—";
   let regional = "—";
   for (const [p, regionales] of Object.entries(PAISES_REGIONALES)) {
-    for (const [r, terminales] of Object.entries(regionales)) {
-      if (terminales.includes(terminalNombre)) {
+    for (const [r, terminalesArr] of Object.entries(regionales)) {
+      if (terminalesArr.includes(terminalNombre)) {
         pais = p;
         regional = r;
       }
     }
   }
 
-  const regsTerminal = registros.filter((r) => r.terminal === terminalNombre);
+  const evTerminal = eventos.filter((e) => e.terminal === terminalNombre);
   const ahora = new Date();
-
-  // KPIs
-  const faltantesAbiertos = regsTerminal.filter((r) => r.tipo === "faltante" && r.estado !== "cerrado").length;
   const hace30 = new Date(ahora.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const eventosEstesMes = regsTerminal.filter((r) => r.tipo === "evento" && new Date(r.fecha) >= hace30).length;
-  const personasEnSeguimiento = regsTerminal.filter((r) => r.tipo === "contacto").length;
-  const casosVencidos = regsTerminal.filter((r) => r.estado === "vencido").length;
-  const casosAbiertos = regsTerminal.filter((r) => r.estado !== "cerrado").length;
 
-  // Últimos 10 registros ordenados por fecha desc
-  const recientes = [...regsTerminal]
+  const eventosAbiertos = evTerminal.filter((e) => e.estado !== "cerrado").length;
+  const evEsteMes = evTerminal.filter((e) => new Date(e.fecha) >= hace30).length;
+  const casosVencidos = evTerminal.filter((e) => e.estado !== "cerrado" && e.diasAbierto > 30).length;
+  const alertasTerminal = alertasIA.filter((a) =>
+    a.entidadesInvolucradas.some((e) => e.tipo === "terminal" && e.nombre.toLowerCase().includes(terminalNombre.toLowerCase()))
+  );
+
+  const recientes = [...evTerminal]
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
     .slice(0, 10);
 
-  // Top 5 personas por apariciones
   const conteoPersonas: Record<string, number> = {};
-  regsTerminal.forEach((r) => {
-    r.personasVinculadas?.forEach((pv) => {
+  evTerminal.forEach((e) => {
+    [...e.personasResponsables, ...e.personasParticipantes].forEach((pv) => {
       conteoPersonas[pv.personaId] = (conteoPersonas[pv.personaId] ?? 0) + 1;
     });
   });
@@ -910,23 +861,12 @@ export function Terminal360Drawer() {
     .map(([id, count]) => ({ persona: personas.find((p) => p.id === id), count }))
     .filter((x) => x.persona);
 
-  const hayRecurrentes = topPersonas.some((x) => x.count > 1);
-
-  // Alertas IA que involucran esta terminal
-  const alertasTerminal = alertasIA.filter((a) =>
-    a.entidadesInvolucradas.some(
-      (e) => e.tipo === "terminal" && e.nombre.toLowerCase().includes(terminalNombre.toLowerCase())
-    )
-  );
-
   const paisBandera = pais === "Colombia" ? "🇨🇴" : pais === "México" ? "🇲🇽" : "🌐";
 
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={cerrarDrawer} />
       <div className="fixed right-0 top-0 h-full w-[58%] bg-card shadow-drawer z-50 flex flex-col animate-slide-in-right overflow-hidden">
-
-        {/* Header */}
         <div className="border-b border-border px-6 py-4 flex items-start justify-between flex-shrink-0">
           <div>
             <div className="text-xs text-muted-foreground mb-1">Perfil 360° de Terminal</div>
@@ -934,7 +874,7 @@ export function Terminal360Drawer() {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-muted-foreground">{paisBandera} {pais} · {regional}</span>
               <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                {casosAbiertos} casos abiertos
+                {eventosAbiertos} eventos abiertos
               </span>
             </div>
           </div>
@@ -944,14 +884,12 @@ export function Terminal360Drawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
-
-          {/* KPIs 2×2 */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "Faltantes abiertos", value: faltantesAbiertos, icon: "🔵", color: "border-blue-200 bg-blue-50" },
-              { label: "Eventos este mes", value: eventosEstesMes, icon: "🔴", color: "border-red-200 bg-red-50" },
-              { label: "Personas en seguimiento", value: personasEnSeguimiento, icon: "🟡", color: "border-amber-200 bg-amber-50" },
-              { label: "Casos vencidos", value: casosVencidos, icon: "⏰", color: casosVencidos > 0 ? "border-red-200 bg-red-50" : "border-border bg-muted/30" },
+              { label: "Eventos abiertos", value: eventosAbiertos, icon: "📋", color: "border-blue-200 bg-blue-50" },
+              { label: "Eventos este mes", value: evEsteMes, icon: "📅", color: "border-border bg-muted/30" },
+              { label: "Vencidos >30d", value: casosVencidos, icon: "⏰", color: casosVencidos > 0 ? "border-red-200 bg-red-50" : "border-border bg-muted/30" },
+              { label: "Alertas IA", value: alertasTerminal.length, icon: "🤖", color: alertasTerminal.length > 0 ? "border-amber-200 bg-amber-50" : "border-border bg-muted/30" },
             ].map(({ label, value, icon, color }) => (
               <div key={label} className={`rounded-xl border p-4 ${color}`}>
                 <div className="text-2xl mb-1">{icon}</div>
@@ -961,32 +899,27 @@ export function Terminal360Drawer() {
             ))}
           </div>
 
-          {/* Registros recientes */}
           {recientes.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
               <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">
-                Registros recientes ({recientes.length} de {regsTerminal.length})
+                Eventos recientes ({recientes.length} de {evTerminal.length})
               </div>
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-muted-foreground border-b border-border bg-muted/10">
-                    {["Tipo", "ID", "Descripción", "Estado", "Fecha"].map((h) => (
+                    {["Categoría", "ID", "Tipo evento", "Estado", "Fecha"].map((h) => (
                       <th key={h} className="text-left px-4 py-2 font-semibold">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {recientes.map((r) => (
-                    <tr
-                      key={r.id}
-                      onClick={() => abrirRegistro(r.id)}
-                      className="cursor-pointer hover:bg-muted transition-colors"
-                    >
-                      <td className="px-4 py-2.5"><TipoBadge tipo={r.tipo} /></td>
-                      <td className="px-4 py-2.5 font-mono text-muted-foreground">{r.id}</td>
-                      <td className="px-4 py-2.5 max-w-[180px] truncate">{descripcionCorta(r)}</td>
-                      <td className="px-4 py-2.5"><EstadoBadge estado={r.estado} /></td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{r.fecha}</td>
+                  {recientes.map((e) => (
+                    <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors">
+                      <td className="px-4 py-2.5"><CategoriaBadge categoria={e.categoria} /></td>
+                      <td className="px-4 py-2.5 font-mono text-muted-foreground">{e.id}</td>
+                      <td className="px-4 py-2.5 max-w-[160px] truncate">{e.tipoEvento}</td>
+                      <td className="px-4 py-2.5"><EstadoBadge estado={e.estado} /></td>
+                      <td className="px-4 py-2.5 text-muted-foreground">{e.fecha}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -994,20 +927,17 @@ export function Terminal360Drawer() {
             </div>
           )}
 
-          {regsTerminal.length === 0 && (
+          {evTerminal.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">
               <span className="text-4xl">📋</span>
-              <p className="mt-2 text-sm">No hay registros para esta terminal.</p>
+              <p className="mt-2 text-sm">No hay eventos para esta terminal.</p>
             </div>
           )}
 
-          {/* Top personas */}
           <div className="border border-border rounded-xl overflow-hidden">
             <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">Top personas vinculadas</div>
-            {!hayRecurrentes || topPersonas.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-muted-foreground italic">
-                No se detectan personas con apariciones recurrentes.
-              </p>
+            {topPersonas.length === 0 ? (
+              <p className="px-4 py-4 text-sm text-muted-foreground italic">No hay personas con eventos en esta terminal.</p>
             ) : (
               <table className="w-full text-xs">
                 <thead>
@@ -1019,11 +949,7 @@ export function Terminal360Drawer() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {topPersonas.map(({ persona, count }) => (
-                    <tr
-                      key={persona!.id}
-                      onClick={() => abrirPersona(persona!.id)}
-                      className="cursor-pointer hover:bg-muted transition-colors"
-                    >
+                    <tr key={persona!.id} onClick={() => abrirPersona(persona!.id)} className="cursor-pointer hover:bg-muted transition-colors">
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
                           <AvatarInicial nombre={persona!.nombre} size="sm" />
@@ -1048,20 +974,14 @@ export function Terminal360Drawer() {
             )}
           </div>
 
-          {/* Alertas IA */}
           <div className="border border-border rounded-xl overflow-hidden">
             <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">🤖 Alertas IA</div>
             {alertasTerminal.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-muted-foreground italic">
-                Sin alertas activas para esta terminal.
-              </p>
+              <p className="px-4 py-4 text-sm text-muted-foreground italic">Sin alertas activas para esta terminal.</p>
             ) : (
               <div className="divide-y divide-border">
                 {alertasTerminal.map((a) => (
-                  <div
-                    key={a.id}
-                    className={`px-4 py-3 ${a.severidad === "critica" ? "bg-red-50" : a.severidad === "alta" ? "bg-amber-50" : "bg-blue-50"}`}
-                  >
+                  <div key={a.id} className={`px-4 py-3 ${a.severidad === "critica" ? "bg-red-50" : a.severidad === "alta" ? "bg-amber-50" : "bg-blue-50"}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <SeveridadBadge severidad={a.severidad} />
                       <span className="text-xs font-semibold">{a.titulo}</span>
@@ -1072,7 +992,6 @@ export function Terminal360Drawer() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </>
