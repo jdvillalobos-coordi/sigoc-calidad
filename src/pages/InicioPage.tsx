@@ -2,13 +2,14 @@ import React from "react";
 import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { EstadoPersonaBadge, formatCurrency } from "@/lib/utils-app";
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, AlertTriangle, PackageSearch, DollarSign, ArrowRight, Plus } from "lucide-react";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { DateRange } from "react-day-picker";
+
 
 const PERIODOS = [
   { label: "7d",  days: 7 },
@@ -81,34 +82,11 @@ export default function InicioPage() {
      - RCE: valor > $1M (seguimiento preventivo de recaudo)
      - Faltante: estadoGeneral "con_novedad" (novedad detectada sin investigar)
   ── */
-  // Collect ALL guide numbers referenced in ANY event
-  const guiasConEventos = React.useMemo(() => {
-    const set = new Set<string>();
-    eventos.forEach((e) => {
-      (e.guias ?? []).forEach((g) => set.add(g.trim()));
-    });
-    return set;
+  const totalSinGestionar = React.useMemo(() => {
+    const conEventos = new Set<string>();
+    eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
+    return guias.filter((g) => !conEventos.has(g.numero.trim()) && (g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")).length;
   }, []);
-
-  // Guides that have NO event yet AND meet risk criteria (RCE or con_novedad)
-  const guiasSinGestion = React.useMemo(() => {
-    return guias
-      .filter((g) => !guiasConEventos.has(g.numero.trim()))
-      .filter((g) => g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")
-      .map((g) => ({
-        ...g,
-        tipoAlerta: g.valorDeclarado >= 1_000_000 && g.estadoGeneral === "con_novedad"
-          ? "rce_y_novedad" as const
-          : g.valorDeclarado >= 1_000_000
-          ? "rce" as const
-          : "novedad" as const,
-      }))
-      .sort((a, b) => b.valorDeclarado - a.valorDeclarado);
-  }, [guiasConEventos]);
-
-  const guiasRCESinGestion       = guiasSinGestion.filter((g) => g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad");
-  const guiasFaltantesSinEvento  = guiasSinGestion.filter((g) => g.tipoAlerta === "novedad");
-  const totalSinGestionar        = guiasSinGestion.length;
 
   /* ── Rankings ── */
   const termToRegional = React.useMemo(() => {
@@ -249,103 +227,6 @@ export default function InicioPage() {
             );
           })}
         </div>
-
-        {/* ── Pendientes sin gestionar ──────────────────────────────
-            Guías que el sistema detecta como problemáticas pero que
-            no tienen ningún evento abierto todavía. Son la brecha
-            entre lo que ocurrió y lo que se está investigando.
-        ──────────────────────────────────────────────────────── */}
-        {totalSinGestionar > 0 && (
-          <div className="rounded-xl border-2 border-amber-200 bg-amber-50 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-amber-200">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                <span className="text-sm font-semibold text-amber-800">
-                  {totalSinGestionar} guía{totalSinGestionar !== 1 ? "s" : ""} sin gestionar
-                </span>
-                <span className="text-xs text-amber-600 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                  Requieren acción
-                </span>
-              </div>
-              <span className="text-[11px] text-amber-600">Detectadas automáticamente por el sistema</span>
-            </div>
-
-            <div className="divide-y divide-amber-100">
-
-              {/* Guías con recaudo >$1M sin evento RCE */}
-              {guiasRCESinGestion.length > 0 && (
-                <div className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 mb-2.5">
-                    <DollarSign className="w-3.5 h-3.5 text-green-700 flex-shrink-0" />
-                    <span className="text-xs font-semibold text-green-800">Recaudo alto sin seguimiento RCE</span>
-                    <span className="text-[10px] text-green-700 bg-green-100 border border-green-200 px-1.5 py-0.5 rounded-full">
-                      {guiasRCESinGestion.length} guía{guiasRCESinGestion.length !== 1 ? "s" : ""} · valor &gt;$1M
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {guiasRCESinGestion.map((g) => (
-                      <div key={g.numero} className="flex items-center gap-3 bg-white/70 border border-green-200 rounded-lg px-3 py-2">
-                        <button onClick={() => abrirGuia(g.numero)}
-                          className="font-mono text-xs font-semibold text-green-800 hover:underline flex-shrink-0">
-                          {g.numero}
-                        </button>
-                        <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-foreground truncate block">{g.nombreCliente}</span>
-                          <span className="text-[10px] text-muted-foreground">{g.terminalOrigen} → {g.terminalDestino}</span>
-                        </div>
-                        <span className="text-xs font-bold text-green-700 flex-shrink-0">{formatCurrency(g.valorDeclarado)}</span>
-                        <button
-                          onClick={() => setNuevaRegistroAbierto(true)}
-                          className="flex items-center gap-1 px-2.5 py-1 bg-green-700 text-white text-[11px] font-semibold rounded-lg hover:bg-green-800 transition-colors flex-shrink-0">
-                          <Plus className="w-3 h-3" /> Crear evento
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Guías con novedad sin evento de investigación */}
-              {guiasFaltantesSinEvento.length > 0 && (
-                <div className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 mb-2.5">
-                    <PackageSearch className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                    <span className="text-xs font-semibold text-amber-800">Novedades sin evento de investigación</span>
-                    <span className="text-[10px] text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                      {guiasFaltantesSinEvento.length} guía{guiasFaltantesSinEvento.length !== 1 ? "s" : ""} con_novedad
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {guiasFaltantesSinEvento.map((g) => (
-                      <div key={g.numero} className="flex items-center gap-3 bg-white/70 border border-amber-200 rounded-lg px-3 py-2">
-                        <button onClick={() => abrirGuia(g.numero)}
-                          className="font-mono text-xs font-semibold text-amber-800 hover:underline flex-shrink-0">
-                          {g.numero}
-                        </button>
-                        <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs text-foreground truncate block">{g.nombreCliente}</span>
-                          <span className="text-[10px] text-muted-foreground">{g.terminalOrigen} → {g.terminalDestino} · {formatCurrency(g.valorDeclarado)}</span>
-                        </div>
-                        <span className="text-[10px] font-medium text-amber-700 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0">
-                          con_novedad
-                        </span>
-                        <button
-                          onClick={() => setNuevaRegistroAbierto(true)}
-                          className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 text-white text-[11px] font-semibold rounded-lg hover:bg-amber-700 transition-colors flex-shrink-0">
-                          <Plus className="w-3 h-3" /> Crear evento
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        )}
 
         {/* Alertas IA */}
         <div>

@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
-import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
+import { eventos, guias, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, formatDate, formatCurrency, categoriaConfig, AvatarInicial } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import {
-  Plus, ChevronUp, ChevronDown, CalendarIcon, X, Search,
-  ExternalLink, Clock, User, MapPin, Hash, FileText,
-  ChevronRight, Tag, Users, Building2, Package, AlertCircle
+  Plus, ChevronUp, ChevronDown, CalendarIcon, X,
+  ExternalLink, Clock, User, MapPin, Hash,
+  ChevronRight, Tag, Building2, AlertCircle,
+  AlertTriangle, DollarSign, PackageSearch, ArrowRight
 } from "lucide-react";
 import type { CategoriaEvento, EstadoEvento, Evento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -250,7 +251,7 @@ function EventoDetalle({ evento, onClose }: { evento: Evento; onClose: () => voi
                   )}>{evento.gravedadFalta}</span>
                 </InfoRow>
               )}
-              {evento.decisionGH && <InfoRow icon={<FileText className="w-3.5 h-3.5" />} label="Decisión GH"><span className="text-xs">{evento.decisionGH}</span></InfoRow>}
+              {evento.decisionGH && <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label="Decisión GH"><span className="text-xs">{evento.decisionGH}</span></InfoRow>}
             </div>
           </Section>
         )}
@@ -363,7 +364,7 @@ function InfoRow({ icon, label, children }: { icon: React.ReactNode; label: stri
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery } = useApp();
+  const { abrirRegistro, abrirTerminal, abrirGuia, setNuevaRegistroAbierto, busquedaQuery } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [paisFiltro, setPaisFiltro]           = useState("todos");
@@ -374,7 +375,26 @@ export default function RegistrosPage() {
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
   const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
+  const [pendientesExpanded, setPendientesExpanded] = useState(true);
   const PER_PAGE = 20;
+
+  // ── Guías sin gestionar (insumo para crear eventos) ──────────
+  const guiasSinGestion = useMemo(() => {
+    const conEventos = new Set<string>();
+    eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
+    return guias
+      .filter((g) => !conEventos.has(g.numero.trim()))
+      .filter((g) => g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")
+      .map((g) => ({
+        ...g,
+        tipoAlerta: (g.valorDeclarado >= 1_000_000 && g.estadoGeneral === "con_novedad")
+          ? "rce_y_novedad" as const
+          : g.valorDeclarado >= 1_000_000
+          ? "rce" as const
+          : "novedad" as const,
+      }))
+      .sort((a, b) => b.valorDeclarado - a.valorDeclarado);
+  }, []);
 
   function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
   function handleRegionalChange(val: string) { setRegionalFiltro(val); setTerminalFiltro("todos"); setPage(1); }
@@ -541,6 +561,77 @@ export default function RegistrosPage() {
           </div>
         )}
       </div>
+
+      {/* ── Guías sin gestionar — insumo para crear eventos ────────
+          Guías con recaudo >$1M o con_novedad que no tienen un
+          evento asociado todavía. El analista puede iniciar la
+          investigación directamente desde aquí.
+      ──────────────────────────────────────────────────────── */}
+      {guiasSinGestion.length > 0 && (
+        <div className="flex-shrink-0 border-b-2 border-amber-200 bg-amber-50">
+          {/* Cabecera colapsable */}
+          <button
+            onClick={() => setPendientesExpanded(v => !v)}
+            className="w-full flex items-center justify-between px-5 py-2.5 hover:bg-amber-100/60 transition-colors">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="text-sm font-semibold text-amber-800">
+                {guiasSinGestion.length} guía{guiasSinGestion.length !== 1 ? "s" : ""} sin gestionar
+              </span>
+              <span className="text-xs text-amber-600 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                Requieren un evento
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-amber-600 hidden sm:block">
+                Insumo detectado automáticamente — crea un evento de Dineros para iniciar seguimiento
+              </span>
+              <ChevronDown className={cn("w-4 h-4 text-amber-600 transition-transform", pendientesExpanded && "rotate-180")} />
+            </div>
+          </button>
+
+          {/* Lista expandida */}
+          {pendientesExpanded && (
+            <div className="px-5 pb-3 space-y-1.5 max-h-52 overflow-y-auto">
+              {guiasSinGestion.map((g) => (
+                <div key={g.numero}
+                  className="flex items-center gap-3 bg-white/80 border border-amber-200 rounded-lg px-3 py-2">
+                  {/* Tipo de alerta */}
+                  <span className={cn(
+                    "text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0",
+                    g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad"
+                      ? "bg-green-100 text-green-700 border border-green-200"
+                      : "bg-amber-100 text-amber-700 border border-amber-200"
+                  )}>
+                    {g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad" ? "💰 RCE" : "📦 Novedad"}
+                  </span>
+                  {/* Número */}
+                  <button onClick={() => abrirGuia(g.numero)}
+                    className="font-mono text-xs font-semibold text-primary hover:underline flex-shrink-0">
+                    {g.numero}
+                  </button>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs text-foreground truncate block font-medium">{g.nombreCliente}</span>
+                    <span className="text-[10px] text-muted-foreground">{g.terminalOrigen} → {g.terminalDestino}</span>
+                  </div>
+                  {/* Valor */}
+                  <span className="text-xs font-bold text-green-700 flex-shrink-0 hidden sm:block">
+                    {g.valorDeclarado.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}
+                  </span>
+                  {/* Acción */}
+                  <button
+                    onClick={() => setNuevaRegistroAbierto(true)}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 text-white text-[11px] font-semibold rounded-lg hover:bg-amber-700 transition-colors flex-shrink-0">
+                    <Plus className="w-3 h-3" /> Crear evento
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Cuerpo: tabla + panel ── */}
       <div className="flex-1 flex overflow-hidden">
