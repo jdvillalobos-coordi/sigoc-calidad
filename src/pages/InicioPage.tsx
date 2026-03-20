@@ -255,7 +255,7 @@ export default function InicioPage() {
                         >
                           {vehiculo.placa}
                         </button>
-                        <div className="text-[10px] text-muted-foreground">{vehiculo.tipo} · {vehiculo.marca} {vehiculo.modelo}</div>
+                        <div className="text-[10px] text-muted-foreground">{vehiculo.tipo}</div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
