@@ -760,6 +760,22 @@ export function Vehiculo360Drawer() {
             </p>
           </div>
 
+          {/* Actividad Lesiva */}
+          {vehiculo.estado !== "bloqueado" ? (
+            <button
+              onClick={() => toast({ title: "🔴 Vehículo bloqueado", description: `Vehículo ${vehiculo.placa} registrado en actividades lesivas.` })}
+              className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+            >
+              <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva (Bloquear vehículo)</div>
+              <div className="text-xs text-red-600/70 mt-0.5">Bloquear vehículo por presencia en eventos de novedad</div>
+            </button>
+          ) : (
+            <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
+              <div className="text-xs font-semibold text-red-700">🚫 Vehículo Bloqueado</div>
+              <div className="text-xs text-red-600/70 mt-0.5">Actividad lesiva activa</div>
+            </div>
+          )}
+
           {evVehiculo.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
               <div className="px-4 py-3 bg-muted/30 font-semibold text-sm">Eventos asociados ({evVehiculo.length})</div>
