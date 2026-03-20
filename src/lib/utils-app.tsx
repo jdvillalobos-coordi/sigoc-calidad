@@ -6,7 +6,6 @@ export const categoriaConfig: Record<CategoriaEvento, { label: string; color: st
   dineros:             { label: "Dineros",            color: "badge-dineros",    dot: "bg-green-600",  icon: "💰", bgColor: "bg-green-600" },
   unidades:            { label: "Unidades",           color: "badge-unidades",   dot: "bg-blue-600",   icon: "📦", bgColor: "bg-blue-600" },
   listas_vinculantes:  { label: "Listas Vinculantes", color: "badge-listas",     dot: "bg-gray-500",   icon: "📋", bgColor: "bg-gray-500" },
-  proceso_evidencias:  { label: "Evidencias",         color: "badge-evidencias", dot: "bg-orange-600", icon: "📸", bgColor: "bg-orange-600" },
   pqr:                 { label: "PQR",                color: "badge-pqr",        dot: "bg-purple-600", icon: "📞", bgColor: "bg-purple-600" },
   disciplinarios:      { label: "Disciplinarios",     color: "badge-disciplinarios", dot: "bg-red-600", icon: "⚖️", bgColor: "bg-red-600" },
 };
