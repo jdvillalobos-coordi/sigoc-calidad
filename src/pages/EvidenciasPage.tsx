@@ -1,0 +1,282 @@
+import React, { useState } from "react";
+import { Camera, ChevronDown, ChevronUp, ImageIcon, AlertTriangle } from "lucide-react";
+import { evidencias, terminales } from "@/data/mockData";
+import { useApp } from "@/context/AppContext";
+import { formatDate } from "@/lib/utils-app";
+import { toast } from "@/hooks/use-toast";
+import type { Evidencia } from "@/types";
+
+type FiltroRevision = "todos" | "pendientes" | "revisados";
+type FiltroIA = "todos" | "cumple" | "no_cumple";
+
+function ResultadoIABadge({ resultado }: { resultado: "cumple" | "no_cumple" }) {
+  return resultado === "cumple" ? (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+      ✅ Cumple
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+      ❌ No cumple
+    </span>
+  );
+}
+
+function VeredictoTag({ v }: { v: "confirma" | "falso_negativo" | "falso_positivo" }) {
+  const map = {
+    confirma:       "bg-gray-100 text-gray-700 border-gray-200",
+    falso_negativo: "bg-amber-100 text-amber-700 border-amber-200",
+    falso_positivo: "bg-red-100 text-red-700 border-red-200",
+  };
+  const label = {
+    confirma: "Confirmado",
+    falso_negativo: "Falso negativo",
+    falso_positivo: "Falso positivo",
+  };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${map[v]}`}>
+      {label[v]}
+    </span>
+  );
+}
+
+function EvidenciaRow({ ev }: { ev: Evidencia }) {
+  const { abrirGuia, setNuevaRegistroAbierto } = useApp();
+  const [expanded, setExpanded] = useState(false);
+  const [veredicto, setVeredicto] = useState(ev.veredictoOperador ?? "");
+  const [justificacion, setJustificacion] = useState(ev.justificacionOperador ?? "");
+  const [guardado, setGuardado] = useState(!!ev.veredictoOperador);
+
+  const pendiente = !ev.veredictoOperador;
+  const generaEvento =
+    (veredicto === "confirma" && ev.resultadoIA === "no_cumple") ||
+    veredicto === "falso_positivo";
+
+  function guardar() {
+    if (!veredicto) return;
+    setGuardado(true);
+    toast({ title: "✅ Veredicto guardado", description: `Evidencia ${ev.id} revisada.` });
+    setExpanded(false);
+  }
+
+  return (
+    <div className="border-b border-border last:border-0">
+      {/* Fila principal */}
+      <button
+        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 items-center"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div>
+          <button
+            className="text-xs font-mono text-primary hover:underline"
+            onClick={(e) => { e.stopPropagation(); abrirGuia(ev.guia); }}
+          >
+            {ev.guia}
+          </button>
+          <span className="ml-2 text-xs text-muted-foreground">{ev.terminal}</span>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {ev.tipoEvidencia === "entrega" ? "Evidencia entrega" : "Evidencia intento"}
+        </span>
+        <ResultadoIABadge resultado={ev.resultadoIA} />
+        {ev.veredictoOperador
+          ? <VeredictoTag v={ev.veredictoOperador} />
+          : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">⏳ Pendiente</span>
+        }
+        <span className="text-xs text-muted-foreground">{formatDate(ev.fecha)}</span>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+
+      {/* Panel expandido */}
+      {expanded && (
+        <div className="px-4 pb-4 bg-muted/20 border-t border-border">
+          <div className="pt-4 grid grid-cols-2 gap-4">
+            {/* Preview imagen */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Evidencia fotográfica</p>
+              <div className="w-full aspect-video bg-muted/50 border border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2">
+                <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
+                <span className="text-xs text-muted-foreground/60">Imagen no disponible en demo</span>
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                <div><span className="font-medium">Guía:</span> {ev.guia}</div>
+                <div><span className="font-medium">Tipo:</span> {ev.tipoEvidencia === "entrega" ? "Evidencia de entrega" : "Evidencia de intento de entrega"}</div>
+                <div><span className="font-medium">Fecha:</span> {formatDate(ev.fecha)}</div>
+                {ev.revisadoPor && <div><span className="font-medium">Revisado por:</span> {ev.revisadoPor}</div>}
+              </div>
+            </div>
+
+            {/* Veredicto */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Tu veredicto</p>
+              {guardado ? (
+                <div className="space-y-2">
+                  <VeredictoTag v={veredicto as "confirma" | "falso_negativo" | "falso_positivo"} />
+                  {justificacion && (
+                    <p className="text-xs text-muted-foreground mt-1 italic">"{justificacion}"</p>
+                  )}
+                  <button
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setGuardado(false)}
+                  >
+                    Editar veredicto
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setVeredicto("confirma")}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${veredicto === "confirma" ? "bg-green-600 text-white border-green-600" : "border-border hover:bg-green-50 hover:border-green-200"}`}
+                  >
+                    ✅ Confirmo — La IA tiene razón
+                  </button>
+                  <button
+                    onClick={() => setVeredicto("falso_negativo")}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${veredicto === "falso_negativo" ? "bg-amber-500 text-white border-amber-500" : "border-border hover:bg-amber-50 hover:border-amber-200"}`}
+                  >
+                    ⚠️ Falso negativo — La evidencia SÍ es válida pero la IA la rechazó
+                  </button>
+                  <button
+                    onClick={() => setVeredicto("falso_positivo")}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${veredicto === "falso_positivo" ? "bg-red-600 text-white border-red-600" : "border-border hover:bg-red-50 hover:border-red-200"}`}
+                  >
+                    🚫 Falso positivo — La evidencia NO es válida pero la IA la aprobó
+                  </button>
+
+                  {(veredicto === "falso_negativo" || veredicto === "falso_positivo") && (
+                    <textarea
+                      className="w-full border border-border rounded-lg px-3 py-2 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none mt-1"
+                      rows={2}
+                      placeholder="Justificación obligatoria..."
+                      value={justificacion}
+                      onChange={(e) => setJustificacion(e.target.value)}
+                    />
+                  )}
+
+                  <button
+                    onClick={guardar}
+                    disabled={!veredicto || ((veredicto === "falso_negativo" || veredicto === "falso_positivo") && !justificacion)}
+                    className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Guardar veredicto
+                  </button>
+                </div>
+              )}
+
+              {/* Banner genera evento */}
+              {generaEvento && (
+                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700 font-medium">
+                      Esta evidencia no cumple. Se generará un evento automáticamente en la categoría correspondiente.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setNuevaRegistroAbierto(true)}
+                    className="w-full px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 transition-colors"
+                  >
+                    Generar evento
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function EvidenciasPage() {
+  const [filtroRevision, setFiltroRevision] = useState<FiltroRevision>("todos");
+  const [filtroIA, setFiltroIA] = useState<FiltroIA>("todos");
+  const [filtroTerminal, setFiltroTerminal] = useState("todos");
+
+  const pendientes = evidencias.filter((e) => !e.veredictoOperador).length;
+
+  const filtradas = evidencias.filter((ev) => {
+    if (filtroRevision === "pendientes" && ev.veredictoOperador) return false;
+    if (filtroRevision === "revisados" && !ev.veredictoOperador) return false;
+    if (filtroIA === "cumple" && ev.resultadoIA !== "cumple") return false;
+    if (filtroIA === "no_cumple" && ev.resultadoIA !== "no_cumple") return false;
+    if (filtroTerminal !== "todos" && ev.terminal !== filtroTerminal) return false;
+    return true;
+  });
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="border-b border-border px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold flex items-center gap-2">
+              <Camera className="w-5 h-5 text-muted-foreground" />
+              Gestión de Evidencias
+            </h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Revisa las evidencias de entrega validadas por IA y confirma o corrige el resultado
+            </p>
+          </div>
+          {pendientes > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+              ⏳ {pendientes} pendientes de revisión
+            </span>
+          )}
+        </div>
+
+        {/* Filtros */}
+        <div className="flex items-center gap-3 mt-4">
+          <select
+            value={filtroRevision}
+            onChange={(e) => setFiltroRevision(e.target.value as FiltroRevision)}
+            className="border border-border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="todos">Todos</option>
+            <option value="pendientes">Pendientes</option>
+            <option value="revisados">Revisados</option>
+          </select>
+          <select
+            value={filtroIA}
+            onChange={(e) => setFiltroIA(e.target.value as FiltroIA)}
+            className="border border-border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="todos">Resultado IA: Todos</option>
+            <option value="cumple">✅ Cumple</option>
+            <option value="no_cumple">❌ No cumple</option>
+          </select>
+          <select
+            value={filtroTerminal}
+            onChange={(e) => setFiltroTerminal(e.target.value)}
+            className="border border-border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="todos">Todas las terminales</option>
+            {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <span className="text-xs text-muted-foreground ml-auto">{filtradas.length} evidencias</span>
+        </div>
+      </div>
+
+      {/* Lista */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="bg-card border border-border rounded-xl mx-6 my-4 overflow-hidden">
+          {/* Encabezados */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
+            <span>Guía / Terminal</span>
+            <span>Tipo</span>
+            <span>Resultado IA</span>
+            <span>Estado revisión</span>
+            <span>Fecha</span>
+            <span />
+          </div>
+          {filtradas.length === 0 ? (
+            <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+              No hay evidencias que coincidan con los filtros seleccionados.
+            </div>
+          ) : (
+            filtradas.map((ev) => <EvidenciaRow key={ev.id} ev={ev} />)
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

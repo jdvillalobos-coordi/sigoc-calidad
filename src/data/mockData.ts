@@ -1668,3 +1668,116 @@ export const REGIONALES_FLAT: Record<string, string[]> = Object.values(PAISES_RE
   .reduce((acc, regionales) => ({ ...acc, ...regionales }), {} as Record<string, string[]>);
 
 export const terminales = TODAS_TERMINALES;
+
+// ============================================================
+// EVIDENCIAS (módulo de validación IA)
+// ============================================================
+import type { Evidencia } from "@/types";
+
+export const evidencias: Evidencia[] = [
+  // 4 cumple — 2 revisadas, 2 pendientes
+  {
+    id: "EV-001",
+    guia: "20000001002",
+    terminal: "Bogotá",
+    tipoEvidencia: "entrega",
+    resultadoIA: "cumple",
+    fecha: "2026-01-15",
+    veredictoOperador: "confirma",
+    fechaRevision: "2026-01-15",
+    revisadoPor: "Ana Martínez",
+  },
+  {
+    id: "EV-002",
+    guia: "20000001003",
+    terminal: "Medellín",
+    tipoEvidencia: "entrega",
+    resultadoIA: "cumple",
+    fecha: "2026-01-18",
+    veredictoOperador: "confirma",
+    fechaRevision: "2026-01-19",
+    revisadoPor: "Sandra Herrera",
+  },
+  {
+    id: "EV-003",
+    guia: "19900293002",
+    terminal: "Cali",
+    tipoEvidencia: "entrega",
+    resultadoIA: "cumple",
+    fecha: "2026-02-05",
+  },
+  {
+    id: "EV-004",
+    guia: "20000001005",
+    terminal: "Pereira",
+    tipoEvidencia: "intento_entrega",
+    resultadoIA: "cumple",
+    fecha: "2026-02-10",
+  },
+  // 4 no_cumple — 2 revisadas (1 confirma, 1 falso_negativo), 2 pendientes
+  {
+    id: "EV-005",
+    guia: "19900293001",
+    terminal: "Barranquilla",
+    tipoEvidencia: "entrega",
+    resultadoIA: "no_cumple",
+    fecha: "2026-01-28",
+    veredictoOperador: "confirma",
+    justificacionOperador: "Firma difiere morfológicamente del destinatario registrado. Confirmado por análisis grafológico.",
+    fechaRevision: "2026-01-29",
+    revisadoPor: "Ana Martínez",
+  },
+  {
+    id: "EV-006",
+    guia: "20000001010",
+    terminal: "Bogotá",
+    tipoEvidencia: "entrega",
+    resultadoIA: "no_cumple",
+    fecha: "2026-02-10",
+    veredictoOperador: "falso_negativo",
+    justificacionOperador: "Dispositivo diferente por falla técnica del mensajero, pero la entrega sí se realizó correctamente al destinatario.",
+    fechaRevision: "2026-02-11",
+    revisadoPor: "Sandra Herrera",
+  },
+  {
+    id: "EV-007",
+    guia: "20000001004",
+    terminal: "Barranquilla",
+    tipoEvidencia: "intento_entrega",
+    resultadoIA: "no_cumple",
+    fecha: "2026-02-14",
+  },
+  {
+    id: "EV-008",
+    guia: "19900293003",
+    terminal: "Barranquilla",
+    tipoEvidencia: "entrega",
+    resultadoIA: "no_cumple",
+    fecha: "2026-02-16",
+  },
+  // 2 cumple pero operador marcó falso_positivo
+  {
+    id: "EV-009",
+    guia: "20000001013",
+    terminal: "Barranquilla",
+    tipoEvidencia: "entrega",
+    resultadoIA: "cumple",
+    fecha: "2026-02-09",
+    veredictoOperador: "falso_positivo",
+    justificacionOperador: "El paquete fotografiado no coincide con las dimensiones del original. Cliente manipuló las fotos para respaldar reclamación fraudulenta.",
+    fechaRevision: "2026-02-09",
+    revisadoPor: "Ana Martínez",
+  },
+  {
+    id: "EV-010",
+    guia: "20000001007",
+    terminal: "Bucaramanga",
+    tipoEvidencia: "intento_entrega",
+    resultadoIA: "cumple",
+    fecha: "2026-02-12",
+    veredictoOperador: "falso_positivo",
+    justificacionOperador: "La foto muestra dirección incorrecta. El mensajero fue al domicilio equivocado y reportó como intento válido.",
+    fechaRevision: "2026-02-12",
+    revisadoPor: "Ana Martínez",
+  },
+];
