@@ -837,6 +837,22 @@ export function Guia360Drawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {guia.valorDeclarado >= 1000000 && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold text-green-700">💰 Guía con recaudo superior a $1M — Seguimiento RCE activo</div>
+                  <div className="text-xs text-green-600/70 mt-0.5">Esta guía requiere seguimiento preventivo de seguridad por su alto valor de recaudo ({formatCurrency(guia.valorDeclarado)})</div>
+                </div>
+                <button
+                  onClick={() => toast({ title: "✅ Evento RCE creado", description: "Se registró seguimiento preventivo para esta guía" })}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0"
+                >
+                  Registrar seguimiento RCE
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
             {[
               ["Origen", `${guia.terminalOrigen} (${guia.ciudadOrigen})`],
