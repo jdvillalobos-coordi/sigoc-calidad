@@ -238,7 +238,7 @@ export const guias: Guia[] = [
     terminalOrigen: "Medellín", ciudadOrigen: "Medellín",
     terminalDestino: "Cartagena", ciudadDestino: "Cartagena",
     nitCliente: "901234567", nombreCliente: "Industrias Caribe S.A.",
-    valorDeclarado: 2900000, fechaCreacion: "2026-03-08", estadoGeneral: "sin_novedad",
+    valorDeclarado: 2900000, fechaCreacion: "2026-03-08", estadoGeneral: "con_novedad",
   },
   {
     numero: "20000001003",
@@ -248,39 +248,11 @@ export const guias: Guia[] = [
     valorDeclarado: 1350000, fechaCreacion: "2026-03-10", estadoGeneral: "sin_novedad",
   },
   {
-    numero: "20000001004",
-    terminalOrigen: "Barranquilla", ciudadOrigen: "Barranquilla",
-    terminalDestino: "Medellín", ciudadDestino: "Medellín",
-    nitCliente: "800789123", nombreCliente: "Distribuidora El Progreso Ltda.",
-    valorDeclarado: 3800000, fechaCreacion: "2026-03-12", estadoGeneral: "con_novedad",
-  },
-  {
-    numero: "20000001005",
-    terminalOrigen: "Cali", ciudadOrigen: "Cali",
-    terminalDestino: "Bucaramanga", ciudadDestino: "Bucaramanga",
-    nitCliente: "900456789", nombreCliente: "Proveedora del Valle S.A.S.",
-    valorDeclarado: 2100000, fechaCreacion: "2026-02-13", estadoGeneral: "sin_novedad",
-  },
-  {
-    numero: "20000001007",
-    terminalOrigen: "Bucaramanga", ciudadOrigen: "Bucaramanga",
-    terminalDestino: "Cartagena", ciudadDestino: "Cartagena",
-    nitCliente: "901678901", nombreCliente: "Soluciones Logísticas del Norte S.A.",
-    valorDeclarado: 5200000, fechaCreacion: "2026-02-18", estadoGeneral: "con_novedad",
-  },
-  {
     numero: "20000001008",
     terminalOrigen: "Cartagena", ciudadOrigen: "Cartagena",
     terminalDestino: "Bogotá", ciudadDestino: "Bogotá",
     nitCliente: "800345678", nombreCliente: "Grupo Empresarial Caribe Ltda.",
     valorDeclarado: 1780000, fechaCreacion: "2026-02-20", estadoGeneral: "sin_novedad",
-  },
-  {
-    numero: "20000001009",
-    terminalOrigen: "Medellín", ciudadOrigen: "Medellín",
-    terminalDestino: "Cali", ciudadDestino: "Cali",
-    nitCliente: "900234567", nombreCliente: "Textiles La Merced S.A.S.",
-    valorDeclarado: 2250000, fechaCreacion: "2026-02-23", estadoGeneral: "con_novedad",
   },
   {
     numero: "20000001010",
@@ -302,6 +274,42 @@ export const guias: Guia[] = [
     terminalDestino: "Bogotá", ciudadDestino: "Bogotá",
     nitCliente: "900234567", nombreCliente: "Textiles La Merced S.A.S.",
     valorDeclarado: 1500000, fechaCreacion: "2026-03-15", estadoGeneral: "con_novedad",
+  },
+  // ── Guías recientes SIN evento asociado (pendientes reales) ──
+  {
+    numero: "20000002001",
+    terminalOrigen: "Barranquilla", ciudadOrigen: "Barranquilla",
+    terminalDestino: "Bogotá", ciudadDestino: "Bogotá",
+    nitCliente: "800789123", nombreCliente: "Distribuidora El Progreso Ltda.",
+    valorDeclarado: 4200000, fechaCreacion: "2026-03-17", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "20000002002",
+    terminalOrigen: "Medellín", ciudadOrigen: "Medellín",
+    terminalDestino: "Cali", ciudadDestino: "Cali",
+    nitCliente: "901123456", nombreCliente: "Comercial del Pacífico S.A.",
+    valorDeclarado: 3750000, fechaCreacion: "2026-03-18", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "20000002003",
+    terminalOrigen: "Bogotá", ciudadOrigen: "Bogotá",
+    terminalDestino: "Bucaramanga", ciudadDestino: "Bucaramanga",
+    nitCliente: "900456789", nombreCliente: "Proveedora del Valle S.A.S.",
+    valorDeclarado: 1850000, fechaCreacion: "2026-03-19", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "20000002004",
+    terminalOrigen: "Cali", ciudadOrigen: "Cali",
+    terminalDestino: "Barranquilla", ciudadDestino: "Barranquilla",
+    nitCliente: "900234567", nombreCliente: "Textiles La Merced S.A.S.",
+    valorDeclarado: 2600000, fechaCreacion: "2026-03-19", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "20000002005",
+    terminalOrigen: "Bucaramanga", ciudadOrigen: "Bucaramanga",
+    terminalDestino: "Medellín", ciudadDestino: "Medellín",
+    nitCliente: "800345678", nombreCliente: "Grupo Empresarial Caribe Ltda.",
+    valorDeclarado: 5100000, fechaCreacion: "2026-03-16", estadoGeneral: "con_novedad",
   },
 ];
 
