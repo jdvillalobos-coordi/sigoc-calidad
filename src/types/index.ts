@@ -6,7 +6,6 @@ export type CategoriaEvento =
   | "dineros"
   | "unidades"
   | "listas_vinculantes"
-  | "proceso_evidencias"
   | "pqr"
   | "disciplinarios";
 
