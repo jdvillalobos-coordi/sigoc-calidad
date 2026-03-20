@@ -137,10 +137,10 @@ function SearchBar() {
           {registrosRes.length > 0 && (
             <div>
               <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/40 border-b border-border">
-                📋 Registros
+                📋 Eventos
               </div>
               {registrosRes.map((r) => {
-                const cfg = tipoConfig[r.tipo];
+                const cfg = categoriaConfig[r.categoria];
                 return (
                   <button
                     key={r.id}
@@ -152,7 +152,7 @@ function SearchBar() {
                     </div>
                     <div>
                       <div className="font-medium">{r.id}</div>
-                      <div className="text-xs text-muted-foreground truncate max-w-[300px]">{descripcionCorta(r)}</div>
+                      <div className="text-xs text-muted-foreground truncate max-w-[300px]">{r.tipoEvento} · {r.terminal}</div>
                     </div>
                   </button>
                 );
