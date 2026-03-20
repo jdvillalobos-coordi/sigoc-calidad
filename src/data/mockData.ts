@@ -901,11 +901,12 @@ export const eventos: Evento[] = [
   },
 
   // ══════════════════════════════════
-  // PROCESO EVIDENCIAS (5)
+  // EVIDENCIAS (ahora en módulo separado — eventos generados por IA no cumple)
+  // Se migran a categoría "pqr" o "unidades" según el tipo
   // ══════════════════════════════════
   {
     id: "EVI-001",
-    categoria: "proceso_evidencias",
+    categoria: "pqr",
     tipoEvento: "Falsa evidencia de entrega",
     tipoEntidad: "empleado",
     estado: "cerrado",
@@ -928,7 +929,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "EVI-002",
-    categoria: "proceso_evidencias",
+    categoria: "pqr",
     tipoEvento: "Falsa evidencia de entrega",
     tipoEntidad: "empleado",
     estado: "cerrado",
@@ -951,7 +952,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "EVI-003",
-    categoria: "proceso_evidencias",
+    categoria: "pqr",
     tipoEvento: "Falsa evidencia de entrega",
     tipoEntidad: "aliado_goo",
     estado: "abierto",
@@ -977,7 +978,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "EVI-004",
-    categoria: "proceso_evidencias",
+    categoria: "pqr",
     tipoEvento: "Error de captura fotográfica",
     tipoEntidad: "aliado_droop",
     estado: "abierto",
@@ -1003,7 +1004,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "EVI-005",
-    categoria: "proceso_evidencias",
+    categoria: "pqr",
     tipoEvento: "Falsa evidencia de entrega",
     tipoEntidad: "aliado_goo",
     estado: "abierto",
