@@ -44,7 +44,7 @@ function Bar({ value, max }: { value: number; max: number }) {
 }
 
 export default function InicioPage() {
-  const { setPaginaActiva, abrirPersona, abrirVehiculo, abrirTerminal } = useApp();
+  const { setPaginaActiva, abrirPersona, abrirVehiculo, abrirTerminal, abrirGuia, setNuevaRegistroAbierto } = useApp();
   const [alertas, setAlertas]     = React.useState<AlertaIA[]>(alertasIA);
   const [periodo, setPeriodo]     = React.useState<number>(30);
   const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
@@ -58,7 +58,6 @@ export default function InicioPage() {
       const fecha = new Date(e.fecha);
       let okFecha = true;
       if (dateRange?.from || dateRange?.to) {
-        // Rango personalizado seleccionado
         if (dateRange.from) okFecha = okFecha && !isBefore(fecha, startOfDay(dateRange.from));
         if (dateRange.to)   okFecha = okFecha && !isAfter(fecha, endOfDay(dateRange.to));
       } else if (periodo > 0) {
@@ -75,6 +74,32 @@ export default function InicioPage() {
   const nuevasIA   = alertas.filter((a) => a.estado === "nueva");
   const criticas   = nuevasIA.filter((a) => a.severidad === "critica");
   const enSeguim   = personas.filter((p) => p.estado === "en_seguimiento" || p.estado === "bloqueado");
+
+  /* ── Brechas de cobertura (guías sin evento asociado) ──
+     Son el corazón del valor de la plataforma: casos que DEBEN gestionarse
+     pero que nadie ha iniciado todavía.
+  ── */
+  const guiasConEventos = React.useMemo(() => {
+    const set = new Set<string>();
+    eventos.forEach((e) => (e.guias ?? []).forEach((g) => set.add(g)));
+    return set;
+  }, []);
+
+  // Guías con alto valor (>$1M) sin ningún evento → necesitan seguimiento RCE
+  const guiasRCESinGestion = React.useMemo(() =>
+    guias.filter(
+      (g) => g.valorDeclarado >= 1_000_000 && !guiasConEventos.has(g.numero)
+    ).slice(0, 5)
+  , [guiasConEventos]);
+
+  // Guías con novedad activa sin evento → necesitan investigación
+  const guiasFaltantesSinEvento = React.useMemo(() =>
+    guias.filter(
+      (g) => g.estadoGeneral === "con_novedad" && !guiasConEventos.has(g.numero)
+    ).slice(0, 5)
+  , [guiasConEventos]);
+
+  const totalSinGestionar = guiasRCESinGestion.length + guiasFaltantesSinEvento.length;
 
   /* ── Rankings ── */
   const termToRegional = React.useMemo(() => {
