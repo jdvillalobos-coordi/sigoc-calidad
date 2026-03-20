@@ -1673,7 +1673,6 @@ export const terminales = TODAS_TERMINALES;
 // ============================================================
 // EVIDENCIAS (módulo de validación IA)
 // ============================================================
-import type { Evidencia } from "@/types";
 
 export const evidencias: Evidencia[] = [
   // 4 cumple — 2 revisadas, 2 pendientes
