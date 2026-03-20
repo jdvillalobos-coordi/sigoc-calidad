@@ -2,10 +2,13 @@ import React from "react";
 import { eventos, alertasIA, personas, vehiculos, PAISES_REGIONALES } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { EstadoPersonaBadge } from "@/lib/utils-app";
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays } from "lucide-react";
-import { format, subDays, isAfter } from "date-fns";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X } from "lucide-react";
+import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import type { DateRange } from "react-day-picker";
 
 const PERIODOS = [
   { label: "7d",  days: 7 },
@@ -42,20 +45,29 @@ function Bar({ value, max }: { value: number; max: number }) {
 
 export default function InicioPage() {
   const { setPaginaActiva, abrirPersona, abrirVehiculo, abrirTerminal } = useApp();
-  const [alertas, setAlertas]   = React.useState<AlertaIA[]>(alertasIA);
-  const [periodo, setPeriodo]   = React.useState<number>(30);
-  const [cat, setCat]           = React.useState<CategoriaEvento | "todas">("todas");
-  const [tab, setTab]           = React.useState<RankingTab>("regionales");
+  const [alertas, setAlertas]     = React.useState<AlertaIA[]>(alertasIA);
+  const [periodo, setPeriodo]     = React.useState<number>(30);
+  const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
+  const [tab, setTab]             = React.useState<RankingTab>("regionales");
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+  const [calOpen, setCalOpen]     = React.useState(false);
 
   /* ── Filtrado ── */
   const filtrados = React.useMemo(() => {
-    const corte = periodo > 0 ? subDays(new Date(), periodo) : null;
     return eventos.filter((e) => {
-      const okFecha = !corte || isAfter(new Date(e.fecha), corte);
-      const okCat   = cat === "todas" || e.categoria === cat;
+      const fecha = new Date(e.fecha);
+      let okFecha = true;
+      if (dateRange?.from || dateRange?.to) {
+        // Rango personalizado seleccionado
+        if (dateRange.from) okFecha = okFecha && !isBefore(fecha, startOfDay(dateRange.from));
+        if (dateRange.to)   okFecha = okFecha && !isAfter(fecha, endOfDay(dateRange.to));
+      } else if (periodo > 0) {
+        okFecha = isAfter(fecha, subDays(new Date(), periodo));
+      }
+      const okCat = cat === "todas" || e.categoria === cat;
       return okFecha && okCat;
     });
-  }, [periodo, cat]);
+  }, [periodo, cat, dateRange]);
 
   /* ── KPIs ── */
   const abiertos   = filtrados.filter((e) => e.estado === "abierto");
@@ -126,17 +138,50 @@ export default function InicioPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 items-center">
+          {/* Períodos rápidos */}
           <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-            <span className="flex items-center px-2.5 border-r border-border text-muted-foreground">
-              <CalendarDays className="w-3.5 h-3.5" />
-            </span>
             {PERIODOS.map((p) => (
-              <button key={p.label} onClick={() => setPeriodo(p.days)}
-                className={`px-3 py-1.5 transition-colors ${periodo === p.days ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+              <button key={p.label}
+                onClick={() => { setPeriodo(p.days); setDateRange(undefined); }}
+                className={`px-3 py-1.5 transition-colors ${!dateRange && periodo === p.days ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
                 {p.label}
               </button>
             ))}
           </div>
+
+          {/* Rango de fechas personalizado */}
+          <Popover open={calOpen} onOpenChange={setCalOpen}>
+            <PopoverTrigger asChild>
+              <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${dateRange?.from ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
+                <CalendarDays className="w-3.5 h-3.5" />
+                {dateRange?.from
+                  ? dateRange.to
+                    ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
+                    : format(dateRange.from, "d MMM yyyy", { locale: es })
+                  : "Rango personalizado"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={(range) => { setDateRange(range); if (range?.from) setPeriodo(0); }}
+                locale={es}
+                numberOfMonths={2}
+                initialFocus
+              />
+              {dateRange?.from && (
+                <div className="flex justify-end px-3 pb-3">
+                  <button onClick={() => { setDateRange(undefined); setPeriodo(30); setCalOpen(false); }}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <X className="w-3 h-3" /> Limpiar rango
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          {/* Categorías */}
           <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card flex-wrap">
             {CATS.map((c) => (
               <button key={c.value} onClick={() => setCat(c.value)}
