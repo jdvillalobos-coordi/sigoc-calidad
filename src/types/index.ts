@@ -205,8 +205,23 @@ export interface UsuarioApp {
   avatarInicial: string;
 }
 
+// ---- Evidencia (módulo de validación IA) ----
+export interface Evidencia {
+  id: string;
+  guia: string;
+  terminal: string;
+  tipoEvidencia: "entrega" | "intento_entrega";
+  resultadoIA: "cumple" | "no_cumple";
+  fecha: string;
+  imagenUrl?: string;
+  veredictoOperador?: "confirma" | "falso_negativo" | "falso_positivo";
+  justificacionOperador?: string;
+  fechaRevision?: string;
+  revisadoPor?: string;
+}
+
 // ---- Navegación ----
-export type PaginaActiva = "inicio" | "registros" | "ia" | "configuracion";
+export type PaginaActiva = "inicio" | "registros" | "evidencias" | "ia" | "configuracion";
 export type DrawerTipo = "registro" | "persona360" | "vehiculo360" | "guia360" | "terminal360" | null;
 
 export interface DrawerState {

@@ -10,7 +10,6 @@ const CATEGORIAS = [
   { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
   { id: "unidades" as CategoriaEvento, icon: "📦", label: "Unidades", desc: "Faltantes de mercancía, novedades código 100" },
   { id: "listas_vinculantes" as CategoriaEvento, icon: "📋", label: "Listas Vinculantes", desc: "Antecedentes, denuncias, vínculos externos (Truora)" },
-  { id: "proceso_evidencias" as CategoriaEvento, icon: "📸", label: "Proceso Evidencias", desc: "Evidencias de entrega que no pasan validación IA" },
   { id: "pqr" as CategoriaEvento, icon: "📞", label: "PQR", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
   { id: "disciplinarios" as CategoriaEvento, icon: "⚖️", label: "Disciplinarios", desc: "Faltas laborales: llegadas tarde, desacatos, llamados de atención" },
 ] as const;
@@ -19,7 +18,6 @@ const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[]
   dineros:            [{ opciones: ["Hurto de dinero", "Faltante de dinero", "Faltante injustificado"] }],
   unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
   listas_vinculantes: [{ opciones: ["Denuncia penal", "Accidente de tránsito", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] }],
-  proceso_evidencias: [{ opciones: ["Falsa evidencia de entrega", "Falsa evidencia de intento de entrega", "Reporte causal — dirección no localizada", "Error de captura fotográfica"] }],
   pqr:                [{ opciones: ["Unidad no entregada", "Producto incompleto", "Producto en mal estado", "Incumplimiento de funcionario", "Entrega trocada", "Entrega no reconocida", "Pérdida total", "Deterioro"] }],
   disciplinarios:     [{ opciones: ["Llegada tarde", "Llamado de atención verbal", "Llamado de atención escrito", "Desacato", "Falta leve", "Falta grave", "Falta gravísima"] }],
 };
@@ -28,7 +26,6 @@ const FUENTES: Record<CategoriaEvento, string> = {
   dineros:            "SIGO Dineros",
   unidades:           "SIGO NyS",
   listas_vinculantes: "Truora / ClickCloud",
-  proceso_evidencias: "Módulo de evidencias interno",
   pqr:                "Reporte cliente / Agente CAL",
   disciplinarios:     "SuccessFactors / Gestión Humana",
 };
