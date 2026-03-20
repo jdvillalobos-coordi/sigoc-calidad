@@ -35,8 +35,8 @@ function SearchBar() {
     g.numero.includes(q) || g.nombreCliente.toLowerCase().includes(q)
   ).slice(0, 3) : [];
 
-  const registrosRes = q.length > 1 ? registros.filter((r) =>
-    r.id.toLowerCase().includes(q) || descripcionCorta(r).toLowerCase().includes(q)
+  const registrosRes = q.length > 1 ? eventos.filter((r) =>
+    r.id.toLowerCase().includes(q) || r.tipoEvento.toLowerCase().includes(q) || descripcionCorta(r).toLowerCase().includes(q)
   ).slice(0, 4) : [];
 
   const hasResults = personasRes.length + vehiculosRes.length + guiasRes.length + registrosRes.length > 0;
