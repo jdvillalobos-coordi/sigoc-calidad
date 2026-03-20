@@ -125,21 +125,32 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
                 <div className="space-y-2">
                   <button
                     onClick={() => setVeredicto("confirma")}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${veredicto === "confirma" ? "bg-green-600 text-white border-green-600" : "border-border hover:bg-green-50 hover:border-green-200"}`}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${veredicto === "confirma" ? "bg-green-600 text-white border-green-600" : "border-border hover:bg-green-50 hover:border-green-200"}`}
                   >
-                    ✅ Confirmo — La IA tiene razón
+                    <div className="text-xs font-medium">✅ Confirmo — La IA tiene razón</div>
+                    <div className={`text-xs mt-0.5 ${veredicto === "confirma" ? "text-white/70" : "text-muted-foreground"}`}>
+                      {ev.resultadoIA === "cumple"
+                        ? "La foto es válida y corresponde a una entrega real."
+                        : "La foto efectivamente no es válida. El caso debe escalarse."}
+                    </div>
                   </button>
                   <button
                     onClick={() => setVeredicto("falso_negativo")}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${veredicto === "falso_negativo" ? "bg-amber-500 text-white border-amber-500" : "border-border hover:bg-amber-50 hover:border-amber-200"}`}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${veredicto === "falso_negativo" ? "bg-amber-500 text-white border-amber-500" : "border-border hover:bg-amber-50 hover:border-amber-200"}`}
                   >
-                    ⚠️ Falso negativo — La evidencia SÍ es válida pero la IA la rechazó
+                    <div className="text-xs font-medium">⚠️ Falso negativo — La IA rechazó una evidencia válida</div>
+                    <div className={`text-xs mt-0.5 ${veredicto === "falso_negativo" ? "text-white/80" : "text-muted-foreground"}`}>
+                      La foto sí corresponde a la entrega real, pero la IA la rechazó por error. Falla del modelo de IA.
+                    </div>
                   </button>
                   <button
                     onClick={() => setVeredicto("falso_positivo")}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg border text-xs font-medium transition-colors ${veredicto === "falso_positivo" ? "bg-red-600 text-white border-red-600" : "border-border hover:bg-red-50 hover:border-red-200"}`}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${veredicto === "falso_positivo" ? "bg-red-600 text-white border-red-600" : "border-border hover:bg-red-50 hover:border-red-200"}`}
                   >
-                    🚫 Falso positivo — La evidencia NO es válida pero la IA la aprobó
+                    <div className="text-xs font-medium">🚫 Falso positivo — La IA aprobó una evidencia inválida</div>
+                    <div className={`text-xs mt-0.5 ${veredicto === "falso_positivo" ? "text-white/80" : "text-muted-foreground"}`}>
+                      La foto <strong>no corresponde</strong> a la entrega: el mensajero tomó una foto incorrecta, de otro lugar o de otro paquete, y la IA la aprobó por error. Falla del operador y/o del modelo.
+                    </div>
                   </button>
 
                   {(veredicto === "falso_negativo" || veredicto === "falso_positivo") && (
