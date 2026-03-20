@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Bell, ChevronDown } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { personas, vehiculos, guias, registros, notificaciones } from "@/data/mockData";
-import { tipoConfig, descripcionCorta, AvatarInicial } from "@/lib/utils-app";
+import { personas, vehiculos, guias, eventos, notificaciones } from "@/data/mockData";
+import { categoriaConfig, descripcionCorta, AvatarInicial } from "@/lib/utils-app";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
@@ -35,8 +35,8 @@ function SearchBar() {
     g.numero.includes(q) || g.nombreCliente.toLowerCase().includes(q)
   ).slice(0, 3) : [];
 
-  const registrosRes = q.length > 1 ? registros.filter((r) =>
-    r.id.toLowerCase().includes(q) || descripcionCorta(r).toLowerCase().includes(q)
+  const registrosRes = q.length > 1 ? eventos.filter((r) =>
+    r.id.toLowerCase().includes(q) || r.tipoEvento.toLowerCase().includes(q) || descripcionCorta(r).toLowerCase().includes(q)
   ).slice(0, 4) : [];
 
   const hasResults = personasRes.length + vehiculosRes.length + guiasRes.length + registrosRes.length > 0;
@@ -137,10 +137,10 @@ function SearchBar() {
           {registrosRes.length > 0 && (
             <div>
               <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/40 border-b border-border">
-                📋 Registros
+                📋 Eventos
               </div>
               {registrosRes.map((r) => {
-                const cfg = tipoConfig[r.tipo];
+                const cfg = categoriaConfig[r.categoria];
                 return (
                   <button
                     key={r.id}
@@ -152,7 +152,7 @@ function SearchBar() {
                     </div>
                     <div>
                       <div className="font-medium">{r.id}</div>
-                      <div className="text-xs text-muted-foreground truncate max-w-[300px]">{descripcionCorta(r)}</div>
+                      <div className="text-xs text-muted-foreground truncate max-w-[300px]">{r.tipoEvento} · {r.terminal}</div>
                     </div>
                   </button>
                 );
