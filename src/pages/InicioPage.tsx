@@ -2,10 +2,13 @@ import React from "react";
 import { eventos, alertasIA, personas, vehiculos, PAISES_REGIONALES } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { EstadoPersonaBadge } from "@/lib/utils-app";
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays } from "lucide-react";
-import { format, subDays, isAfter } from "date-fns";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X } from "lucide-react";
+import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import type { DateRange } from "react-day-picker";
 
 const PERIODOS = [
   { label: "7d",  days: 7 },
