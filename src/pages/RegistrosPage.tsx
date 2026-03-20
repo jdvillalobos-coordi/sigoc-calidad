@@ -6,7 +6,6 @@ import {
   Plus, ChevronUp, ChevronDown, CalendarIcon, X,
   ExternalLink, Clock, User, MapPin, Hash,
   ChevronRight, Tag, Building2, AlertCircle,
-  AlertTriangle, DollarSign, PackageSearch, ArrowRight
 } from "lucide-react";
 import type { CategoriaEvento, EstadoEvento, Evento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -259,79 +258,37 @@ function EventoDetalle({ evento, onClose }: { evento: Evento; onClose: () => voi
         {/* Resultado IA (evidencias generadas automáticamente) */}
         {evento.resultadoIA && (
           <Section title="Resultado IA" icon="🤖">
-            <div className="flex items-center gap-2">
-              <span className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold border",
-                evento.resultadoIA === "cumple"
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : "bg-red-50 text-red-700 border-red-200"
-              )}>
-                {evento.resultadoIA === "cumple" ? "✅ Cumple" : "❌ No cumple"}
-              </span>
+            <div className="space-y-1.5">
+              <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label="Resultado IA">
+                <span className={cn("text-xs font-semibold",
+                  evento.resultadoIA === "cumple" ? "text-green-700" : "text-destructive"
+                )}>{evento.resultadoIA === "cumple" ? "✅ Cumple" : "❌ No cumple"}</span>
+              </InfoRow>
               {evento.veredictoOperador && (
-                <span className="text-xs text-muted-foreground">
-                  Operador: <span className="font-medium capitalize">{evento.veredictoOperador.replace(/_/g, " ")}</span>
-                </span>
+                <InfoRow icon={<User className="w-3.5 h-3.5" />} label="Veredicto operador">
+                  <span className="text-xs capitalize">{evento.veredictoOperador.replace(/_/g, " ")}</span>
+                </InfoRow>
               )}
             </div>
           </Section>
         )}
 
-        {/* Eventos asociados */}
-        {evento.eventosAsociados && evento.eventosAsociados.length > 0 && (
-          <Section title="Eventos relacionados" icon="🔗">
-            <div className="flex flex-wrap gap-2">
-              {evento.eventosAsociados.map((eid) => {
-                const ev = eventos.find(e => e.id === eid);
-                return (
-                  <button key={eid} onClick={() => abrirRegistro(eid)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-muted border border-border rounded-lg text-xs hover:bg-muted/80 transition-colors">
-                    {ev ? <><CategoriaBadge categoria={ev.categoria} className="mr-1" />{eid}</> : eid}
-                    <ExternalLink className="w-3 h-3 ml-0.5 text-muted-foreground" />
-                  </button>
-                );
-              })}
-            </div>
-          </Section>
-        )}
-
-        {/* Últimas anotaciones */}
+        {/* Anotaciones recientes */}
         {evento.anotaciones.length > 0 && (
-          <Section title="Seguimiento" icon="💬">
+          <Section title="Últimas anotaciones" icon="💬">
             <div className="space-y-2">
               {evento.anotaciones.slice(-2).map((a) => (
-                <div key={a.id} className="bg-muted/40 rounded-lg p-2.5">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-xs font-semibold">{a.autorNombre}</span>
+                <div key={a.id} className="bg-muted/40 rounded-lg px-3 py-2">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[10px] font-semibold text-foreground">{a.autorId}</span>
                     <span className="text-[10px] text-muted-foreground">{formatDate(a.fecha)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{a.texto}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{a.texto}</p>
                 </div>
               ))}
-              {evento.anotaciones.length > 2 && (
-                <button onClick={() => abrirRegistro(evento.id)}
-                  className="text-xs text-primary hover:underline">
-                  Ver todas las anotaciones ({evento.anotaciones.length}) →
-                </button>
-              )}
             </div>
           </Section>
         )}
-
-        {/* Registrado por */}
-        <div className="pt-2 border-t border-border">
-          <div className="text-xs text-muted-foreground space-y-0.5">
-            <div>Registrado por <span className="font-medium text-foreground">{evento.usuarioRegistro}</span> · {evento.perfilUsuario}</div>
-            <div>{evento.terminalUsuario} · {formatDate(evento.fechaRegistro)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer con acción principal */}
-      <div className="flex-shrink-0 px-5 py-3 border-t border-border">
-        <button onClick={() => abrirRegistro(evento.id)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
-          <ExternalLink className="w-4 h-4" /> Abrir detalle completo
-        </button>
       </div>
     </div>
   );
@@ -375,10 +332,12 @@ export default function RegistrosPage() {
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
   const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
-  const [pendientesExpanded, setPendientesExpanded] = useState(true);
   const PER_PAGE = 20;
 
-  // ── Guías sin gestionar (insumo para crear eventos) ──────────
+  // ── Guías RCE sin evento: filas virtuales en la tabla ────────
+  // Son guías con recaudo >$1M o con_novedad sin evento asociado.
+  // Aparecen como filas al inicio de la tabla con badge "RCE Pendiente"
+  // y botón "Crear evento" — el analista las convierte en eventos reales.
   const guiasSinGestion = useMemo(() => {
     const conEventos = new Set<string>();
     eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
@@ -387,11 +346,7 @@ export default function RegistrosPage() {
       .filter((g) => g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")
       .map((g) => ({
         ...g,
-        tipoAlerta: (g.valorDeclarado >= 1_000_000 && g.estadoGeneral === "con_novedad")
-          ? "rce_y_novedad" as const
-          : g.valorDeclarado >= 1_000_000
-          ? "rce" as const
-          : "novedad" as const,
+        diasSinGestionar: Math.floor((Date.now() - new Date(g.fechaCreacion).getTime()) / 86_400_000),
       }))
       .sort((a, b) => b.valorDeclarado - a.valorDeclarado);
   }, []);
@@ -414,6 +369,18 @@ export default function RegistrosPage() {
   , [regionalFiltro, paisFiltro]);
 
   const q = busquedaQuery.toLowerCase().trim();
+
+  // Guías pendientes filtradas (se ocultan si filtro de categoría ≠ todos/dineros o estado = cerrado)
+  const guiasFiltradas = useMemo(() => {
+    if (estadoFiltro === "cerrado") return [];
+    if (categoriaFiltro !== "todos" && categoriaFiltro !== "dineros") return [];
+    return guiasSinGestion.filter((g) => {
+      if (terminalFiltro !== "todos" && g.terminalDestino !== terminalFiltro) return false;
+      if (q && !g.numero.includes(q) && !g.nombreCliente.toLowerCase().includes(q)
+          && !g.terminalDestino.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [guiasSinGestion, estadoFiltro, categoriaFiltro, terminalFiltro, q]);
 
   const filtered = useMemo(() => eventos
     .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
@@ -468,6 +435,7 @@ export default function RegistrosPage() {
   }
 
   const hayFiltrosActivos = paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
+  const totalVisible = filtered.length + guiasFiltradas.length;
 
   function limpiarFiltros() {
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setPage(1);
@@ -537,7 +505,7 @@ export default function RegistrosPage() {
           <DateRangeFilter range={dateRange} onChange={(r) => { setDateRange(r); setPage(1); }} />
 
           <div className="flex-1" />
-          <span className="text-xs text-muted-foreground font-medium">{filtered.length} evento{filtered.length !== 1 ? "s" : ""}</span>
+          <span className="text-xs text-muted-foreground font-medium">{totalVisible} evento{totalVisible !== 1 ? "s" : ""}</span>
           <button onClick={() => setNuevaRegistroAbierto(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors">
             <Plus className="w-3.5 h-3.5" /> Nuevo evento
@@ -561,77 +529,6 @@ export default function RegistrosPage() {
           </div>
         )}
       </div>
-
-      {/* ── Guías sin gestionar — insumo para crear eventos ────────
-          Guías con recaudo >$1M o con_novedad que no tienen un
-          evento asociado todavía. El analista puede iniciar la
-          investigación directamente desde aquí.
-      ──────────────────────────────────────────────────────── */}
-      {guiasSinGestion.length > 0 && (
-        <div className="flex-shrink-0 border-b-2 border-amber-200 bg-amber-50">
-          {/* Cabecera colapsable */}
-          <button
-            onClick={() => setPendientesExpanded(v => !v)}
-            className="w-full flex items-center justify-between px-5 py-2.5 hover:bg-amber-100/60 transition-colors">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span className="text-sm font-semibold text-amber-800">
-                {guiasSinGestion.length} guía{guiasSinGestion.length !== 1 ? "s" : ""} sin gestionar
-              </span>
-              <span className="text-xs text-amber-600 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                Requieren un evento
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-amber-600 hidden sm:block">
-                Insumo detectado automáticamente — crea un evento de Dineros para iniciar seguimiento
-              </span>
-              <ChevronDown className={cn("w-4 h-4 text-amber-600 transition-transform", pendientesExpanded && "rotate-180")} />
-            </div>
-          </button>
-
-          {/* Lista expandida */}
-          {pendientesExpanded && (
-            <div className="px-5 pb-3 space-y-1.5 max-h-52 overflow-y-auto">
-              {guiasSinGestion.map((g) => (
-                <div key={g.numero}
-                  className="flex items-center gap-3 bg-white/80 border border-amber-200 rounded-lg px-3 py-2">
-                  {/* Tipo de alerta */}
-                  <span className={cn(
-                    "text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0",
-                    g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad"
-                      ? "bg-green-100 text-green-700 border border-green-200"
-                      : "bg-amber-100 text-amber-700 border border-amber-200"
-                  )}>
-                    {g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad" ? "💰 RCE" : "📦 Novedad"}
-                  </span>
-                  {/* Número */}
-                  <button onClick={() => abrirGuia(g.numero)}
-                    className="font-mono text-xs font-semibold text-primary hover:underline flex-shrink-0">
-                    {g.numero}
-                  </button>
-                  <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs text-foreground truncate block font-medium">{g.nombreCliente}</span>
-                    <span className="text-[10px] text-muted-foreground">{g.terminalOrigen} → {g.terminalDestino}</span>
-                  </div>
-                  {/* Valor */}
-                  <span className="text-xs font-bold text-green-700 flex-shrink-0 hidden sm:block">
-                    {g.valorDeclarado.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}
-                  </span>
-                  {/* Acción */}
-                  <button
-                    onClick={() => setNuevaRegistroAbierto(true)}
-                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 text-white text-[11px] font-semibold rounded-lg hover:bg-amber-700 transition-colors flex-shrink-0">
-                    <Plus className="w-3 h-3" /> Crear evento
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Cuerpo: tabla + panel ── */}
       <div className="flex-1 flex overflow-hidden">
@@ -664,6 +561,71 @@ export default function RegistrosPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
+
+                {/* ── Filas de guías RCE pendientes (al inicio, antes de los eventos) ── */}
+                {guiasFiltradas.map((g) => (
+                  <tr key={`rce-${g.numero}`}
+                    className="bg-amber-50/60 border-l-2 border-l-amber-400 hover:bg-amber-50 transition-colors">
+                    {/* Categoría: badge especial RCE */}
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                        💰 RCE
+                      </span>
+                    </td>
+                    {/* ID: número de guía */}
+                    <td className="px-4 py-3">
+                      <button onClick={() => abrirGuia(g.numero)}
+                        className="font-mono text-xs font-semibold text-primary hover:underline">
+                        {g.numero}
+                      </button>
+                    </td>
+                    {/* Tipo / Personas */}
+                    <td className="px-4 py-3 max-w-0">
+                      <span className="truncate block text-xs font-medium text-foreground">Seguimiento RCE</span>
+                      <span className="text-[10px] text-muted-foreground truncate block">
+                        {g.nombreCliente} · {formatCurrency(g.valorDeclarado)}
+                      </span>
+                    </td>
+                    {/* Entidad */}
+                    {!panelAbierto && (
+                      <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">
+                        Cliente
+                      </td>
+                    )}
+                    {/* Terminal destino */}
+                    <td className="px-4 py-3">
+                      <button onClick={(ev) => { ev.stopPropagation(); abrirTerminal(g.terminalDestino); }}
+                        className="text-xs text-primary hover:underline font-medium">
+                        {g.terminalDestino}
+                      </button>
+                    </td>
+                    {/* Estado: Sin gestionar */}
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                        Sin gestionar
+                      </span>
+                    </td>
+                    {/* Fecha creación */}
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {format(parseISO(g.fechaCreacion), "dd MMM yy", { locale: es })}
+                    </td>
+                    {/* Días + CTA */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-xs font-semibold", g.diasSinGestionar > 3 ? "text-amber-600" : "text-muted-foreground")}>
+                          {g.diasSinGestionar > 3 ? `⏰ ${g.diasSinGestionar}d` : `${g.diasSinGestionar}d`}
+                        </span>
+                        <button
+                          onClick={() => setNuevaRegistroAbierto(true)}
+                          className="flex items-center gap-0.5 px-2 py-1 bg-primary text-primary-foreground text-[10px] font-semibold rounded-md hover:bg-primary/90 transition-colors whitespace-nowrap">
+                          <Plus className="w-2.5 h-2.5" /> Crear evento
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+
+                {/* ── Filas de eventos reales ── */}
                 {paged.map((e) => {
                   const isSelected = eventoSeleccionado?.id === e.id;
                   const responsable = e.personasResponsables[0];
@@ -723,7 +685,7 @@ export default function RegistrosPage() {
                 })}
               </tbody>
             </table>
-            {filtered.length === 0 && (
+            {filtered.length === 0 && guiasFiltradas.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <span className="text-4xl mb-3">📋</span>
                 <p className="font-medium">No se encontraron eventos</p>
