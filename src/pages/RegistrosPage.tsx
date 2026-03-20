@@ -375,10 +375,11 @@ export default function RegistrosPage() {
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
   const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
-  const [pendientesExpanded, setPendientesExpanded] = useState(true);
   const PER_PAGE = 20;
 
-  // ── Guías sin gestionar (insumo para crear eventos) ──────────
+  // ── Guías sin gestionar: aparecen como filas en la tabla ──────
+  // Son guías con recaudo >$1M o con_novedad sin evento asociado.
+  // No son "eventos" reales aún — el analista debe crear el evento.
   const guiasSinGestion = useMemo(() => {
     const conEventos = new Set<string>();
     eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
@@ -392,9 +393,192 @@ export default function RegistrosPage() {
           : g.valorDeclarado >= 1_000_000
           ? "rce" as const
           : "novedad" as const,
+        diasSinGestionar: Math.floor((Date.now() - new Date(g.fechaCreacion).getTime()) / 86_400_000),
       }))
       .sort((a, b) => b.valorDeclarado - a.valorDeclarado);
   }, []);
+
+  function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
+  function handleRegionalChange(val: string) { setRegionalFiltro(val); setTerminalFiltro("todos"); setPage(1); }
+
+  const regionalesDisponibles: string[] = useMemo(() =>
+    paisFiltro !== "todos"
+      ? Object.keys(PAISES_REGIONALES[paisFiltro] ?? {})
+      : Object.values(PAISES_REGIONALES).flatMap((r) => Object.keys(r))
+  , [paisFiltro]);
+
+  const terminalesDisponibles: string[] = useMemo(() =>
+    regionalFiltro !== "todos"
+      ? REGIONALES_FLAT[regionalFiltro] ?? []
+      : paisFiltro !== "todos"
+        ? Object.values(PAISES_REGIONALES[paisFiltro] ?? {}).flat()
+        : terminales
+  , [regionalFiltro, paisFiltro]);
+
+  const q = busquedaQuery.toLowerCase().trim();
+
+  // Guías filtradas según los filtros activos (terminal, país, búsqueda)
+  const guiasSinGestionFiltradas = useMemo(() => {
+    // Solo mostrar si no hay filtro de categoría específico o estado cerrado
+    if (categoriaFiltro !== "todos" || estadoFiltro === "cerrado") return [];
+    return guiasSinGestion.filter((g) => {
+      if (terminalFiltro !== "todos" && g.terminalDestino !== terminalFiltro) return false;
+      if (q && !g.numero.toLowerCase().includes(q) && !g.nombreCliente.toLowerCase().includes(q)
+          && !g.terminalDestino.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [guiasSinGestion, categoriaFiltro, estadoFiltro, terminalFiltro, q]);
+
+  const filtered = useMemo(() => eventos
+    .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
+    .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
+    .filter((e) => {
+      if (terminalFiltro  !== "todos") return e.terminal === terminalFiltro;
+      if (regionalFiltro  !== "todos") return (REGIONALES_FLAT[regionalFiltro] ?? []).includes(e.terminal);
+      if (paisFiltro      !== "todos") return Object.values(PAISES_REGIONALES[paisFiltro] ?? {}).flat().includes(e.terminal);
+      return true;
+    })
+    .filter((e) => {
+      if (!dateRange?.from) return true;
+      const fecha = parseISO(e.fecha);
+      const to = dateRange.to ?? new Date();
+      return isWithinInterval(fecha, { start: dateRange.from, end: to });
+    })
+    .filter((e) => {
+      if (!q) return true;
+      const allPersonaNames = [...e.personasResponsables, ...e.personasParticipantes]
+        .map(p => `${p.nombre} ${p.cedula}`.toLowerCase());
+      return (
+        e.id.toLowerCase().includes(q) ||
+        e.terminal.toLowerCase().includes(q) ||
+        e.tipoEvento.toLowerCase().includes(q) ||
+        e.descripcionHechos.toLowerCase().includes(q) ||
+        (e.guias && e.guias.some((g) => g.toLowerCase().includes(q))) ||
+        allPersonaNames.some(n => n.includes(q)) ||
+        (e.nitCliente && e.nitCliente.toLowerCase().includes(q)) ||
+        (e.nombreCliente && e.nombreCliente.toLowerCase().includes(q))
+      );
+    })
+    .sort((a, b) => {
+      let cmp = 0;
+      if      (sortField === "fecha")       cmp = new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+      else if (sortField === "diasAbierto") cmp = a.diasAbierto - b.diasAbierto;
+      else                                  cmp = a.id.localeCompare(b.id);
+      return sortDir === "asc" ? cmp : -cmp;
+    })
+  , [categoriaFiltro, estadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
+
+  const pages = Math.ceil(filtered.length / PER_PAGE);
+  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  function toggleSort(field: typeof sortField) {
+    if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("desc"); }
+  }
+
+  function SortIcon({ field }: { field: typeof sortField }) {
+    if (sortField !== field) return <span className="text-muted-foreground/40">↕</span>;
+    return sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+  }
+
+  const hayFiltrosActivos = paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
+  const totalVisible = filtered.length + guiasSinGestionFiltradas.length;
+
+  function limpiarFiltros() {
+    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setPage(1);
+  }
+
+  function seleccionar(evento: Evento) {
+    setEventoSeleccionado(prev => prev?.id === evento.id ? null : evento);
+  }
+
+  const panelAbierto = !!eventoSeleccionado;
+
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+
+      {/* ── Barra de filtros ── */}
+      <div className="border-b border-border bg-card px-5 py-3 flex-shrink-0 space-y-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+
+          {/* Categoría — chips horizontales */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {CATEGORIAS.map((c) => (
+              <button key={c.value}
+                onClick={() => { setCategoriaFiltro(c.value); setPage(1); }}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
+                  categoriaFiltro === c.value
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Estado */}
+          <select
+            className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+            value={estadoFiltro}
+            onChange={(e) => { setEstadoFiltro(e.target.value); setPage(1); }}>
+            <option value="todos">Todos los estados</option>
+            <option value="abierto">Abierto</option>
+            <option value="cerrado">Cerrado</option>
+          </select>
+
+          {/* País → Regional → Terminal (cascada) */}
+          <select
+            className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={paisFiltro} onChange={(e) => handlePaisChange(e.target.value)}>
+            <option value="todos">Todos los países</option>
+            {Object.keys(PAISES_REGIONALES).map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select
+            className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={regionalFiltro} onChange={(e) => handleRegionalChange(e.target.value)}>
+            <option value="todos">Todas las regionales</option>
+            {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select
+            className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={terminalFiltro} onChange={(e) => { setTerminalFiltro(e.target.value); setPage(1); }}>
+            <option value="todos">Todas las terminales</option>
+            {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+
+          <DateRangeFilter range={dateRange} onChange={(r) => { setDateRange(r); setPage(1); }} />
+
+          <div className="flex-1" />
+          <span className="text-xs text-muted-foreground font-medium">{totalVisible} evento{totalVisible !== 1 ? "s" : ""}</span>
+          <button onClick={() => setNuevaRegistroAbierto(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors">
+            <Plus className="w-3.5 h-3.5" /> Nuevo evento
+          </button>
+        </div>
+
+        {hayFiltrosActivos && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground">Filtrando por:</span>
+            {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => {}} />}
+            {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
+            {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
+            {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
+            {dateRange?.from && (
+              <FilterPill
+                label={`Fechas: ${format(dateRange.from, "dd MMM", { locale: es })}${dateRange.to ? ` – ${format(dateRange.to, "dd MMM", { locale: es })}` : ""}`}
+                onRemove={() => { setDateRange(undefined); setPage(1); }}
+              />
+            )}
+            <button onClick={limpiarFiltros} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">Limpiar filtros</button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Cuerpo: tabla + panel ── */}
+      <div className="flex-1 flex overflow-hidden">
 
   function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
   function handleRegionalChange(val: string) { setRegionalFiltro(val); setTerminalFiltro("todos"); setPage(1); }
