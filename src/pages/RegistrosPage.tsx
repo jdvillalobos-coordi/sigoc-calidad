@@ -562,6 +562,77 @@ export default function RegistrosPage() {
         )}
       </div>
 
+      {/* ── Guías sin gestionar — insumo para crear eventos ────────
+          Guías con recaudo >$1M o con_novedad que no tienen un
+          evento asociado todavía. El analista puede iniciar la
+          investigación directamente desde aquí.
+      ──────────────────────────────────────────────────────── */}
+      {guiasSinGestion.length > 0 && (
+        <div className="flex-shrink-0 border-b-2 border-amber-200 bg-amber-50">
+          {/* Cabecera colapsable */}
+          <button
+            onClick={() => setPendientesExpanded(v => !v)}
+            className="w-full flex items-center justify-between px-5 py-2.5 hover:bg-amber-100/60 transition-colors">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span className="text-sm font-semibold text-amber-800">
+                {guiasSinGestion.length} guía{guiasSinGestion.length !== 1 ? "s" : ""} sin gestionar
+              </span>
+              <span className="text-xs text-amber-600 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                Requieren un evento
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-amber-600 hidden sm:block">
+                Insumo detectado automáticamente — crea un evento de Dineros para iniciar seguimiento
+              </span>
+              <ChevronDown className={cn("w-4 h-4 text-amber-600 transition-transform", pendientesExpanded && "rotate-180")} />
+            </div>
+          </button>
+
+          {/* Lista expandida */}
+          {pendientesExpanded && (
+            <div className="px-5 pb-3 space-y-1.5 max-h-52 overflow-y-auto">
+              {guiasSinGestion.map((g) => (
+                <div key={g.numero}
+                  className="flex items-center gap-3 bg-white/80 border border-amber-200 rounded-lg px-3 py-2">
+                  {/* Tipo de alerta */}
+                  <span className={cn(
+                    "text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0",
+                    g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad"
+                      ? "bg-green-100 text-green-700 border border-green-200"
+                      : "bg-amber-100 text-amber-700 border border-amber-200"
+                  )}>
+                    {g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad" ? "💰 RCE" : "📦 Novedad"}
+                  </span>
+                  {/* Número */}
+                  <button onClick={() => abrirGuia(g.numero)}
+                    className="font-mono text-xs font-semibold text-primary hover:underline flex-shrink-0">
+                    {g.numero}
+                  </button>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs text-foreground truncate block font-medium">{g.nombreCliente}</span>
+                    <span className="text-[10px] text-muted-foreground">{g.terminalOrigen} → {g.terminalDestino}</span>
+                  </div>
+                  {/* Valor */}
+                  <span className="text-xs font-bold text-green-700 flex-shrink-0 hidden sm:block">
+                    {g.valorDeclarado.toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 })}
+                  </span>
+                  {/* Acción */}
+                  <button
+                    onClick={() => setNuevaRegistroAbierto(true)}
+                    className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 text-white text-[11px] font-semibold rounded-lg hover:bg-amber-700 transition-colors flex-shrink-0">
+                    <Plus className="w-3 h-3" /> Crear evento
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Cuerpo: tabla + panel ── */}
       <div className="flex-1 flex overflow-hidden">
 
