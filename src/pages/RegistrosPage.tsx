@@ -16,7 +16,6 @@ const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
   { value: "dineros", label: "💰 Dineros" },
   { value: "unidades", label: "📦 Unidades" },
   { value: "listas_vinculantes", label: "📋 Listas Vinculantes" },
-  { value: "proceso_evidencias", label: "📸 Evidencias" },
   { value: "pqr", label: "📞 PQR" },
   { value: "disciplinarios", label: "⚖️ Disciplinarios" },
 ];

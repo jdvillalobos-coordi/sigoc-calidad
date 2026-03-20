@@ -65,7 +65,6 @@ export function CategoriaBadge({ categoria, className = "" }: { categoria: Categ
     dineros:            "bg-green-100 text-green-800 border border-green-200",
     unidades:           "bg-blue-100 text-blue-800 border border-blue-200",
     listas_vinculantes: "bg-gray-100 text-gray-700 border border-gray-200",
-    proceso_evidencias: "bg-orange-100 text-orange-800 border border-orange-200",
     pqr:                "bg-purple-100 text-purple-800 border border-purple-200",
     disciplinarios:     "bg-red-100 text-red-800 border border-red-200",
   };

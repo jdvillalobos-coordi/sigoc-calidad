@@ -422,7 +422,7 @@ export function Persona360Drawer() {
   const evDineros = evPersona.filter((e) => e.categoria === "dineros");
   const evUnidades = evPersona.filter((e) => e.categoria === "unidades");
   const evListas = evPersona.filter((e) => e.categoria === "listas_vinculantes");
-  const evEvidencias = evPersona.filter((e) => e.categoria === "proceso_evidencias");
+  const evEvidencias = evPersona.filter((e) => e.resultadoIA != null);
   const evPQR = persona.tipo === "cliente" && persona.nit
     ? eventos.filter((e) => e.categoria === "pqr" && e.nitCliente === persona.nit)
     : evPersona.filter((e) => e.categoria === "pqr");
