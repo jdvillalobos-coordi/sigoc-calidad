@@ -280,7 +280,7 @@ function EventoDetalle({ evento, onClose }: { evento: Evento; onClose: () => voi
               {evento.anotaciones.slice(-2).map((a) => (
                 <div key={a.id} className="bg-muted/40 rounded-lg px-3 py-2">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[10px] font-semibold text-foreground">{a.autor}</span>
+                    <span className="text-[10px] font-semibold text-foreground">{a.autorId}</span>
                     <span className="text-[10px] text-muted-foreground">{formatDate(a.fecha)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{a.texto}</p>
