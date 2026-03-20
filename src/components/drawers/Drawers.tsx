@@ -609,6 +609,86 @@ export function Persona360Drawer() {
               </table>
             </Section>
           )}
+          {/* ── Acciones rápidas ── */}
+          <div className="border border-border rounded-xl p-4">
+            <h3 className="font-semibold text-sm mb-3">⚡ Acciones rápidas</h3>
+            <div className="space-y-2">
+              {/* Cuadro de Contacto */}
+              {persona.estado !== "en_seguimiento" && persona.estado !== "bloqueado" && (
+                <button
+                  onClick={() => toast({ title: "🟡 Persona agregada al Cuadro de Contacto", description: `${persona.nombre} ahora está en seguimiento.` })}
+                  className="w-full text-left px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
+                >
+                  <div className="text-xs font-semibold text-amber-700">📋 Agregar al Cuadro de Contacto</div>
+                  <div className="text-xs text-amber-600/70 mt-0.5">Marcar como persona en seguimiento por sospecha de reincidencia</div>
+                </button>
+              )}
+              {persona.estado === "en_seguimiento" && (
+                <div className="px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-lg">
+                  <div className="text-xs font-semibold text-amber-700">📋 En Cuadro de Contacto</div>
+                  <div className="text-xs text-amber-600/70 mt-0.5">Esta persona está actualmente en seguimiento</div>
+                </div>
+              )}
+              {/* Actividad Lesiva / Bloqueo */}
+              {persona.estado !== "bloqueado" && (
+                <button
+                  onClick={() => toast({ title: "🔴 Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueado(a).` })}
+                  className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva (Bloquear)</div>
+                  <div className="text-xs text-red-600/70 mt-0.5">Bloquear persona por responsabilidad directa en eventos</div>
+                </button>
+              )}
+              {persona.estado === "bloqueado" && (
+                <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
+                  <div className="text-xs font-semibold text-red-700">🚫 Persona Bloqueada</div>
+                  <div className="text-xs text-red-600/70 mt-0.5">Actividad lesiva activa — acceso restringido</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Decisiones de Gestión Humana ── */}
+          <div className="border border-border rounded-xl p-4">
+            <h3 className="font-semibold text-sm mb-3">📋 Decisiones de Gestión Humana</h3>
+            {evDisciplinarios.filter(e => e.decisionGH).length > 0 && (
+              <div className="space-y-2 mb-3">
+                {evDisciplinarios.filter(e => e.decisionGH).map(e => (
+                  <div key={e.id} className="bg-muted/40 rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold">{e.decisionGH}</span>
+                      <span className="text-xs text-muted-foreground">{formatDate(e.fecha)}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{e.usuarioRegistro} · Evento {e.id}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <select className="w-full border border-border rounded-lg px-3 py-2 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="">Registrar nueva decisión...</option>
+                <option value="llamado_verbal">Llamado de atención verbal</option>
+                <option value="llamado_escrito">Llamado de atención escrito</option>
+                <option value="suspension">Suspensión temporal</option>
+                <option value="proceso_disciplinario">Inicio proceso disciplinario</option>
+                <option value="desvinculacion">Desvinculación</option>
+                <option value="escalamiento">Escalamiento a seguridad</option>
+                <option value="sin_accion">Sin acción — caso insuficiente</option>
+              </select>
+              <textarea
+                className="w-full border border-border rounded-lg px-3 py-2 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                rows={2}
+                placeholder="Observaciones de la decisión..."
+              />
+              <button
+                onClick={() => toast({ title: "✅ Decisión registrada", description: `Decisión de GH registrada para ${persona.nombre}` })}
+                className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
+              >
+                Registrar decisión
+              </button>
+            </div>
+          </div>
+
           {estudios.length > 0 && (
             <Section id="estudios" title="🔎 Estudios de seguridad" count={estudios.length}>
               {estudios.map((e) => (
@@ -679,6 +759,22 @@ export function Vehiculo360Drawer() {
                 `Vehículo vinculado a ${evVehiculo.length} evento${evVehiculo.length !== 1 ? "s" : ""}. ${evVehiculo.length > 1 ? `Patrón detectado: ${evVehiculo.length} eventos en rutas diferentes. El riesgo podría estar asociado a la ruta.` : "Sin patrones críticos detectados."}`}
             </p>
           </div>
+
+          {/* Actividad Lesiva */}
+          {vehiculo.estado !== "bloqueado" ? (
+            <button
+              onClick={() => toast({ title: "🔴 Vehículo bloqueado", description: `Vehículo ${vehiculo.placa} registrado en actividades lesivas.` })}
+              className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+            >
+              <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva (Bloquear vehículo)</div>
+              <div className="text-xs text-red-600/70 mt-0.5">Bloquear vehículo por presencia en eventos de novedad</div>
+            </button>
+          ) : (
+            <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
+              <div className="text-xs font-semibold text-red-700">🚫 Vehículo Bloqueado</div>
+              <div className="text-xs text-red-600/70 mt-0.5">Actividad lesiva activa</div>
+            </div>
+          )}
 
           {evVehiculo.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
@@ -757,6 +853,22 @@ export function Guia360Drawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {guia.valorDeclarado >= 1000000 && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold text-green-700">💰 Guía con recaudo superior a $1M — Seguimiento RCE activo</div>
+                  <div className="text-xs text-green-600/70 mt-0.5">Esta guía requiere seguimiento preventivo de seguridad por su alto valor de recaudo ({formatCurrency(guia.valorDeclarado)})</div>
+                </div>
+                <button
+                  onClick={() => toast({ title: "✅ Evento RCE creado", description: "Se registró seguimiento preventivo para esta guía" })}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0"
+                >
+                  Registrar seguimiento RCE
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
             {[
               ["Origen", `${guia.terminalOrigen} (${guia.ciudadOrigen})`],
