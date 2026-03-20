@@ -1,36 +1,32 @@
 import React from "react";
-import type { TipoRegistro, EstadoRegistro, SeveridadIA, EstadoPersona } from "@/types";
+import type { CategoriaEvento, EstadoEvento, SeveridadIA, EstadoPersona, Evento } from "@/types";
 
-// ---- Colores por tipo ----
-export const tipoConfig: Record<TipoRegistro, { label: string; color: string; dot: string; icon: string }> = {
-  faltante: { label: "Faltante", color: "badge-faltante", dot: "bg-blue-500", icon: "📦" },
-  evento: { label: "Evento", color: "badge-evento", dot: "bg-red-500", icon: "⚠️" },
-  rce: { label: "RCE", color: "badge-rce", dot: "bg-green-500", icon: "💰" },
-  posventa: { label: "Posventa", color: "badge-posventa", dot: "bg-purple-500", icon: "🛒" },
-  lesiva: { label: "Act. Lesiva", color: "badge-lesiva", dot: "bg-gray-600", icon: "🔒" },
-  contacto: { label: "Cuadro Contacto", color: "badge-contacto", dot: "bg-amber-500", icon: "👁️" },
-  evidencia: { label: "Evidencia", color: "badge-evidencia", dot: "bg-orange-500", icon: "📎" },
+// ---- Colores por categoría ----
+export const categoriaConfig: Record<CategoriaEvento, { label: string; color: string; dot: string; icon: string; bgColor: string }> = {
+  dineros:             { label: "Dineros",            color: "badge-dineros",    dot: "bg-green-600",  icon: "💰", bgColor: "bg-green-600" },
+  unidades:            { label: "Unidades",           color: "badge-unidades",   dot: "bg-blue-600",   icon: "📦", bgColor: "bg-blue-600" },
+  listas_vinculantes:  { label: "Listas Vinculantes", color: "badge-listas",     dot: "bg-gray-500",   icon: "📋", bgColor: "bg-gray-500" },
+  proceso_evidencias:  { label: "Evidencias",         color: "badge-evidencias", dot: "bg-orange-600", icon: "📸", bgColor: "bg-orange-600" },
+  pqr:                 { label: "PQR",                color: "badge-pqr",        dot: "bg-purple-600", icon: "📞", bgColor: "bg-purple-600" },
+  disciplinarios:      { label: "Disciplinarios",     color: "badge-disciplinarios", dot: "bg-red-600", icon: "⚖️", bgColor: "bg-red-600" },
 };
 
-export const estadoConfig: Record<EstadoRegistro, { label: string; color: string }> = {
-  en_investigacion: { label: "En investigación", color: "estado-investigacion" },
+export const estadoConfig: Record<EstadoEvento, { label: string; color: string }> = {
+  abierto: { label: "Abierto", color: "estado-abierto" },
   cerrado: { label: "Cerrado", color: "estado-cerrado" },
-  vencido: { label: "Vencido", color: "estado-vencido" },
-  pendiente: { label: "Pendiente por asignar", color: "estado-pendiente" },
-  bloqueado: { label: "Bloqueado", color: "estado-bloqueado" },
 };
 
 export const severidadConfig: Record<SeveridadIA, { label: string; color: string; icon: string; bg: string }> = {
-  critica: { label: "Crítica", color: "text-red-600", icon: "🔴", bg: "bg-red-50 border-red-200" },
-  alta: { label: "Alta", color: "text-amber-600", icon: "🟡", bg: "bg-amber-50 border-amber-200" },
-  media: { label: "Media", color: "text-blue-600", icon: "🔵", bg: "bg-blue-50 border-blue-200" },
-  baja: { label: "Baja", color: "text-green-600", icon: "🟢", bg: "bg-green-50 border-green-200" },
+  critica: { label: "Crítica", color: "text-red-600",   icon: "🔴", bg: "bg-red-50 border-red-200" },
+  alta:    { label: "Alta",    color: "text-amber-600", icon: "🟠", bg: "bg-amber-50 border-amber-200" },
+  media:   { label: "Media",   color: "text-blue-600",  icon: "🟡", bg: "bg-blue-50 border-blue-200" },
+  baja:    { label: "Baja",    color: "text-green-600", icon: "🟢", bg: "bg-green-50 border-green-200" },
 };
 
 export const estadoPersonaConfig: Record<EstadoPersona, { label: string; color: string }> = {
-  sin_novedad: { label: "Sin novedad", color: "bg-green-100 text-green-700 border border-green-200" },
+  sin_novedad:    { label: "Sin novedad",    color: "bg-green-100 text-green-700 border border-green-200" },
   en_seguimiento: { label: "En seguimiento", color: "bg-amber-100 text-amber-700 border border-amber-200" },
-  bloqueado: { label: "Bloqueado", color: "bg-red-100 text-red-700 border border-red-200" },
+  bloqueado:      { label: "Bloqueado",      color: "bg-red-100 text-red-700 border border-red-200" },
 };
 
 export function formatCurrency(value: number): string {
@@ -57,33 +53,40 @@ export function formatDateTime(dateStr: string): string {
   });
 }
 
-export function descripcionCorta(registro: any): string {
-  if (registro.tipo === "faltante") return `Faltante código ${registro.codigoNovedad} — Guía ${registro.guia}`;
-  if (registro.tipo === "evento") return registro.tipoEvento;
-  if (registro.tipo === "rce") return `RCE ${formatCurrency(registro.valorRecaudo)} — Guía ${registro.guia}`;
-  if (registro.tipo === "posventa") return `${registro.requerimiento} — Guía ${registro.guia}`;
-  if (registro.tipo === "lesiva") return `Bloqueo: ${registro.entidadNombre}`;
-  if (registro.tipo === "contacto") return `Seguimiento: ${registro.personaNombre}`;
-  if (registro.tipo === "evidencia") return `Evidencia ${registro.tipoEvidencia} — Guía ${registro.guia}`;
-  return registro.id;
+export function descripcionCorta(evento: Evento): string {
+  if (evento.tipoEvento) return evento.tipoEvento;
+  return evento.id;
 }
 
-// Badge component
-export function TipoBadge({ tipo, className = "" }: { tipo: TipoRegistro; className?: string }) {
-  const cfg = tipoConfig[tipo];
+// Badge components
+export function CategoriaBadge({ categoria, className = "" }: { categoria: CategoriaEvento; className?: string }) {
+  const cfg = categoriaConfig[categoria];
+  // Inline colors to avoid Tailwind purge issues
+  const colorMap: Record<CategoriaEvento, string> = {
+    dineros:            "bg-green-100 text-green-800 border border-green-200",
+    unidades:           "bg-blue-100 text-blue-800 border border-blue-200",
+    listas_vinculantes: "bg-gray-100 text-gray-700 border border-gray-200",
+    proceso_evidencias: "bg-orange-100 text-orange-800 border border-orange-200",
+    pqr:                "bg-purple-100 text-purple-800 border border-purple-200",
+    disciplinarios:     "bg-red-100 text-red-800 border border-red-200",
+  };
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color} ${className}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[categoria]} ${className}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
       {cfg.label}
     </span>
   );
 }
 
-export function EstadoBadge({ estado, className = "" }: { estado: EstadoRegistro; className?: string }) {
-  const cfg = estadoConfig[estado];
+export function EstadoBadge({ estado, className = "" }: { estado: EstadoEvento; className?: string }) {
+  const colorMap: Record<EstadoEvento, string> = {
+    abierto: "bg-amber-100 text-amber-700 border border-amber-200",
+    cerrado: "bg-gray-100 text-gray-600 border border-gray-200",
+  };
+  const label = estado === "abierto" ? "Abierto" : "Cerrado";
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color} ${className}`}>
-      {cfg.label}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[estado]} ${className}`}>
+      {label}
     </span>
   );
 }
