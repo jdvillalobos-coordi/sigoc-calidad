@@ -81,34 +81,11 @@ export default function InicioPage() {
      - RCE: valor > $1M (seguimiento preventivo de recaudo)
      - Faltante: estadoGeneral "con_novedad" (novedad detectada sin investigar)
   ── */
-  // Collect ALL guide numbers referenced in ANY event
-  const guiasConEventos = React.useMemo(() => {
-    const set = new Set<string>();
-    eventos.forEach((e) => {
-      (e.guias ?? []).forEach((g) => set.add(g.trim()));
-    });
-    return set;
+  const totalSinGestionar = React.useMemo(() => {
+    const conEventos = new Set<string>();
+    eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
+    return guias.filter((g) => !conEventos.has(g.numero.trim()) && (g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")).length;
   }, []);
-
-  // Guides that have NO event yet AND meet risk criteria (RCE or con_novedad)
-  const guiasSinGestion = React.useMemo(() => {
-    return guias
-      .filter((g) => !guiasConEventos.has(g.numero.trim()))
-      .filter((g) => g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")
-      .map((g) => ({
-        ...g,
-        tipoAlerta: g.valorDeclarado >= 1_000_000 && g.estadoGeneral === "con_novedad"
-          ? "rce_y_novedad" as const
-          : g.valorDeclarado >= 1_000_000
-          ? "rce" as const
-          : "novedad" as const,
-      }))
-      .sort((a, b) => b.valorDeclarado - a.valorDeclarado);
-  }, [guiasConEventos]);
-
-  const guiasRCESinGestion       = guiasSinGestion.filter((g) => g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad");
-  const guiasFaltantesSinEvento  = guiasSinGestion.filter((g) => g.tipoAlerta === "novedad");
-  const totalSinGestionar        = guiasSinGestion.length;
 
   /* ── Rankings ── */
   const termToRegional = React.useMemo(() => {

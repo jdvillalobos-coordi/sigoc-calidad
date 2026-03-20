@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
+import { eventos, guias, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, formatDate, formatCurrency, categoriaConfig, AvatarInicial } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import {
