@@ -56,8 +56,9 @@ function AlertaCard({ alerta, onPersona, onTerminal, onMarcar }: { alerta: Alert
 }
 
 export default function InicioPage() {
-  const { setPaginaActiva, abrirPersona, abrirTerminal, abrirRegistro } = useApp();
+  const { setPaginaActiva, abrirPersona, abrirVehiculo, abrirTerminal, abrirRegistro } = useApp();
   const [alertas, setAlertas] = React.useState<AlertaIA[]>(alertasIA);
+  const [topTab, setTopTab] = React.useState<"personas" | "vehiculos">("personas");
 
   const abiertos    = eventos.filter((e) => e.estado !== "cerrado");
   const vencidos    = eventos.filter((e) => e.diasAbierto > 30 && e.estado !== "cerrado");
@@ -76,6 +77,39 @@ export default function InicioPage() {
     .slice()
     .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
     .slice(0, 10);
+
+  // Top personas por incidencias
+  const topPersonas = React.useMemo(() => {
+    const conteo: Record<string, { persona: typeof personas[0]; count: number }> = {};
+    eventos.forEach((ev) => {
+      [...ev.personasResponsables, ...ev.personasParticipantes].forEach((p) => {
+        if (!conteo[p.personaId]) {
+          const persona = personas.find((x) => x.id === p.personaId);
+          if (persona) conteo[p.personaId] = { persona, count: 0 };
+        }
+        if (conteo[p.personaId]) conteo[p.personaId].count++;
+      });
+    });
+    return Object.values(conteo).sort((a, b) => b.count - a.count).slice(0, 8);
+  }, []);
+
+  // Top vehículos por incidencias
+  const topVehiculos = React.useMemo(() => {
+    const conteo: Record<string, { vehiculo: typeof vehiculos[0]; count: number }> = {};
+    eventos.forEach((ev) => {
+      (ev.vehiculosVinculados ?? []).forEach((v) => {
+        if (!conteo[v.vehiculoId]) {
+          const vehiculo = vehiculos.find((x) => x.id === v.vehiculoId);
+          if (vehiculo) conteo[v.vehiculoId] = { vehiculo, count: 0 };
+        }
+        if (conteo[v.vehiculoId]) conteo[v.vehiculoId].count++;
+      });
+    });
+    return Object.values(conteo).sort((a, b) => b.count - a.count).slice(0, 8);
+  }, []);
+
+  const maxCountPersonas = topPersonas[0]?.count ?? 1;
+  const maxCountVehiculos = topVehiculos[0]?.count ?? 1;
 
   const fechaHoy = format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es });
 
