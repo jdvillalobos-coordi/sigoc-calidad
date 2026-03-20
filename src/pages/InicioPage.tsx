@@ -75,9 +75,11 @@ export default function InicioPage() {
   const criticas   = nuevasIA.filter((a) => a.severidad === "critica");
   const enSeguim   = personas.filter((p) => p.estado === "en_seguimiento" || p.estado === "bloqueado");
 
-  /* ── Brechas de cobertura (guías sin evento asociado) ──
-     Son el corazón del valor de la plataforma: casos que DEBEN gestionarse
-     pero que nadie ha iniciado todavía.
+  /* ── Brechas de cobertura ──
+     Guías que el sistema detecta como problemáticas pero que no
+     tienen ningún evento abierto todavía. Dos tipos:
+     - RCE: valor > $1M (seguimiento preventivo de recaudo)
+     - Faltante: estadoGeneral "con_novedad" (novedad detectada sin investigar)
   ── */
   const guiasConEventos = React.useMemo(() => {
     const set = new Set<string>();
@@ -85,21 +87,25 @@ export default function InicioPage() {
     return set;
   }, []);
 
-  // Guías con alto valor (>$1M) sin ningún evento → necesitan seguimiento RCE
-  const guiasRCESinGestion = React.useMemo(() =>
-    guias.filter(
-      (g) => g.valorDeclarado >= 1_000_000 && !guiasConEventos.has(g.numero)
-    ).slice(0, 5)
-  , [guiasConEventos]);
+  const guiasSinGestion = React.useMemo(() => {
+    return guias
+      .filter((g) => !guiasConEventos.has(g.numero))
+      .filter((g) => g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")
+      .map((g) => ({
+        ...g,
+        tipoAlerta: g.valorDeclarado >= 1_000_000 && g.estadoGeneral === "con_novedad"
+          ? "rce_y_novedad" as const
+          : g.valorDeclarado >= 1_000_000
+          ? "rce" as const
+          : "novedad" as const,
+      }))
+      .sort((a, b) => b.valorDeclarado - a.valorDeclarado)
+      .slice(0, 8);
+  }, [guiasConEventos]);
 
-  // Guías con novedad activa sin evento → necesitan investigación
-  const guiasFaltantesSinEvento = React.useMemo(() =>
-    guias.filter(
-      (g) => g.estadoGeneral === "con_novedad" && !guiasConEventos.has(g.numero)
-    ).slice(0, 5)
-  , [guiasConEventos]);
-
-  const totalSinGestionar = guiasRCESinGestion.length + guiasFaltantesSinEvento.length;
+  const guiasRCESinGestion       = guiasSinGestion.filter((g) => g.tipoAlerta === "rce" || g.tipoAlerta === "rce_y_novedad");
+  const guiasFaltantesSinEvento  = guiasSinGestion.filter((g) => g.tipoAlerta === "novedad");
+  const totalSinGestionar        = guiasSinGestion.length;
 
   /* ── Rankings ── */
   const termToRegional = React.useMemo(() => {
