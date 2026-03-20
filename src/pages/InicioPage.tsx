@@ -138,17 +138,50 @@ export default function InicioPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 items-center">
+          {/* Períodos rápidos */}
           <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-            <span className="flex items-center px-2.5 border-r border-border text-muted-foreground">
-              <CalendarDays className="w-3.5 h-3.5" />
-            </span>
             {PERIODOS.map((p) => (
-              <button key={p.label} onClick={() => setPeriodo(p.days)}
-                className={`px-3 py-1.5 transition-colors ${periodo === p.days ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+              <button key={p.label}
+                onClick={() => { setPeriodo(p.days); setDateRange(undefined); }}
+                className={`px-3 py-1.5 transition-colors ${!dateRange && periodo === p.days ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
                 {p.label}
               </button>
             ))}
           </div>
+
+          {/* Rango de fechas personalizado */}
+          <Popover open={calOpen} onOpenChange={setCalOpen}>
+            <PopoverTrigger asChild>
+              <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${dateRange?.from ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
+                <CalendarDays className="w-3.5 h-3.5" />
+                {dateRange?.from
+                  ? dateRange.to
+                    ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
+                    : format(dateRange.from, "d MMM yyyy", { locale: es })
+                  : "Rango personalizado"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={(range) => { setDateRange(range); if (range?.from) setPeriodo(0); }}
+                locale={es}
+                numberOfMonths={2}
+                initialFocus
+              />
+              {dateRange?.from && (
+                <div className="flex justify-end px-3 pb-3">
+                  <button onClick={() => { setDateRange(undefined); setPeriodo(30); setCalOpen(false); }}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <X className="w-3 h-3" /> Limpiar rango
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          {/* Categorías */}
           <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card flex-wrap">
             {CATS.map((c) => (
               <button key={c.value} onClick={() => setCat(c.value)}
