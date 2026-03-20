@@ -364,7 +364,7 @@ function InfoRow({ icon, label, children }: { icon: React.ReactNode; label: stri
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery } = useApp();
+  const { abrirRegistro, abrirTerminal, abrirGuia, setNuevaRegistroAbierto, busquedaQuery } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [paisFiltro, setPaisFiltro]           = useState("todos");
@@ -375,7 +375,26 @@ export default function RegistrosPage() {
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
   const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
+  const [pendientesExpanded, setPendientesExpanded] = useState(true);
   const PER_PAGE = 20;
+
+  // ── Guías sin gestionar (insumo para crear eventos) ──────────
+  const guiasSinGestion = useMemo(() => {
+    const conEventos = new Set<string>();
+    eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
+    return guias
+      .filter((g) => !conEventos.has(g.numero.trim()))
+      .filter((g) => g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")
+      .map((g) => ({
+        ...g,
+        tipoAlerta: (g.valorDeclarado >= 1_000_000 && g.estadoGeneral === "con_novedad")
+          ? "rce_y_novedad" as const
+          : g.valorDeclarado >= 1_000_000
+          ? "rce" as const
+          : "novedad" as const,
+      }))
+      .sort((a, b) => b.valorDeclarado - a.valorDeclarado);
+  }, []);
 
   function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
   function handleRegionalChange(val: string) { setRegionalFiltro(val); setTerminalFiltro("todos"); setPage(1); }
