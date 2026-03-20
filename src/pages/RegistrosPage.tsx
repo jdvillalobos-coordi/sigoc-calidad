@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { registros, terminales, PAISES_REGIONALES, TODAS_TERMINALES, REGIONALES_FLAT } from "@/data/mockData";
-import { TipoBadge, EstadoBadge, descripcionCorta, formatDate } from "@/lib/utils-app";
+import { eventos, terminales, PAISES_REGIONALES, TODAS_TERMINALES, REGIONALES_FLAT } from "@/data/mockData";
+import { CategoriaBadge, EstadoBadge, descripcionCorta, formatDate } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { Plus, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
-import type { TipoRegistro, EstadoRegistro } from "@/types";
+import type { CategoriaEvento, EstadoEvento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -11,24 +11,20 @@ import { format, isWithinInterval, parseISO, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
-const TIPOS: { value: TipoRegistro | "todos"; label: string }[] = [
-  { value: "todos", label: "Todos los tipos" },
-  { value: "faltante", label: "🔵 Faltante" },
-  { value: "evento", label: "🔴 Evento" },
-  { value: "rce", label: "🟢 RCE" },
-  { value: "posventa", label: "🟣 Posventa" },
-  { value: "lesiva", label: "⚫ Act. Lesiva" },
-  { value: "contacto", label: "🟡 Cuadro Contacto" },
-  { value: "evidencia", label: "🟠 Evidencia" },
+const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
+  { value: "todos", label: "Todas las categorías" },
+  { value: "dineros", label: "💰 Dineros" },
+  { value: "unidades", label: "📦 Unidades" },
+  { value: "listas_vinculantes", label: "📋 Listas Vinculantes" },
+  { value: "proceso_evidencias", label: "📸 Evidencias" },
+  { value: "pqr", label: "📞 PQR" },
+  { value: "disciplinarios", label: "⚖️ Disciplinarios" },
 ];
 
-const ESTADOS: { value: EstadoRegistro | "todos"; label: string }[] = [
+const ESTADOS: { value: EstadoEvento | "todos"; label: string }[] = [
   { value: "todos", label: "Todos los estados" },
-  { value: "en_investigacion", label: "En investigación" },
+  { value: "abierto", label: "Abierto" },
   { value: "cerrado", label: "Cerrado" },
-  { value: "vencido", label: "Vencido" },
-  { value: "pendiente", label: "Pendiente" },
-  { value: "bloqueado", label: "Bloqueado" },
 ];
 
 const PRESETS = [
@@ -38,7 +34,6 @@ const PRESETS = [
   { label: "Últimos 90 días", days: 90 },
 ];
 
-// ── FilterPill ──────────────────────────────────────────────────────────────
 function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
@@ -50,7 +45,6 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
-// ── DateRangeFilter ─────────────────────────────────────────────────────────
 function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; onChange: (r: DateRange | undefined) => void }) {
   const [open, setOpen] = useState(false);
   const label = range?.from
@@ -58,21 +52,16 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
       ? `${format(range.from, "dd MMM", { locale: es })} – ${format(range.to, "dd MMM", { locale: es })}`
       : format(range.from, "dd MMM yyyy", { locale: es })
     : "Fechas";
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button className={cn(
           "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
-          range?.from
-            ? "bg-primary text-primary-foreground border-primary"
-            : "bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          range?.from ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground"
         )}>
-          <CalendarIcon className="w-3 h-3" />
-          {label}
+          <CalendarIcon className="w-3 h-3" />{label}
           {range?.from && (
-            <span className="ml-0.5 hover:bg-white/20 rounded-full p-0.5"
-              onClick={(e) => { e.stopPropagation(); onChange(undefined); }}>
+            <span className="ml-0.5 hover:bg-white/20 rounded-full p-0.5" onClick={(e) => { e.stopPropagation(); onChange(undefined); }}>
               <X className="w-3 h-3" />
             </span>
           )}
@@ -82,34 +71,21 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
         <div className="flex">
           <div className="border-r border-border p-3 flex flex-col gap-1 min-w-[140px]">
             {PRESETS.map((p) => (
-              <button key={p.label}
-                onClick={() => { onChange({ from: p.days === 0 ? new Date() : subDays(new Date(), p.days), to: new Date() }); setOpen(false); }}
-                className="text-left text-xs px-3 py-2 rounded-lg hover:bg-muted text-foreground transition-colors">
-                {p.label}
-              </button>
+              <button key={p.label} onClick={() => { onChange({ from: p.days === 0 ? new Date() : subDays(new Date(), p.days), to: new Date() }); setOpen(false); }}
+                className="text-left text-xs px-3 py-2 rounded-lg hover:bg-muted text-foreground transition-colors">{p.label}</button>
             ))}
-            <button onClick={() => { onChange(undefined); setOpen(false); }}
-              className="text-left text-xs px-3 py-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors mt-1 border-t border-border pt-2">
-              Sin filtro
-            </button>
+            <button onClick={() => { onChange(undefined); setOpen(false); }} className="text-left text-xs px-3 py-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors mt-1 border-t border-border pt-2">Sin filtro</button>
           </div>
-          <Calendar
-            mode="range"
-            selected={range}
-            onSelect={onChange}
-            numberOfMonths={1}
-            className={cn("p-3 pointer-events-auto")}
-          />
+          <Calendar mode="range" selected={range} onSelect={onChange} numberOfMonths={1} className={cn("p-3 pointer-events-auto")} />
         </div>
       </PopoverContent>
     </Popover>
   );
 }
 
-// ── RegistrosPage ───────────────────────────────────────────────────────────
 export default function RegistrosPage() {
   const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery } = useApp();
-  const [tipoFiltro, setTipoFiltro] = useState<string>("todos");
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro] = useState<string>("todos");
   const [paisFiltro, setPaisFiltro] = useState("todos");
   const [regionalFiltro, setRegionalFiltro] = useState("todos");
@@ -120,18 +96,8 @@ export default function RegistrosPage() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 15;
 
-  // ── Cascada País → Regional → Terminal ──────────────────────────────────
-  function handlePaisChange(val: string) {
-    setPaisFiltro(val);
-    setRegionalFiltro("todos");
-    setTerminalFiltro("todos");
-    setPage(1);
-  }
-  function handleRegionalChange(val: string) {
-    setRegionalFiltro(val);
-    setTerminalFiltro("todos");
-    setPage(1);
-  }
+  function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
+  function handleRegionalChange(val: string) { setRegionalFiltro(val); setTerminalFiltro("todos"); setPage(1); }
 
   const regionalesDisponibles: string[] =
     paisFiltro !== "todos"
@@ -145,35 +111,31 @@ export default function RegistrosPage() {
         ? Object.values(PAISES_REGIONALES[paisFiltro] ?? {}).flat()
         : terminales;
 
-  // ── Filtrado ─────────────────────────────────────────────────────────────
   const q = busquedaQuery.toLowerCase().trim();
 
-  const filtered = registros
-    .filter((r) => tipoFiltro === "todos" || r.tipo === tipoFiltro)
-    .filter((r) => estadoFiltro === "todos" || r.estado === estadoFiltro)
-    .filter((r) => {
-      if (terminalFiltro !== "todos") return r.terminal === terminalFiltro;
-      if (regionalFiltro !== "todos") return (REGIONALES_FLAT[regionalFiltro] ?? []).includes(r.terminal);
-      if (paisFiltro !== "todos") {
-        const terminalesPais = Object.values(PAISES_REGIONALES[paisFiltro] ?? {}).flat();
-        return terminalesPais.includes(r.terminal);
-      }
+  const filtered = eventos
+    .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
+    .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
+    .filter((e) => {
+      if (terminalFiltro !== "todos") return e.terminal === terminalFiltro;
+      if (regionalFiltro !== "todos") return (REGIONALES_FLAT[regionalFiltro] ?? []).includes(e.terminal);
+      if (paisFiltro !== "todos") return Object.values(PAISES_REGIONALES[paisFiltro] ?? {}).flat().includes(e.terminal);
       return true;
     })
-    .filter((r) => {
+    .filter((e) => {
       if (!dateRange?.from) return true;
-      const fecha = parseISO(r.fecha);
+      const fecha = parseISO(e.fecha);
       const to = dateRange.to ?? new Date();
       return isWithinInterval(fecha, { start: dateRange.from, end: to });
     })
-    .filter((r) => {
+    .filter((e) => {
       if (!q) return true;
       return (
-        r.id.toLowerCase().includes(q) ||
-        r.terminal.toLowerCase().includes(q) ||
-        r.responsableNombre.toLowerCase().includes(q) ||
-        descripcionCorta(r).toLowerCase().includes(q) ||
-        (r.guia && r.guia.toLowerCase().includes(q))
+        e.id.toLowerCase().includes(q) ||
+        e.terminal.toLowerCase().includes(q) ||
+        e.tipoEvento.toLowerCase().includes(q) ||
+        e.descripcionHechos.toLowerCase().includes(q) ||
+        (e.guias && e.guias.some((g) => g.toLowerCase().includes(q)))
       );
     })
     .sort((a, b) => {
@@ -200,11 +162,7 @@ export default function RegistrosPage() {
   const hayFiltrosActivos = paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
 
   function limpiarFiltros() {
-    setPaisFiltro("todos");
-    setRegionalFiltro("todos");
-    setTerminalFiltro("todos");
-    setDateRange(undefined);
-    setPage(1);
+    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setPage(1);
   }
 
   return (
@@ -212,60 +170,37 @@ export default function RegistrosPage() {
       {/* Filtros */}
       <div className="border-b border-border bg-card px-6 py-3 flex-shrink-0 space-y-2.5">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Tipo y Estado */}
-          <select
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            value={tipoFiltro}
-            onChange={(e) => { setTipoFiltro(e.target.value); setPage(1); }}
-          >
-            {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          <select className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={categoriaFiltro} onChange={(e) => { setCategoriaFiltro(e.target.value); setPage(1); }}>
+            {CATEGORIAS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
-          <select
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            value={estadoFiltro}
-            onChange={(e) => { setEstadoFiltro(e.target.value); setPage(1); }}
-          >
+          <select className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setPage(1); }}>
             {ESTADOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
           </select>
-
-          {/* Cascada País → Regional → Terminal */}
-          <select
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            value={paisFiltro}
-            onChange={(e) => handlePaisChange(e.target.value)}
-          >
+          <select className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={paisFiltro} onChange={(e) => handlePaisChange(e.target.value)}>
             <option value="todos">Todos los países</option>
             {Object.keys(PAISES_REGIONALES).map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
-          <select
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            value={regionalFiltro}
-            onChange={(e) => handleRegionalChange(e.target.value)}
-          >
+          <select className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={regionalFiltro} onChange={(e) => handleRegionalChange(e.target.value)}>
             <option value="todos">Todas las regionales</option>
             {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
-          <select
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            value={terminalFiltro}
-            onChange={(e) => { setTerminalFiltro(e.target.value); setPage(1); }}
-          >
+          <select className="text-sm border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            value={terminalFiltro} onChange={(e) => { setTerminalFiltro(e.target.value); setPage(1); }}>
             <option value="todos">Todas las terminales</option>
             {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
-
           <DateRangeFilter range={dateRange} onChange={(r) => { setDateRange(r); setPage(1); }} />
           <div className="flex-1" />
-          <span className="text-xs text-muted-foreground">{filtered.length} registro{filtered.length !== 1 ? "s" : ""}</span>
-          <button
-            onClick={() => setNuevaRegistroAbierto(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Nuevo registro
+          <span className="text-xs text-muted-foreground">{filtered.length} evento{filtered.length !== 1 ? "s" : ""}</span>
+          <button onClick={() => setNuevaRegistroAbierto(true)}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+            <Plus className="w-4 h-4" /> Nuevo evento
           </button>
         </div>
-
-        {/* FilterPills activas */}
         {hayFiltrosActivos && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground">Filtrando por:</span>
@@ -280,9 +215,7 @@ export default function RegistrosPage() {
               />
             )}
             {(paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from) && (
-              <button onClick={limpiarFiltros} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">
-                Limpiar filtros
-              </button>
+              <button onClick={limpiarFiltros} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">Limpiar filtros</button>
             )}
           </div>
         )}
@@ -293,14 +226,13 @@ export default function RegistrosPage() {
         <table className="w-full text-sm">
           <thead className="sticky top-0 bg-muted/80 backdrop-blur z-10">
             <tr className="border-b border-border">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32">Tipo</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-36">Categoría</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-24" onClick={() => toggleSort("id")}>
                 <span className="flex items-center gap-1">ID <SortIcon field="id" /></span>
               </th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Descripción</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Tipo evento</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-28">Terminal</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-36">Estado</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32">Responsable</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-28">Estado</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-24" onClick={() => toggleSort("fecha")}>
                 <span className="flex items-center gap-1">Fecha <SortIcon field="fecha" /></span>
               </th>
@@ -310,41 +242,36 @@ export default function RegistrosPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {paged.map((r) => (
-              <tr key={r.id} onClick={() => abrirRegistro(r.id)} className="table-row-hover bg-card">
-                <td className="px-4 py-3"><TipoBadge tipo={r.tipo} /></td>
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{r.id}</td>
+            {paged.map((e) => (
+              <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="table-row-hover bg-card">
+                <td className="px-4 py-3"><CategoriaBadge categoria={e.categoria} /></td>
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{e.id}</td>
                 <td className="px-4 py-3 max-w-xs">
-                  <span className="truncate block text-foreground">{descripcionCorta(r)}</span>
+                  <span className="truncate block text-foreground">{e.tipoEvento}</span>
+                  {e.guias && e.guias.length > 0 && <span className="text-xs text-muted-foreground font-mono">Guía {e.guias[0]}{e.guias.length > 1 ? ` +${e.guias.length - 1}` : ""}</span>}
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); abrirTerminal(r.terminal); }}
-                    className="text-sm text-coordinadora-blue hover:underline font-medium"
-                  >
-                    {r.terminal}
-                  </button>
+                  <button onClick={(ev) => { ev.stopPropagation(); abrirTerminal(e.terminal); }}
+                    className="text-sm text-coordinadora-blue hover:underline font-medium">{e.terminal}</button>
                 </td>
-                <td className="px-4 py-3"><EstadoBadge estado={r.estado} /></td>
-                <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[120px]">{r.responsableNombre}</td>
-                <td className="px-4 py-3 text-xs text-muted-foreground">{r.fecha}</td>
+                <td className="px-4 py-3"><EstadoBadge estado={e.estado} /></td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">{e.fecha}</td>
                 <td className="px-4 py-3 text-xs">
-                  {r.estado !== "cerrado" && r.diasAbierto > 30
-                    ? <span className="text-destructive font-semibold flex items-center gap-1">🔴 {r.diasAbierto}d</span>
-                    : r.estado !== "cerrado" && r.diasAbierto > 3
-                    ? <span className="text-amber-600 font-medium flex items-center gap-1">⏰ {r.diasAbierto}d</span>
-                    : <span className={r.diasAbierto > 30 ? "text-destructive font-semibold" : r.diasAbierto > 14 ? "text-amber-600 font-medium" : "text-muted-foreground"}>{r.diasAbierto}d</span>
+                  {e.estado !== "cerrado" && e.diasAbierto > 30
+                    ? <span className="text-destructive font-semibold flex items-center gap-1">🔴 {e.diasAbierto}d</span>
+                    : e.estado !== "cerrado" && e.diasAbierto > 3
+                    ? <span className="text-amber-600 font-medium flex items-center gap-1">⏰ {e.diasAbierto}d</span>
+                    : <span className="text-muted-foreground">{e.diasAbierto}d</span>
                   }
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <span className="text-4xl mb-3">📋</span>
-            <p className="font-medium">No se encontraron registros</p>
+            <p className="font-medium">No se encontraron eventos</p>
             <p className="text-sm mt-1">Intenta cambiar los filtros de búsqueda</p>
           </div>
         )}
@@ -354,14 +281,14 @@ export default function RegistrosPage() {
       {pages > 1 && (
         <div className="border-t border-border bg-card px-6 py-3 flex items-center justify-between flex-shrink-0">
           <span className="text-xs text-muted-foreground">
-            Mostrando {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} de {filtered.length}
+            Mostrando {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} de {filtered.length} eventos
           </span>
           <div className="flex items-center gap-1">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-40 transition-colors">Anterior</button>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-xs border border-border rounded-lg disabled:opacity-40 hover:bg-muted transition-colors">Anterior</button>
             {Array.from({ length: Math.min(pages, 5) }, (_, i) => i + 1).map((p) => (
-              <button key={p} onClick={() => setPage(p)} className={`px-3 py-1 text-sm border rounded transition-colors ${p === page ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{p}</button>
+              <button key={p} onClick={() => setPage(p)} className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${p === page ? "bg-primary text-primary-foreground" : "border border-border hover:bg-muted"}`}>{p}</button>
             ))}
-            <button disabled={page === pages} onClick={() => setPage(p => p + 1)} className="px-3 py-1 text-sm border border-border rounded hover:bg-muted disabled:opacity-40 transition-colors">Siguiente</button>
+            <button onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={page === pages} className="px-3 py-1.5 text-xs border border-border rounded-lg disabled:opacity-40 hover:bg-muted transition-colors">Siguiente</button>
           </div>
         </div>
       )}

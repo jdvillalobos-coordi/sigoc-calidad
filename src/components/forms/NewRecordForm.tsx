@@ -1,133 +1,88 @@
 import React, { useState } from "react";
-import { X, ChevronLeft } from "lucide-react";
+import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, personas, vehiculos, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca } from "@/data/mockData";
+import { guias, terminales, getGuia, getPersonaPorCedula } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
+import type { CategoriaEvento } from "@/types";
 
-type TipoF = "faltante" | "evento" | "rce" | "posventa" | "lesiva" | "contacto" | "evidencia" | null;
-
-const TIPOS_FORM = [
-  { id: "faltante", icon: "🔵", label: "Faltante", desc: "Investigar guías reportadas como faltantes (novedad 100)" },
-  { id: "evento", icon: "🔴", label: "Evento", desc: "Registrar riesgos materializados: hurtos, fraudes, accidentes, etc." },
-  { id: "rce", icon: "🟢", label: "RCE", desc: "Seguimiento a guías con recaudo contra entrega >$1M" },
-  { id: "posventa", icon: "🟣", label: "Posventa", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
-  { id: "lesiva", icon: "⚫", label: "Actividad Lesiva", desc: "Bloquear personas, vehículos o clientes por responsabilidad" },
-  { id: "contacto", icon: "🟡", label: "Cuadro de Contacto", desc: "Registrar persona en seguimiento por sospecha" },
-  { id: "evidencia", icon: "🟠", label: "Evidencia", desc: "Registrar resultado de validación IA sobre prueba de entrega" },
+const CATEGORIAS = [
+  { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
+  { id: "unidades" as CategoriaEvento, icon: "📦", label: "Unidades", desc: "Faltantes de mercancía, novedades código 100" },
+  { id: "listas_vinculantes" as CategoriaEvento, icon: "📋", label: "Listas Vinculantes", desc: "Antecedentes, denuncias, vínculos externos (Truora)" },
+  { id: "proceso_evidencias" as CategoriaEvento, icon: "📸", label: "Proceso Evidencias", desc: "Evidencias de entrega que no pasan validación IA" },
+  { id: "pqr" as CategoriaEvento, icon: "📞", label: "PQR", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
+  { id: "disciplinarios" as CategoriaEvento, icon: "⚖️", label: "Disciplinarios", desc: "Faltas laborales: llegadas tarde, desacatos, llamados de atención" },
 ] as const;
 
-const EVENTOS_TIPOS = [
-  { grupo: "Seguridad física", opciones: ["Hurto de Combustible", "Intrusión", "Sabotaje", "Vandalismo", "Secuestro", "Extorsión", "Homicidio", "Lesiones Personales", "Terrorismo"] },
-  { grupo: "Transporte y vías", opciones: ["Accidentes de Tránsito", "Aéreo", "Bloqueo de vías", "Descuelgue"] },
-  { grupo: "Fraude y documentación", opciones: ["Dinero RCE/FP — Fraude, Hurto, Pérdida", "Fraude en la Documentación", "Suplantación"] },
-  { grupo: "Tecnología y señales", opciones: ["Falla del Servidor / GPS", "Fuga de Información", "Inhibidores de Señal"] },
-  { grupo: "Otros", opciones: ["Afectaciones a la seguridad híbrida"] },
-];
+const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[] }[]> = {
+  dineros:            [{ opciones: ["Hurto de dinero", "Faltante de dinero", "Faltante injustificado"] }],
+  unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
+  listas_vinculantes: [{ opciones: ["Denuncia penal", "Accidente de tránsito", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] }],
+  proceso_evidencias: [{ opciones: ["Falsa evidencia de entrega", "Falsa evidencia de intento de entrega", "Reporte causal — dirección no localizada", "Error de captura fotográfica"] }],
+  pqr:                [{ opciones: ["Unidad no entregada", "Producto incompleto", "Producto en mal estado", "Incumplimiento de funcionario", "Entrega trocada", "Entrega no reconocida", "Pérdida total", "Deterioro"] }],
+  disciplinarios:     [{ opciones: ["Llegada tarde", "Llamado de atención verbal", "Llamado de atención escrito", "Desacato", "Falta leve", "Falta grave", "Falta gravísima"] }],
+};
 
-const REQUERIMIENTOS_POSVENTA = [
-  { grupo: "Entregas", opciones: [
-    "Certificación de entrega - mala entrega",
-    "Entrega no reconocida",
-    "Entrega trocada",
-    "Entrega a tercero no autorizado",
-    "Entrega en dirección incorrecta",
-    "Entrega parcial",
-  ]},
-  { grupo: "Faltantes y pérdidas", opciones: [
-    "Faltante parcial",
-    "Faltante total",
-    "Pérdida total",
-    "Pérdida parcial",
-  ]},
-  { grupo: "Daños y deterioro", opciones: [
-    "Deterioro",
-    "Avería por manipulación",
-    "Daño por humedad",
-    "Empaque inadecuado",
-  ]},
-  { grupo: "Novedades operativas", opciones: [
-    "Novedad 300-400-403-829 superior a 72h sin gestión",
-    "Incumplimiento de SLA",
-    "Devolución no gestionada",
-    "Reexpedición fallida",
-  ]},
-  { grupo: "Fraude y sospecha", opciones: [
-    "Suplantación de identidad en entrega",
-    "Reclamación fraudulenta",
-    "Incumplimiento",
-    "Manipulación de evidencia fotográfica",
-  ]},
-];
+const FUENTES: Record<CategoriaEvento, string> = {
+  dineros:            "SIGO Dineros",
+  unidades:           "SIGO NyS",
+  listas_vinculantes: "Truora / ClickCloud",
+  proceso_evidencias: "Módulo de evidencias interno",
+  pqr:                "Reporte cliente / Agente CAL",
+  disciplinarios:     "SuccessFactors / Gestión Humana",
+};
 
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
 
 export default function NewRecordForm({ onClose }: { onClose: () => void }) {
-  const { abrirRegistro } = useApp();
-  const [tipo, setTipo] = useState<TipoF>(null);
-  const [guiaInput, setGuiaInput] = useState("");
-  const [guiaData, setGuiaData] = useState<GuiaData | null>(null);
-  const [guiaError, setGuiaError] = useState(false);
-  const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
-  const [observaciones, setObservaciones] = useState("");
-  const [terminal, setTerminal] = useState("");
-  // Faltante
-  const [codigoNovedad, setCodigoNovedad] = useState("");
-  const [tipoRiesgo, setTipoRiesgo] = useState("");
-  const [cedResp, setCedResp] = useState(""); const [cedRespNombre, setCedRespNombre] = useState(""); const [cedRespError, setCedRespError] = useState(false);
-  const [nysAsociado, setNysAsociado] = useState("");
-  // Evento
+  const [categoria, setCategoria] = useState<CategoriaEvento | null>(null);
   const [tipoEvento, setTipoEvento] = useState("");
-  const [ubicacion, setUbicacion] = useState("sede");
-  const [descDetallada, setDescDetallada] = useState("");
-  const [fuente, setFuente] = useState("");
-  // RCE
-  const [valorRecaudo, setValorRecaudo] = useState("");
-  const [formaPago, setFormaPago] = useState("");
-  const [estadoRecaudo, setEstadoRecaudo] = useState("");
-  const [porcentajeCobro, setPorcentajeCobro] = useState("");
-  // Posventa
-  const [requerimiento, setRequerimiento] = useState("");
-  const [rolSolicitante, setRolSolicitante] = useState("");
-  // Lesiva
   const [tipoEntidad, setTipoEntidad] = useState("");
-  const [identificacion, setIdentificacion] = useState("");
-  const [motivoBloqueo, setMotivoBloqueo] = useState("");
-  // Contacto
-  const [cedContacto, setCedContacto] = useState(""); const [cedContactoNombre, setCedContactoNombre] = useState("");
-  const [motivoSeg, setMotivoSeg] = useState("");
-  // Evidencia
-  const [tipoEvidencia, setTipoEvidencia] = useState("");
+  const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  const [terminal, setTerminal] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [valorAfectacion, setValorAfectacion] = useState("");
+  const [guiaInputs, setGuiaInputs] = useState<string[]>([""]);
+  const [guiasData, setGuiasData] = useState<Record<number, GuiaData>>({});
+  const [guiaErrors, setGuiaErrors] = useState<Record<number, boolean>>({});
+  const [cedulas, setCedulas] = useState<string[]>([""]);
+  const [cedulasNombre, setCedulasNombre] = useState<Record<number, string>>({});
+  // Específicos
+  const [codigoNovedad, setCodigoNovedad] = useState("");
   const [resultadoIA, setResultadoIA] = useState("");
-  const [motivoNoCumple, setMotivoNoCumple] = useState("");
+  const [veredicto, setVeredicto] = useState("");
+  const [justificacion, setJustificacion] = useState("");
+  const [nitCliente, setNitCliente] = useState("");
+  const [nombreCliente, setNombreCliente] = useState("");
+  const [rolSolicitante, setRolSolicitante] = useState("");
+  const [gravedadFalta, setGravedadFalta] = useState("");
+  const [decisionGH, setDecisionGH] = useState("");
 
-  function buscarGuia(num: string) {
+  function buscarGuia(idx: number, num: string) {
     const g = getGuia(num);
     if (g) {
-      setGuiaData({ terminal: g.terminalOrigen, ciudad: g.ciudadOrigen, cliente: g.nombreCliente, nit: g.nitCliente, valor: g.valorDeclarado });
-      setTerminal(g.terminalOrigen);
-      setGuiaError(false);
-    } else {
-      setGuiaData(null); setGuiaError(true);
+      setGuiasData((prev) => ({ ...prev, [idx]: { terminal: g.terminalOrigen, ciudad: g.ciudadOrigen, cliente: g.nombreCliente, nit: g.nitCliente, valor: g.valorDeclarado } }));
+      if (idx === 0) setTerminal(g.terminalOrigen);
+      setGuiaErrors((prev) => ({ ...prev, [idx]: false }));
+    } else if (num.length > 4) {
+      setGuiasData((prev) => { const n = { ...prev }; delete n[idx]; return n; });
+      setGuiaErrors((prev) => ({ ...prev, [idx]: true }));
     }
   }
 
-  function validarCedula(ced: string, setNombre: (n: string) => void, setError: (e: boolean) => void) {
+  function validarCedula(idx: number, ced: string) {
     const p = getPersonaPorCedula(ced);
-    if (p) { setNombre(p.nombre); setError(false); }
-    else if (ced.length > 5) { setNombre(""); setError(true); }
+    if (p) setCedulasNombre((prev) => ({ ...prev, [idx]: p.nombre }));
+    else if (ced.length > 5) setCedulasNombre((prev) => ({ ...prev, [idx]: "" }));
   }
 
-  const puedeCrear = tipo && observaciones && (
-    tipo === "lesiva" ? (tipoEntidad && identificacion && motivoBloqueo) :
-    tipo === "contacto" ? (cedContacto && motivoSeg) :
-    tipo === "posventa" ? (fecha) :
-    (guiaInput && fecha)
-  );
+  const puedeCrear = !!(categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion);
 
   function crear() {
-    const id = `${tipo!.slice(0, 3).toUpperCase()}-${String(Math.floor(Math.random() * 900) + 100)}`;
-    toast({ title: `✅ Registro ${id} creado exitosamente` });
+    const prefix = categoria!.slice(0, 3).toUpperCase();
+    const id = `${prefix}-${String(Math.floor(Math.random() * 900) + 100)}`;
+    toast({ title: `✅ Evento ${id} creado exitosamente` });
     onClose();
   }
 
@@ -137,316 +92,249 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="border-b border-border px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            {tipo && <button onClick={() => setTipo(null)} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
-            <h2 className="font-bold text-base">{tipo ? `Nuevo registro — ${TIPOS_FORM.find(t => t.id === tipo)?.label}` : "Nuevo registro"}</h2>
+            {categoria && <button onClick={() => setCategoria(null)} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
+            <h2 className="font-bold text-base">
+              {categoria ? `Nuevo evento — ${CATEGORIAS.find(c => c.id === categoria)?.label}` : "Nuevo evento"}
+            </h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><X className="w-5 h-5 text-muted-foreground" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {/* Capa 1: selección tipo */}
-          {!tipo && (
+          {/* Paso 1: selección de categoría */}
+          {!categoria && (
             <div className="grid grid-cols-2 gap-3">
-              {TIPOS_FORM.map((t) => (
-                <button key={t.id} onClick={() => setTipo(t.id as TipoF)}
-                  className="text-left p-4 rounded-xl border border-border hover:border-ring hover:shadow-card-hover transition-all group">
-                  <div className="text-2xl mb-2">{t.icon}</div>
-                  <div className="font-semibold text-sm mb-1">{t.label}</div>
-                  <div className="text-xs text-muted-foreground">{t.desc}</div>
+              {CATEGORIAS.map((c) => (
+                <button key={c.id} onClick={() => setCategoria(c.id)}
+                  className="text-left p-4 rounded-xl border border-border hover:border-ring hover:shadow-card-hover transition-all">
+                  <div className="text-2xl mb-2">{c.icon}</div>
+                  <div className="font-semibold text-sm mb-1">{c.label}</div>
+                  <div className="text-xs text-muted-foreground">{c.desc}</div>
                 </button>
               ))}
             </div>
           )}
 
-          {/* Capa 2+3: formulario */}
-          {tipo && (
-            <div className="space-y-4 slide-down">
-              {/* Campos comunes con guía */}
-              {!["lesiva", "contacto"].includes(tipo) && (
-                <>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                      Nro. Guía {tipo !== "posventa" ? "*" : ""}
-                    </label>
-                    <input
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                      placeholder="19900293001"
-                      value={guiaInput}
-                      onChange={(e) => setGuiaInput(e.target.value)}
-                      onBlur={() => guiaInput && buscarGuia(guiaInput)}
-                    />
-                    {tipo === "posventa" && (
-                      <p className="text-xs text-muted-foreground/70 mt-1">Opcional — algunas reclamaciones no están asociadas a una guía en NyS</p>
-                    )}
-                    {guiaError && <p className="text-xs text-red-500 mt-1">Guía no encontrada en el sistema — completa los datos manualmente</p>}
-                    {guiaData && (
-                      <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="text-xs font-semibold text-blue-700 mb-1.5">Datos de la guía:</div>
-                        <div className="flex flex-wrap gap-2">
-                          {[["Terminal", guiaData.terminal], ["Ciudad", guiaData.ciudad], ["Cliente", guiaData.cliente], ["Valor", formatCurrency(guiaData.valor)]].map(([l, v]) => (
-                            <span key={l} className="field-chip text-xs">{l}: {v}</span>
+          {/* Paso 2+3: campos */}
+          {categoria && (
+            <div className="space-y-4">
+              {/* Tipo de evento */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de evento *</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={tipoEvento} onChange={(e) => setTipoEvento(e.target.value)}>
+                  <option value="">Seleccionar...</option>
+                  {TIPOS_EVENTO[categoria].map((g) =>
+                    g.grupo
+                      ? <optgroup key={g.grupo} label={g.grupo}>{g.opciones.map((o) => <option key={o} value={o}>{o}</option>)}</optgroup>
+                      : g.opciones.map((o) => <option key={o} value={o}>{o}</option>)
+                  )}
+                </select>
+              </div>
+
+              {/* Tipo de entidad */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de entidad *</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={tipoEntidad} onChange={(e) => setTipoEntidad(e.target.value)}>
+                  <option value="">Seleccionar...</option>
+                  {["Empleado CM", "Aliado Goo", "Aliado Droop", "Contratista", "Tercero (persona jurídica)", "Vehículo"].map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+
+              {/* Terminal y Fecha */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminal} onChange={(e) => setTerminal(e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fecha *</label>
+                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Guías */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Guía(s)</label>
+                <div className="space-y-2">
+                  {guiaInputs.map((g, i) => (
+                    <div key={i}>
+                      <input
+                        className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring ${guiaErrors[i] ? "border-red-400" : "border-border"}`}
+                        placeholder="19900293001"
+                        value={g}
+                        onChange={(e) => setGuiaInputs((prev) => prev.map((x, j) => j === i ? e.target.value : x))}
+                        onBlur={() => g && buscarGuia(i, g)}
+                      />
+                      {guiaErrors[i] && <p className="text-xs text-red-500 mt-0.5">Guía no encontrada — completa datos manualmente</p>}
+                      {guiasData[i] && (
+                        <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2">
+                          {[["Terminal", guiasData[i].terminal], ["Cliente", guiasData[i].cliente], ["Valor", formatCurrency(guiasData[i].valor)]].map(([l, v]) => (
+                            <span key={l} className="text-xs bg-white border border-blue-200 rounded px-1.5 py-0.5 text-blue-700">{l}: {v}</span>
                           ))}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal *</label>
-                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={terminal} onChange={(e) => setTerminal(e.target.value)}>
-                        <option value="">Seleccionar...</option>
-                        {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
-                      </select>
+                      )}
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fecha *</label>
-                      <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Campos específicos por tipo */}
-              {tipo === "faltante" && (
-                <div className="space-y-3 slide-down">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Código novedad *</label>
-                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={codigoNovedad} onChange={(e) => setCodigoNovedad(e.target.value)}>
-                        <option value="">Seleccionar...</option>
-                        {["100", "300", "400", "403", "529"].map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de riesgo</label>
-                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={tipoRiesgo} onChange={(e) => setTipoRiesgo(e.target.value)}>
-                        <option value="">Seleccionar...</option>
-                        {["Contaminación", "Contrabando", "Hurto", "Pérdida"].map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  {tipoRiesgo && (
-                    <div className="field-chip text-xs slide-down">Workflow: {["Contaminación", "Contrabando"].includes(tipoRiesgo) ? "Proceso Incautación ROS mcia" : "Eventos de Seguridad Denuncios"}</div>
-                  )}
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Cédula persona responsable *</label>
-                    <input
-                      className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${cedRespError ? "border-red-400" : "border-border"}`}
-                      placeholder="1036452781"
-                      value={cedResp}
-                      onChange={(e) => setCedResp(e.target.value)}
-                      onBlur={() => validarCedula(cedResp, setCedRespNombre, setCedRespError)}
-                    />
-                    {cedRespNombre && <span className="field-chip text-xs mt-1 inline-block slide-down">{cedRespNombre}</span>}
-                    {cedRespError && <p className="text-xs text-red-500 mt-1">Cédula no encontrada en el sistema</p>}
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">NyS asociado</label>
-                    <input
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                      placeholder="Número de novedad en SIGO (ej: NYS-2026-00412)"
-                      value={nysAsociado}
-                      onChange={(e) => setNysAsociado(e.target.value)}
-                    />
-                  </div>
+                  ))}
+                  <button onClick={() => setGuiaInputs((prev) => [...prev, ""])} className="text-xs text-primary flex items-center gap-1 hover:underline">
+                    <Plus className="w-3 h-3" /> Agregar otra guía
+                  </button>
                 </div>
-              )}
+                <p className="text-xs text-muted-foreground/70 mt-1">Opcional — dejar vacío si el evento no está asociado a una guía</p>
+              </div>
 
-              {tipo === "evento" && (
-                <div className="space-y-3 slide-down">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de evento *</label>
-                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={tipoEvento} onChange={(e) => setTipoEvento(e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {EVENTOS_TIPOS.map((g) => (
-                        <optgroup key={g.grupo} label={g.grupo}>
-                          {g.opciones.map((o) => <option key={o} value={o}>{o}</option>)}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Ubicación *</label>
-                    <div className="flex gap-2">
-                      {["sede", "ruta"].map((u) => (
-                        <button key={u} onClick={() => setUbicacion(u)} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors capitalize ${ubicacion === u ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{u === "sede" ? "📍 Sede" : "🛣 Ruta"}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descripción detallada *</label>
-                    <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" rows={4} value={descDetallada} onChange={(e) => setDescDetallada(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fuente del reporte</label>
-                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={fuente} onChange={(e) => setFuente(e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {["Operaciones", "Servicio al Cliente", "Seguridad", "Dirección General", "Otro"].map((f) => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {tipo === "rce" && (
-                <div className="space-y-3 slide-down">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Valor recaudo (COP) *</label>
-                      <input type="number" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="1250000" value={valorRecaudo} onChange={(e) => setValorRecaudo(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Forma de pago *</label>
-                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={formaPago} onChange={(e) => setFormaPago(e.target.value)}>
-                        <option value="">Seleccionar...</option>
-                        {["Efectivo", "Transferencia", "Cheque", "Otro"].map((f) => <option key={f} value={f}>{f}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Estado recaudo *</label>
-                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={estadoRecaudo} onChange={(e) => setEstadoRecaudo(e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {["Pagado", "No pagado", "En proceso"].map((e) => <option key={e} value={e}>{e}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Porcentaje de cobro (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                      placeholder="Ej: 95.5"
-                      value={porcentajeCobro}
-                      onChange={(e) => setPorcentajeCobro(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {tipo === "posventa" && (
-                <div className="space-y-3 slide-down">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Requerimiento *</label>
-                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={requerimiento} onChange={(e) => setRequerimiento(e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {REQUERIMIENTOS_POSVENTA.map((g) => (
-                        <optgroup key={g.grupo} label={g.grupo}>
-                          {g.opciones.map((o) => <option key={o} value={o}>{o}</option>)}
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Rol solicitante *</label>
-                    <div className="flex gap-2">
-                      {["remitente", "destinatario", "tercero"].map((r) => (
-                        <button key={r} onClick={() => setRolSolicitante(r)} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors capitalize ${rolSolicitante === r ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{r.charAt(0).toUpperCase() + r.slice(1)}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {tipo === "lesiva" && (
-                <div className="space-y-3 slide-down">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de entidad *</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[["empleado", "👤 Empleado CM"], ["aliado", "🤝 Aliado"], ["vehiculo", "🚛 Vehículo"], ["cliente", "🏢 Cliente"]].map(([v, l]) => (
-                        <button key={v} onClick={() => setTipoEntidad(v)} className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors text-left ${tipoEntidad === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">{tipoEntidad === "vehiculo" ? "Placa" : tipoEntidad === "cliente" ? "NIT" : "Cédula"} *</label>
-                    <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={identificacion} onChange={(e) => setIdentificacion(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Motivo de bloqueo *</label>
-                    <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" rows={3} value={motivoBloqueo} onChange={(e) => setMotivoBloqueo(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fecha de bloqueo *</label>
-                    <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-                  </div>
-                </div>
-              )}
-
-              {tipo === "contacto" && (
-                <div className="space-y-3 slide-down">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Cédula *</label>
-                    <input
-                      className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${cedRespError ? "border-red-400" : "border-border"}`}
-                      value={cedContacto}
-                      onChange={(e) => setCedContacto(e.target.value)}
-                      onBlur={() => validarCedula(cedContacto, setCedContactoNombre, setCedRespError)}
-                    />
-                    {cedContactoNombre && <span className="field-chip text-xs mt-1 inline-block slide-down">{cedContactoNombre}</span>}
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Motivo del seguimiento *</label>
-                    <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" rows={3} value={motivoSeg} onChange={(e) => setMotivoSeg(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fecha *</label>
-                    <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={fecha} onChange={(e) => setFecha(e.target.value)} />
-                  </div>
-                </div>
-              )}
-
-              {tipo === "evidencia" && (
-                <div className="space-y-3 slide-down">
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de evidencia *</label>
-                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring bg-background" value={tipoEvidencia} onChange={(e) => setTipoEvidencia(e.target.value)}>
-                      <option value="">Seleccionar...</option>
-                      {["Foto de entrega", "Firma", "Documento", "Otro"].map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Resultado validación IA *</label>
-                    <div className="flex gap-3">
-                      {[["cumple", "✅ Cumple", "border-green-400 bg-green-50 text-green-700"], ["no_cumple", "❌ No cumple", "border-red-400 bg-red-50 text-red-700"]].map(([v, l, cls]) => (
-                        <button key={v} onClick={() => setResultadoIA(v)} className={`flex-1 py-3 rounded-xl border-2 font-semibold text-sm transition-all ${resultadoIA === v ? cls : "border-border hover:bg-muted"}`}>{l}</button>
-                      ))}
-                    </div>
-                  </div>
-                  {resultadoIA === "no_cumple" && (
-                    <div className="slide-down">
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Motivo de no cumplimiento</label>
-                      <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" rows={3} value={motivoNoCumple} onChange={(e) => setMotivoNoCumple(e.target.value)} />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Observaciones */}
+              {/* Personas responsables */}
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Observaciones *</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Persona(s) responsable(s) *</label>
+                <div className="space-y-1.5">
+                  {cedulas.map((ced, i) => (
+                    <div key={i}>
+                      <input
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="Número de cédula"
+                        value={ced}
+                        onChange={(e) => setCedulas((prev) => prev.map((x, j) => j === i ? e.target.value : x))}
+                        onBlur={() => validarCedula(i, ced)}
+                      />
+                      {cedulasNombre[i] && <span className="text-xs text-green-600 font-medium mt-0.5 block">{cedulasNombre[i]}</span>}
+                    </div>
+                  ))}
+                  <button onClick={() => setCedulas((prev) => [...prev, ""])} className="text-xs text-primary flex items-center gap-1 hover:underline">
+                    <Plus className="w-3 h-3" /> Agregar persona
+                  </button>
+                </div>
+              </div>
+
+              {/* Descripción */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descripción de los hechos *</label>
                 <textarea
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                  rows={3}
-                  placeholder="Descripción general del registro..."
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
+                  rows={4}
+                  placeholder="Describe en detalle los hechos..."
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
                 />
+              </div>
+
+              {/* Valor de afectación */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                  {categoria === "dineros" ? "Valor del dinero" : categoria === "unidades" ? "Valor declarado de unidades" : "Valor estimado de afectación"}
+                </label>
+                <input
+                  type="number"
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="Valor en COP"
+                  value={valorAfectacion}
+                  onChange={(e) => setValorAfectacion(e.target.value)}
+                />
+              </div>
+
+              {/* Campos específicos por categoría */}
+              {categoria === "unidades" && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Código novedad</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={codigoNovedad} onChange={(e) => setCodigoNovedad(e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    {["100", "300", "400", "403", "529"].map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {categoria === "proceso_evidencias" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-2 block">Resultado IA</label>
+                    <div className="flex gap-2">
+                      {[["cumple", "✅ Cumple"], ["no_cumple", "❌ No cumple"]].map(([v, l]) => (
+                        <button key={v} onClick={() => setResultadoIA(v)} className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${resultadoIA === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {resultadoIA && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-2 block">Veredicto del operador</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {[["confirma", "Confirmo"], ["falso_negativo", "Falso negativo"], ["falso_positivo", "Falso positivo"]].map(([v, l]) => (
+                          <button key={v} onClick={() => setVeredicto(v)} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${veredicto === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(veredicto === "falso_negativo" || veredicto === "falso_positivo") && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Justificación</label>
+                      <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" rows={2} value={justificacion} onChange={(e) => setJustificacion(e.target.value)} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {categoria === "pqr" && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">NIT Cliente</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="900234567" value={nitCliente} onChange={(e) => setNitCliente(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nombre Cliente</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Razón social" value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Rol solicitante</label>
+                    <div className="flex gap-2">
+                      {["remitente", "destinatario", "tercero"].map((r) => (
+                        <button key={r} onClick={() => setRolSolicitante(r)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors ${rolSolicitante === r ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{r}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {categoria === "disciplinarios" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Gravedad de la falta</label>
+                    <div className="flex gap-2">
+                      {[["leve", "Leve"], ["grave", "Grave"], ["gravisima", "Gravísima"]].map(([v, l]) => (
+                        <button key={v} onClick={() => setGravedadFalta(v)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${gravedadFalta === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Decisión GH</label>
+                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={decisionGH} onChange={(e) => setDecisionGH(e.target.value)}>
+                      <option value="">Seleccionar...</option>
+                      {["Sin decisión aún", "Llamado de atención verbal", "Llamado de atención escrito", "Suspensión", "Inicio proceso disciplinario", "Desvinculación", "Otro"].map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Fuente (read-only) */}
+              <div className="p-3 bg-muted/40 rounded-lg flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Fuente:</span>
+                <span className="text-xs font-semibold">{FUENTES[categoria]}</span>
               </div>
             </div>
           )}
         </div>
 
-        {tipo && (
-          <div className="border-t border-border px-6 py-4 flex items-center justify-between flex-shrink-0">
-            <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
+        {/* Footer */}
+        {categoria && (
+          <div className="border-t border-border px-6 py-4 flex justify-end gap-3 flex-shrink-0">
+            <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors">Cancelar</button>
             <button
               onClick={crear}
               disabled={!puedeCrear}
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors"
             >
-              Crear registro
+              Registrar evento
             </button>
           </div>
         )}
