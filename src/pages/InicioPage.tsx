@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, personas, vehiculos, PAISES_REGIONALES } from "@/data/mockData";
+import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
-import { EstadoPersonaBadge } from "@/lib/utils-app";
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X } from "lucide-react";
+import { EstadoPersonaBadge, formatCurrency } from "@/lib/utils-app";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, AlertTriangle, PackageSearch, DollarSign, ArrowRight, Plus } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
