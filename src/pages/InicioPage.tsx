@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, personas } from "@/data/mockData";
+import { eventos, alertasIA, personas, vehiculos } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
-import { CategoriaBadge, EstadoBadge, formatDate } from "@/lib/utils-app";
-import { FolderOpen, Clock, Bot, ChevronRight, Users } from "lucide-react";
+import { CategoriaBadge, EstadoBadge, formatDate, EstadoPersonaBadge } from "@/lib/utils-app";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA } from "@/types";
