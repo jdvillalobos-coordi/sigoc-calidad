@@ -251,7 +251,7 @@ function EventoDetalle({ evento, onClose }: { evento: Evento; onClose: () => voi
                   )}>{evento.gravedadFalta}</span>
                 </InfoRow>
               )}
-              {evento.decisionGH && <InfoRow icon={<FileText className="w-3.5 h-3.5" />} label="Decisión GH"><span className="text-xs">{evento.decisionGH}</span></InfoRow>}
+              {evento.decisionGH && <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label="Decisión GH"><span className="text-xs">{evento.decisionGH}</span></InfoRow>}
             </div>
           </Section>
         )}
