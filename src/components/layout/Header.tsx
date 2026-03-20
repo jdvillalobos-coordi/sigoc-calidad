@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Bell, ChevronDown } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { personas, vehiculos, guias, registros, notificaciones } from "@/data/mockData";
-import { tipoConfig, descripcionCorta, AvatarInicial } from "@/lib/utils-app";
+import { personas, vehiculos, guias, eventos, notificaciones } from "@/data/mockData";
+import { categoriaConfig, descripcionCorta, AvatarInicial } from "@/lib/utils-app";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
