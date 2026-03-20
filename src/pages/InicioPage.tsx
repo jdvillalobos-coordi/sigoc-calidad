@@ -45,20 +45,29 @@ function Bar({ value, max }: { value: number; max: number }) {
 
 export default function InicioPage() {
   const { setPaginaActiva, abrirPersona, abrirVehiculo, abrirTerminal } = useApp();
-  const [alertas, setAlertas]   = React.useState<AlertaIA[]>(alertasIA);
-  const [periodo, setPeriodo]   = React.useState<number>(30);
-  const [cat, setCat]           = React.useState<CategoriaEvento | "todas">("todas");
-  const [tab, setTab]           = React.useState<RankingTab>("regionales");
+  const [alertas, setAlertas]     = React.useState<AlertaIA[]>(alertasIA);
+  const [periodo, setPeriodo]     = React.useState<number>(30);
+  const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
+  const [tab, setTab]             = React.useState<RankingTab>("regionales");
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+  const [calOpen, setCalOpen]     = React.useState(false);
 
   /* ── Filtrado ── */
   const filtrados = React.useMemo(() => {
-    const corte = periodo > 0 ? subDays(new Date(), periodo) : null;
     return eventos.filter((e) => {
-      const okFecha = !corte || isAfter(new Date(e.fecha), corte);
-      const okCat   = cat === "todas" || e.categoria === cat;
+      const fecha = new Date(e.fecha);
+      let okFecha = true;
+      if (dateRange?.from || dateRange?.to) {
+        // Rango personalizado seleccionado
+        if (dateRange.from) okFecha = okFecha && !isBefore(fecha, startOfDay(dateRange.from));
+        if (dateRange.to)   okFecha = okFecha && !isAfter(fecha, endOfDay(dateRange.to));
+      } else if (periodo > 0) {
+        okFecha = isAfter(fecha, subDays(new Date(), periodo));
+      }
+      const okCat = cat === "todas" || e.categoria === cat;
       return okFecha && okCat;
     });
-  }, [periodo, cat]);
+  }, [periodo, cat, dateRange]);
 
   /* ── KPIs ── */
   const abiertos   = filtrados.filter((e) => e.estado === "abierto");
