@@ -3,9 +3,10 @@ import { eventos, guias, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "
 import { CategoriaBadge, EstadoBadge, formatDate, formatCurrency, categoriaConfig, AvatarInicial } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import {
-  Plus, ChevronUp, ChevronDown, CalendarIcon, X, Search,
-  ExternalLink, Clock, User, MapPin, Hash, FileText,
-  ChevronRight, Tag, Users, Building2, Package, AlertCircle
+  Plus, ChevronUp, ChevronDown, CalendarIcon, X,
+  ExternalLink, Clock, User, MapPin, Hash,
+  ChevronRight, Tag, Building2, AlertCircle,
+  AlertTriangle, DollarSign, PackageSearch, ArrowRight
 } from "lucide-react";
 import type { CategoriaEvento, EstadoEvento, Evento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
