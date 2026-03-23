@@ -609,18 +609,11 @@ export default function RegistrosPage() {
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                       {format(parseISO(g.fechaCreacion), "dd MMM yy", { locale: es })}
                     </td>
-                    {/* Días + CTA */}
+                    {/* Días */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className={cn("text-xs font-semibold", g.diasSinGestionar > 3 ? "text-amber-600" : "text-muted-foreground")}>
-                          {g.diasSinGestionar > 3 ? `⏰ ${g.diasSinGestionar}d` : `${g.diasSinGestionar}d`}
-                        </span>
-                        <button
-                          onClick={() => setNuevaRegistroAbierto(true)}
-                          className="flex items-center gap-0.5 px-2 py-1 bg-primary text-primary-foreground text-[10px] font-semibold rounded-md hover:bg-primary/90 transition-colors whitespace-nowrap">
-                          <Plus className="w-2.5 h-2.5" /> Crear evento
-                        </button>
-                      </div>
+                      <span className={cn("text-xs font-semibold", g.diasSinGestionar > 3 ? "text-amber-600" : "text-muted-foreground")}>
+                        {g.diasSinGestionar > 3 ? `⏰ ${g.diasSinGestionar}d` : `${g.diasSinGestionar}d`}
+                      </span>
                     </td>
                   </tr>
                 ))}
