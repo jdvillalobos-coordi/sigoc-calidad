@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Camera, ChevronDown, ChevronUp, ImageIcon, AlertTriangle } from "lucide-react";
+import { Camera, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, User } from "lucide-react";
 import { evidencias, terminales } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils-app";
