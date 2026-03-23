@@ -568,8 +568,9 @@ export default function RegistrosPage() {
                     className="bg-amber-50/60 border-l-2 border-l-amber-400 hover:bg-amber-50 transition-colors">
                     {/* Categoría: badge especial RCE */}
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
-                        💰 RCE
+                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 flex-shrink-0" />
+                        RCE
                       </span>
                     </td>
                     {/* ID: número de guía */}
