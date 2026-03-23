@@ -213,7 +213,12 @@ export interface Evidencia {
   tipoEvidencia: "entrega" | "intento_entrega";
   resultadoIA: "cumple" | "no_cumple";
   fecha: string;
-  imagenUrl?: string;
+  // Links a las fotografías almacenadas (no imágenes embebidas)
+  fotosUrls?: string[];
+  // Operador que tomó la fotografía en campo
+  operadorCedula?: string;
+  operadorNombre?: string;
+  operadorCargo?: string;
   veredictoOperador?: "confirma" | "falso_negativo" | "falso_positivo";
   justificacionOperador?: string;
   fechaRevision?: string;
