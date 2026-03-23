@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Camera, ChevronDown, ChevronUp, ImageIcon, AlertTriangle } from "lucide-react";
+import { Camera, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, User } from "lucide-react";
 import { evidencias, terminales } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils-app";
@@ -90,13 +90,47 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
       {expanded && (
         <div className="px-4 pb-4 bg-muted/20 border-t border-border">
           <div className="pt-4 grid grid-cols-2 gap-4">
-            {/* Preview imagen */}
+            {/* Fotografías — links al sistema de origen */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-2">Evidencia fotográfica</p>
-              <div className="w-full aspect-video bg-muted/50 border border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2">
-                <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
-                <span className="text-xs text-muted-foreground/60">Imagen no disponible en demo</span>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Fotografías de la evidencia</p>
+              {ev.fotosUrls && ev.fotosUrls.length > 0 ? (
+                <div className="space-y-2 mb-3">
+                  {ev.fotosUrls.map((url, i) => (
+                    <a
+                      key={i}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors group"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      <span className="text-xs text-primary group-hover:underline truncate flex-1">
+                        Foto {i + 1} — {ev.tipoEvidencia === "entrega" ? "Evidencia de entrega" : "Evidencia de intento"}
+                      </span>
+                      <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic mb-3">Sin fotografías registradas</p>
+              )}
+
+              {/* Operador que tomó la foto */}
+              <div className="bg-muted/30 rounded-lg px-3 py-2.5 border border-border">
+                <p className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" /> Operador que tomó la foto
+                </p>
+                {ev.operadorNombre ? (
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium">{ev.operadorNombre}</div>
+                    <div className="text-xs text-muted-foreground">{ev.operadorCargo} · CC {ev.operadorCedula}</div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic">Sin información del operador</p>
+                )}
               </div>
+
+              {/* Metadata */}
               <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
                 <div><span className="font-medium">Guía:</span> {ev.guia}</div>
                 <div><span className="font-medium">Tipo:</span> {ev.tipoEvidencia === "entrega" ? "Evidencia de entrega" : "Evidencia de intento de entrega"}</div>
