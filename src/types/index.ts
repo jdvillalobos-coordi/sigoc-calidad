@@ -222,9 +222,19 @@ export interface AlertaIA {
 }
 
 // ---- Notificación ----
+export type TipoNotificacion =
+  | "alerta_ia"
+  | "caso_asignado"
+  | "caso_escalado"
+  | "caso_devuelto"
+  | "caso_vencido"
+  | "caso_cerrado"
+  | "resolucion_aplicada"
+  | "posventa";
+
 export interface Notificacion {
   id: string;
-  tipo: "alerta_ia" | "caso_asignado" | "caso_vencido" | "caso_cerrado" | "posventa";
+  tipo: TipoNotificacion;
   texto: string;
   tiempo: string;
   leida: boolean;

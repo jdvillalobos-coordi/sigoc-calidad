@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import type { PaginaActiva, DrawerState, FormPrefill } from "@/types";
+import type { PaginaActiva, DrawerState, FormPrefill, Notificacion, TipoNotificacion } from "@/types";
+import { notificaciones as notificacionesIniciales } from "@/data/mockData";
 
 interface AppContextType {
   paginaActiva: PaginaActiva;
@@ -18,6 +19,9 @@ interface AppContextType {
   setBusquedaQuery: (q: string) => void;
   formPrefill: FormPrefill | null;
   setFormPrefill: (p: FormPrefill | null) => void;
+  notificacionesState: Notificacion[];
+  setNotificacionesState: React.Dispatch<React.SetStateAction<Notificacion[]>>;
+  agregarNotificacion: (tipo: TipoNotificacion, texto: string, linkRegistroId?: string) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -28,6 +32,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [nuevaRegistroAbierto, setNuevaRegistroAbierto] = useState(false);
   const [busquedaQuery, setBusquedaQuery] = useState("");
   const [formPrefill, setFormPrefill] = useState<FormPrefill | null>(null);
+  const [notificacionesState, setNotificacionesState] = useState<Notificacion[]>(notificacionesIniciales);
+
+  const agregarNotificacion = useCallback((tipo: TipoNotificacion, texto: string, linkRegistroId?: string) => {
+    setNotificacionesState(prev => [{
+      id: `N-${Date.now()}`,
+      tipo,
+      texto,
+      tiempo: "ahora",
+      leida: false,
+      linkRegistroId,
+      linkTipo: linkRegistroId ? "registro" : undefined,
+    }, ...prev]);
+  }, []);
 
   const abrirRegistro = useCallback((id: string) => setDrawer({ tipo: "registro", id }), []);
   const abrirPersona = useCallback((id: string) => setDrawer({ tipo: "persona360", id }), []);
@@ -56,6 +73,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBusquedaQuery,
         formPrefill,
         setFormPrefill,
+        notificacionesState,
+        setNotificacionesState,
+        agregarNotificacion,
       }}
     >
       {children}

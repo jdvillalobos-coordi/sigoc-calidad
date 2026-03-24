@@ -1736,6 +1736,42 @@ export const notificaciones: Notificacion[] = [
     leida: true,
     linkRegistroId: "AI-004",
   },
+  {
+    id: "N-007",
+    tipo: "caso_escalado",
+    texto: "⬆️ Sandra Herrera te escaló el evento DIN-001 — Motivo: Monto superior a $5M requiere aprobación de Jefe de Seguridad",
+    tiempo: "hace 1h",
+    leida: false,
+    linkRegistroId: "DIN-001",
+    linkTipo: "registro",
+  },
+  {
+    id: "N-008",
+    tipo: "caso_devuelto",
+    texto: "↩️ Carlos Mendoza devolvió el evento DIN-008 — Investigación completada desde seguridad",
+    tiempo: "hace 4h",
+    leida: false,
+    linkRegistroId: "DIN-008",
+    linkTipo: "registro",
+  },
+  {
+    id: "N-009",
+    tipo: "resolucion_aplicada",
+    texto: "⚖️ Se aplicó resolución acumulativa \"Llamado de atención escrito\" a 3 eventos vinculados a Carlos Pérez",
+    tiempo: "hace 6h",
+    leida: false,
+    linkRegistroId: "UNI-001",
+    linkTipo: "registro",
+  },
+  {
+    id: "N-010",
+    tipo: "caso_escalado",
+    texto: "⬆️ Jorge Castaño te escaló el evento DIS-004 — Motivo: Requiere revisión de Directora de Calidad por impacto regional",
+    tiempo: "hace 1d",
+    leida: true,
+    linkRegistroId: "DIS-004",
+    linkTipo: "registro",
+  },
 ];
 
 // ============================================================

@@ -79,7 +79,7 @@ const PERSONAS_ESCALAMIENTO = [
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
-  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto } = useApp();
+  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, agregarNotificacion } = useApp();
   const [localEventos, setLocalEventos] = useState(eventos);
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");
   const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo");
@@ -138,18 +138,29 @@ export function RecordDetailDrawer() {
       fechaEscalamiento: new Date().toISOString(),
       motivoEscalamiento: escaladoMotivo,
     });
+    agregarNotificacion(
+      "caso_escalado",
+      `⬆️ Sandra Herrera te escaló el evento ${ev!.id} — Motivo: ${escaladoMotivo}`,
+      ev!.id,
+    );
     setEscalandoAbierto(false);
     setEscaladoPersonaId("");
     setEscaladoMotivo("");
   }
 
   function devolverAlCreador() {
+    const escaladoNombre = ev!.escaladoA?.nombre ?? "Investigador";
     avanzarFlujo("en_investigacion", {
       escaladoA: undefined,
       escaladoPor: undefined,
       fechaEscalamiento: undefined,
       motivoEscalamiento: undefined,
     });
+    agregarNotificacion(
+      "caso_devuelto",
+      `↩️ ${escaladoNombre} devolvió el evento ${ev!.id} — Investigación completada`,
+      ev!.id,
+    );
     toast({ title: "Evento devuelto al investigador original" });
   }
 
@@ -1479,7 +1490,7 @@ const DECISION_OPTIONS: { value: ResolucionFinal; label: string; icon: string; c
 const REQUIERE_OBSERVACIONES: ResolucionFinal[] = ["desvinculacion", "proceso_disciplinario"];
 
 export function ResolucionAcumulativaPanel() {
-  const { drawer, cerrarDrawer, abrirRegistro } = useApp();
+  const { drawer, cerrarDrawer, abrirRegistro, agregarNotificacion } = useApp();
   const [decision, setDecision] = useState<ResolucionFinal | "">("");
   const [observaciones, setObservaciones] = useState("");
   const [confirmado, setConfirmado] = useState(false);
@@ -1512,7 +1523,13 @@ export function ResolucionAcumulativaPanel() {
   function confirmarDecision() {
     if (!puedeConfirmar || confirmado) return;
     setConfirmado(true);
-    toast({ title: "Decisión registrada", description: `Se aplicó "${DECISION_OPTIONS.find(o => o.value === decision)?.label}" a ${evPersona.length} eventos de ${persona!.nombre}` });
+    const decisionLabel = DECISION_OPTIONS.find(o => o.value === decision)?.label ?? decision;
+    toast({ title: "Decisión registrada", description: `Se aplicó "${decisionLabel}" a ${evPersona.length} eventos de ${persona!.nombre}` });
+    agregarNotificacion(
+      "resolucion_aplicada",
+      `⚖️ Se aplicó resolución acumulativa "${decisionLabel}" a ${evPersona.length} eventos vinculados a ${persona!.nombre}`,
+      evPersona[0]?.id,
+    );
     setTimeout(() => {
       cerrarDrawer();
       setConfirmado(false);

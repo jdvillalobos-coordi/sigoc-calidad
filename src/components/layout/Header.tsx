@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Bell, ChevronDown } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { personas, vehiculos, guias, eventos, notificaciones } from "@/data/mockData";
+import { personas, vehiculos, guias, eventos } from "@/data/mockData";
 import { categoriaConfig, descripcionCorta, AvatarInicial } from "@/lib/utils-app";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -173,13 +173,18 @@ function SearchBar() {
 }
 
 // ---- Notificaciones ----
+const NOTIF_BORDER: Record<string, string> = {
+  caso_escalado: "border-l-4 border-l-amber-400",
+  caso_devuelto: "border-l-4 border-l-blue-400",
+  resolucion_aplicada: "border-l-4 border-l-purple-400",
+};
+
 function NotificacionesPopover() {
-  const { abrirRegistro, setPaginaActiva } = useApp();
+  const { abrirRegistro, setPaginaActiva, notificacionesState, setNotificacionesState } = useApp();
   const [open, setOpen] = useState(false);
-  const [notifs, setNotifs] = useState(notificaciones);
   const ref = useRef<HTMLDivElement>(null);
 
-  const noLeidas = notifs.filter((n) => !n.leida).length;
+  const noLeidas = notificacionesState.filter((n) => !n.leida).length;
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -189,14 +194,18 @@ function NotificacionesPopover() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  function handleClick(n: typeof notifs[0]) {
-    setNotifs((prev) => prev.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
+  function handleClick(n: typeof notificacionesState[0]) {
+    setNotificacionesState((prev) => prev.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
     setOpen(false);
     if (n.linkTipo === "registro" && n.linkRegistroId) {
       abrirRegistro(n.linkRegistroId);
     } else if (n.tipo === "alerta_ia") {
       setPaginaActiva("ia");
     }
+  }
+
+  function marcarTodasLeidas() {
+    setNotificacionesState((prev) => prev.map((x) => ({ ...x, leida: true })));
   }
 
   return (
@@ -207,36 +216,56 @@ function NotificacionesPopover() {
       >
         <Bell className="w-5 h-5 text-muted-foreground" />
         {noLeidas > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-destructive text-white text-[10px] rounded-full flex items-center justify-center font-bold px-1">
             {noLeidas}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-96 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden fade-in">
+        <div className="absolute right-0 top-full mt-2 w-[420px] bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden fade-in">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="font-semibold text-sm">Notificaciones</h3>
-            {noLeidas > 0 && (
-              <span className="text-xs text-coordinadora-blue font-medium">{noLeidas} sin leer</span>
-            )}
+            <div className="flex items-center gap-3">
+              {noLeidas > 0 && (
+                <>
+                  <span className="text-xs text-coordinadora-blue font-medium">{noLeidas} sin leer</span>
+                  <button onClick={marcarTodasLeidas} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+                    Marcar todas leídas
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-          <div className="max-h-80 overflow-y-auto divide-y divide-border">
-            {notifs.map((n) => (
-              <button
-                key={n.id}
-                className={`w-full text-left px-4 py-3 hover:bg-muted transition-colors flex gap-3 ${!n.leida ? "bg-blue-50/60" : ""}`}
-                onClick={() => handleClick(n)}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-snug ${!n.leida ? "font-medium" : "text-muted-foreground"}`}>
-                    {n.texto}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{n.tiempo}</p>
-                </div>
-                {!n.leida && <div className="w-2 h-2 rounded-full bg-coordinadora-blue flex-shrink-0 mt-1.5" />}
-              </button>
-            ))}
+          <div className="max-h-96 overflow-y-auto divide-y divide-border">
+            {notificacionesState.map((n) => {
+              const borderCls = NOTIF_BORDER[n.tipo] ?? "";
+              return (
+                <button
+                  key={n.id}
+                  className={`w-full text-left px-4 py-3 hover:bg-muted transition-colors flex gap-3 ${
+                    !n.leida ? "bg-blue-50/60" : ""
+                  } ${borderCls}`}
+                  onClick={() => handleClick(n)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm leading-snug ${!n.leida ? "font-medium" : "text-muted-foreground"}`}>
+                      {n.texto}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[11px] text-muted-foreground">{n.tiempo}</p>
+                      {n.tipo === "caso_escalado" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Escalado</span>
+                      )}
+                      {n.tipo === "resolucion_aplicada" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Resolución</span>
+                      )}
+                    </div>
+                  </div>
+                  {!n.leida && <div className="w-2 h-2 rounded-full bg-coordinadora-blue flex-shrink-0 mt-1.5" />}
+                </button>
+              );
+            })}
           </div>
           <button
             className="w-full px-4 py-2.5 text-xs text-coordinadora-blue hover:bg-muted text-center border-t border-border transition-colors font-medium"
