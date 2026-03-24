@@ -573,19 +573,22 @@ export default function RegistrosPage() {
                         RCE
                       </span>
                     </td>
-                    {/* ID: número de guía */}
+                    {/* ID: pendiente — aún no es un evento */}
                     <td className="px-4 py-3">
-                      <button onClick={() => abrirGuia(g.numero)}
-                        className="font-mono text-xs font-semibold text-primary hover:underline">
-                        {g.numero}
-                      </button>
+                      <span className="text-[10px] text-amber-600 font-medium italic">Sin crear</span>
                     </td>
                     {/* Tipo / Personas */}
                     <td className="px-4 py-3 max-w-0">
                       <span className="truncate block text-xs font-medium text-foreground">Seguimiento RCE</span>
-                      <span className="text-[10px] text-muted-foreground truncate block">
-                        {g.nombreCliente} · {formatCurrency(g.valorDeclarado)}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
+                          {g.nombreCliente} · {formatCurrency(g.valorDeclarado)}
+                        </span>
+                        <button onClick={(ev) => { ev.stopPropagation(); abrirGuia(g.numero); }}
+                          className="text-[10px] text-primary hover:underline font-mono whitespace-nowrap">
+                          · Guía {g.numero}
+                        </button>
+                      </div>
                     </td>
                     {/* Entidad */}
                     {!panelAbierto && (
