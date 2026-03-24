@@ -781,13 +781,15 @@ export function Persona360Drawer() {
     e.personasParticipantes.some((pv) => pv.personaId === persona.id)
   );
   const estudios = estudiosSeguridad.filter((e) => e.personaId === persona.id);
-  const totalEv = evPersona.length;
+  const alertasPersona = alertasIA.filter(a =>
+    a.entidadesInvolucradas.some(e => e.tipo === "persona" && e.id === persona.id)
+  );
 
-  // Risk score: (abiertos*2) + (cerrados con hallazgos*1) + (estudios con hallazgos*3)
+  const totalEv = evPersona.length;
   const evAbiertos = evPersona.filter(e => e.estado === "abierto").length;
-  const evCerradosConHallazgos = evPersona.filter(e => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
-  const estudiosConHallazgos = estudios.filter(e => e.resultado === "hallazgos_encontrados").length;
-  const riskScore = (evAbiertos * 2) + (evCerradosConHallazgos * 1) + (estudiosConHallazgos * 3);
+  const evCerradosConHallazgo = evPersona.filter(e => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
+  const estudiosConHallazgo = estudios.filter(e => e.resultado === "hallazgos_encontrados").length;
+  const riskScore = (evAbiertos * 2) + (evCerradosConHallazgo * 1) + (estudiosConHallazgo * 3);
 
   const riskConfig = riskScore >= 13
     ? { color: "bg-red-500", track: "bg-red-100", border: "border-red-200", bg: "bg-red-50", label: "Riesgo crítico", text: "text-red-800" }
@@ -797,40 +799,36 @@ export function Persona360Drawer() {
         ? { color: "bg-amber-400", track: "bg-amber-100", border: "border-amber-200", bg: "bg-amber-50", label: "Riesgo medio", text: "text-amber-800" }
         : { color: "bg-green-500", track: "bg-green-100", border: "border-green-200", bg: "bg-green-50", label: "Bajo riesgo", text: "text-green-800" };
 
-  // GH decisions from disciplinary events
-  const decisiones = evPersona.filter(e => e.decisionGH).map(e => ({ decision: e.decisionGH!, fecha: e.fecha, eventoId: e.id, registradoPor: e.usuarioRegistro }));
+  const barPct = Math.min(100, (riskScore / 20) * 100);
 
-  // Unified timeline
-  const timelineItems: { fecha: string; icon: string; desc: string; badge?: React.ReactNode; eventoId?: string }[] = [];
+  const decisiones = evPersona.filter(e => e.decisionGH).map(e => ({
+    decision: e.decisionGH!,
+    fecha: e.fecha,
+    evento: e.id,
+    usuario: e.usuarioRegistro,
+  }));
 
-  evPersona.forEach(e => {
-    timelineItems.push({
+  const alertaReincidencia = alertasIA.find(a =>
+    a.tipo === "reincidencia_persona" && a.entidadesInvolucradas.some(e => e.tipo === "persona" && e.id === persona.id)
+  );
+
+  type TimelineItem = { fecha: string; icon: string; desc: string; badge?: React.ReactNode; onClick?: () => void };
+
+  const timeline: TimelineItem[] = [
+    ...evPersona.map(e => ({
       fecha: e.fecha,
       icon: CAT_ICON[e.categoria] ?? "📋",
-      desc: `${e.tipoEvento} — ${e.terminal}`,
+      desc: `${e.id} — ${e.tipoEvento} · ${e.terminal}`,
       badge: <EstadoBadge estado={e.estado} />,
-      eventoId: e.id,
-    });
-  });
-
-  const alertasPersona = alertasIA.filter(a => a.entidadesInvolucradas.some(e => e.tipo === "persona" && e.id === persona.id));
-  alertasPersona.forEach(a => {
-    timelineItems.push({
+      onClick: () => abrirRegistro(e.id),
+    })),
+    ...alertasPersona.map(a => ({
       fecha: a.fechaDeteccion,
       icon: "🤖",
       desc: a.titulo,
-      badge: <SeveridadBadge severidad={a.severidad} />,
-    });
-  });
-
-  const timelineSorted = [...timelineItems].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-
-  // Desglose por categoría
-  const conteoCategoria: Record<string, number> = {};
-  evPersona.forEach(e => { conteoCategoria[e.categoria] = (conteoCategoria[e.categoria] ?? 0) + 1; });
-  const desglose = Object.entries(conteoCategoria)
-    .map(([cat, n]) => `${n} ${categoriaConfig[cat as keyof typeof categoriaConfig]?.label ?? cat}`)
-    .join(" · ");
+      badge: <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${a.severidad === "critica" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{a.severidad}</span>,
+    })),
+  ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
   return (
     <>
@@ -843,7 +841,7 @@ export function Persona360Drawer() {
             <div>
               <h2 className="font-bold text-lg">{persona.nombre}</h2>
               <div className="text-sm text-muted-foreground">
-                {persona.tipo === "cliente" ? `NIT ${persona.nit}` : `CC ${persona.cedula}`} · {persona.cargo} ·{" "}
+                {persona.tipo === "cliente" ? `NIT ${persona.nit}` : `ID ${persona.cedula}`} · {persona.cargo} ·{" "}
                 <button onClick={() => abrirTerminal(persona.terminal)} className="text-coordinadora-blue hover:underline">
                   {persona.terminal}
                 </button>
@@ -854,7 +852,7 @@ export function Persona360Drawer() {
                   : persona.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200"
                   : "bg-green-100 text-green-700 border border-green-200"
                 }`}>
-                  {persona.estado === "bloqueado" ? "Bloqueado" : persona.estado === "en_seguimiento" ? "En seguimiento" : "Sin novedad"}
+                  {persona.estado === "bloqueado" ? "🔴 Bloqueado" : persona.estado === "en_seguimiento" ? "🟡 En seguimiento" : "🟢 Sin novedad"}
                 </span>
               </div>
             </div>
@@ -866,41 +864,57 @@ export function Persona360Drawer() {
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
-          {/* 1. Score de riesgo — termómetro */}
+          {/* Score de riesgo — termómetro */}
           <div className={`${riskConfig.bg} border ${riskConfig.border} rounded-xl p-4`}>
             <div className="flex items-center justify-between mb-2">
-              <span className={`text-sm font-semibold ${riskConfig.text}`}>Indicador de riesgo</span>
-              <div className="flex items-center gap-2">
-                <span className={`text-2xl font-black ${riskConfig.text}`}>{riskScore}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full text-white ${riskConfig.color}`}>{riskConfig.label}</span>
-              </div>
+              <span className="text-sm font-semibold">Score de riesgo</span>
+              <span className={`text-sm font-black ${riskConfig.text}`}>{riskScore}</span>
             </div>
-            <div className={`w-full h-3 ${riskConfig.track} rounded-full overflow-hidden`}>
-              <div className={`h-full rounded-full transition-all ${riskConfig.color}`} style={{ width: `${Math.min(100, (riskScore / 20) * 100)}%` }} />
+            <div className={`w-full h-3 ${riskConfig.track} rounded-full overflow-hidden mb-2`}>
+              <div className={`h-full rounded-full transition-all ${riskConfig.color}`} style={{ width: `${barPct}%` }} />
             </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-              <span>0</span>
-              <span>Bajo</span>
-              <span>Medio</span>
-              <span>Alto</span>
-              <span>Crítico</span>
+            <div className="flex items-center justify-between">
+              <span className={`text-xs font-semibold ${riskConfig.text}`}>{riskConfig.label}</span>
+              <span className="text-[11px] text-muted-foreground">
+                {evAbiertos} abierto{evAbiertos !== 1 ? "s" : ""} · {evCerradosConHallazgo} con hallazgos · {estudiosConHallazgo} estudio{estudiosConHallazgo !== 1 ? "s" : ""}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {evAbiertos} evento{evAbiertos !== 1 ? "s" : ""} abierto{evAbiertos !== 1 ? "s" : ""} · {evCerradosConHallazgos} cerrado{evCerradosConHallazgos !== 1 ? "s" : ""} con hallazgos · {estudiosConHallazgos} estudio{estudiosConHallazgos !== 1 ? "s" : ""} con hallazgos
-            </p>
           </div>
 
-          {/* 2. CTA resolución acumulativa */}
+          {/* Decisiones GH previas (lectura) */}
+          {decisiones.length > 0 && (
+            <div className="border border-border rounded-xl p-4">
+              <h3 className="font-semibold text-sm mb-2">Decisiones de Gestión Humana</h3>
+              <div className="flex flex-wrap gap-2">
+                {decisiones.map((d, i) => (
+                  <div key={i} className="inline-flex items-center gap-2 text-xs bg-muted/40 rounded-lg px-3 py-1.5">
+                    <span className="font-semibold">{d.decision}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="text-muted-foreground">{formatDate(d.fecha)}</span>
+                    <span className="text-muted-foreground">· {d.evento}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CTA resolución acumulativa */}
           {totalEv >= 3 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-amber-900">
-                  Esta persona tiene {totalEv} eventos registrados
-                </div>
-                <div className="text-xs text-amber-700 mt-0.5">{desglose}</div>
+            <div className="border border-amber-300 bg-amber-50 rounded-xl p-4 flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-900">
+                  Esta persona tiene {totalEv} eventos registrados.
+                </p>
+                <p className="text-xs text-amber-700/70 mt-0.5">Puedes aplicar una resolución que cubra todos los eventos vinculados.</p>
               </div>
               <button
-                onClick={() => abrirResolucionAcumulativa(persona.id)}
+                onClick={() => {
+                  if (alertaReincidencia) {
+                    abrirResolucionAcumulativa(alertaReincidencia.id);
+                  } else {
+                    abrirResolucionAcumulativa(`persona:${persona.id}`);
+                  }
+                }}
                 className="flex-shrink-0 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm"
               >
                 Iniciar resolución acumulativa
@@ -908,84 +922,61 @@ export function Persona360Drawer() {
             </div>
           )}
 
-          {/* 3. Decisiones GH pasadas (lectura) */}
-          {decisiones.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Decisiones de Gestión Humana</h3>
-              <div className="flex flex-wrap gap-2">
-                {decisiones.map((d, i) => (
-                  <button key={i} onClick={() => abrirRegistro(d.eventoId)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs transition-colors">
-                    <span className="font-semibold">{d.decision}</span>
-                    <span className="text-muted-foreground">· {formatDate(d.fecha)}</span>
-                  </button>
-                ))}
+          {/* Acciones rápidas */}
+          <div className="flex gap-2">
+            {persona.estado !== "en_seguimiento" && persona.estado !== "bloqueado" && (
+              <button
+                onClick={() => toast({ title: "🟡 Persona agregada al Cuadro de Contacto", description: `${persona.nombre} ahora está en seguimiento.` })}
+                className="flex-1 text-left px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors"
+              >
+                <div className="text-xs font-semibold text-amber-700">📋 Agregar al Cuadro de Contacto</div>
+              </button>
+            )}
+            {persona.estado === "en_seguimiento" && (
+              <div className="flex-1 px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-xl">
+                <div className="text-xs font-semibold text-amber-700">📋 En Cuadro de Contacto</div>
               </div>
-            </div>
-          )}
-
-          {/* 4. Timeline unificada */}
-          {timelineSorted.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                Timeline ({timelineSorted.length} registros)
-              </h3>
-              <div className="space-y-1">
-                {timelineSorted.map((item, i) => (
-                  <button
-                    key={i}
-                    onClick={() => item.eventoId && abrirRegistro(item.eventoId)}
-                    className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border transition-colors ${
-                      item.eventoId ? "hover:bg-muted/50 hover:border-primary/30 cursor-pointer" : "cursor-default"
-                    }`}
-                  >
-                    <span className="text-xs font-mono text-muted-foreground w-[72px] flex-shrink-0">{item.fecha}</span>
-                    <span className="text-base leading-none flex-shrink-0">{item.icon}</span>
-                    <span className="text-xs flex-1 min-w-0 truncate">{item.desc}</span>
-                    {item.badge}
-                  </button>
-                ))}
+            )}
+            {persona.estado !== "bloqueado" && (
+              <button
+                onClick={() => toast({ title: "🔴 Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueado(a).` })}
+                className="flex-1 text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+              >
+                <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva</div>
+              </button>
+            )}
+            {persona.estado === "bloqueado" && (
+              <div className="flex-1 px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl">
+                <div className="text-xs font-semibold text-red-700">🚫 Persona Bloqueada</div>
               </div>
-            </div>
-          )}
-
-          {/* 5. Acciones rápidas */}
-          <div className="border border-border rounded-xl p-4">
-            <h3 className="font-semibold text-sm mb-3">Acciones rápidas</h3>
-            <div className="space-y-2">
-              {persona.estado !== "en_seguimiento" && persona.estado !== "bloqueado" && (
-                <button
-                  onClick={() => toast({ title: "Persona agregada al Cuadro de Contacto", description: `${persona.nombre} ahora está en seguimiento.` })}
-                  className="w-full text-left px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
-                >
-                  <div className="text-xs font-semibold text-amber-700">Agregar al Cuadro de Contacto</div>
-                  <div className="text-xs text-amber-600/70 mt-0.5">Marcar como persona en seguimiento</div>
-                </button>
-              )}
-              {persona.estado === "en_seguimiento" && (
-                <div className="px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-lg">
-                  <div className="text-xs font-semibold text-amber-700">En Cuadro de Contacto</div>
-                  <div className="text-xs text-amber-600/70 mt-0.5">Persona en seguimiento activo</div>
-                </div>
-              )}
-              {persona.estado !== "bloqueado" && (
-                <button
-                  onClick={() => toast({ title: "Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueado(a).` })}
-                  className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                >
-                  <div className="text-xs font-semibold text-red-700">Registrar Actividad Lesiva (Bloquear)</div>
-                  <div className="text-xs text-red-600/70 mt-0.5">Bloquear persona por responsabilidad directa</div>
-                </button>
-              )}
-              {persona.estado === "bloqueado" && (
-                <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
-                  <div className="text-xs font-semibold text-red-700">Persona Bloqueada</div>
-                  <div className="text-xs text-red-600/70 mt-0.5">Actividad lesiva activa — acceso restringido</div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* 6. Estudios de seguridad — colapsable */}
+          {/* Timeline unificada */}
+          {timeline.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Timeline ({timeline.length})</h3>
+              <div className="space-y-1">
+                {timeline.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={item.onClick}
+                    disabled={!item.onClick}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border border-transparent transition-colors ${
+                      item.onClick ? "hover:bg-muted hover:border-border cursor-pointer" : "cursor-default"
+                    }`}
+                  >
+                    <span className="text-[11px] font-mono text-muted-foreground w-[72px] flex-shrink-0">{item.fecha}</span>
+                    <span className="text-sm leading-none flex-shrink-0">{item.icon}</span>
+                    <span className="text-xs flex-1 min-w-0 truncate">{item.desc}</span>
+                    {item.badge && <div className="flex-shrink-0">{item.badge}</div>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Estudios de seguridad (colapsable) */}
           {estudios.length > 0 && (
             <div className="border border-border rounded-xl overflow-hidden">
               <button
@@ -993,7 +984,7 @@ export function Persona360Drawer() {
                 onClick={() => setEstudiosOpen(s => !s)}
               >
                 <span className="font-semibold text-sm">🔎 Estudios de seguridad</span>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">{estudios.length}</span>
                   {estudiosOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                 </div>
@@ -1006,7 +997,7 @@ export function Persona360Drawer() {
                         <span className="text-xs font-semibold">{e.proveedor}</span>
                         <span className="text-xs text-muted-foreground">{e.fecha}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${e.resultado === "hallazgos_encontrados" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-                          {e.resultado === "hallazgos_encontrados" ? "Hallazgos encontrados" : "Sin hallazgos"}
+                          {e.resultado === "hallazgos_encontrados" ? "⚠️ Hallazgos" : "✅ Sin hallazgos"}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">{e.observaciones}</p>
@@ -1017,7 +1008,6 @@ export function Persona360Drawer() {
             </div>
           )}
 
-          {/* Empty state */}
           {totalEv === 0 && estudios.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">
               <span className="text-4xl">👤</span>
@@ -1443,14 +1433,16 @@ export function ResolucionAcumulativaPanel() {
 
   if (drawer.tipo !== "resolucion_acumulativa" || !drawer.id) return null;
 
-  // Support both alertaId and personaId
   let persona: typeof personas[0] | undefined;
-  const alerta = alertasIA.find(a => a.id === drawer.id);
-  if (alerta && alerta.tipo === "reincidencia_persona") {
+
+  if (drawer.id.startsWith("persona:")) {
+    const personaId = drawer.id.replace("persona:", "");
+    persona = personas.find(p => p.id === personaId);
+  } else {
+    const alerta = alertasIA.find(a => a.id === drawer.id);
+    if (!alerta || alerta.tipo !== "reincidencia_persona") return null;
     const personaEntidad = alerta.entidadesInvolucradas.find(e => e.tipo === "persona");
     persona = personaEntidad ? personas.find(p => p.id === personaEntidad.id) : undefined;
-  } else {
-    persona = personas.find(p => p.id === drawer.id);
   }
   if (!persona) return null;
 
