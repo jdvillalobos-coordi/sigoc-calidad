@@ -173,18 +173,15 @@ function SearchBar() {
 }
 
 // ---- Notificaciones ----
-const NOTIF_BORDER: Record<string, string> = {
-  caso_escalado: "border-l-4 border-l-amber-400",
-  caso_devuelto: "border-l-4 border-l-blue-400",
-  resolucion_aplicada: "border-l-4 border-l-purple-400",
-};
+const TIPOS_VISIBLES = new Set(["caso_asignado", "caso_escalado"]);
 
 function NotificacionesPopover() {
-  const { abrirRegistro, setPaginaActiva, notificacionesState, setNotificacionesState } = useApp();
+  const { abrirRegistro, notificacionesState, setNotificacionesState } = useApp();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const noLeidas = notificacionesState.filter((n) => !n.leida).length;
+  const visibles = notificacionesState.filter(n => TIPOS_VISIBLES.has(n.tipo));
+  const noLeidas = visibles.filter(n => !n.leida).length;
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -194,18 +191,16 @@ function NotificacionesPopover() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  function handleClick(n: typeof notificacionesState[0]) {
-    setNotificacionesState((prev) => prev.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
+  function handleClick(n: typeof visibles[0]) {
+    setNotificacionesState(prev => prev.map(x => x.id === n.id ? { ...x, leida: true } : x));
     setOpen(false);
     if (n.linkTipo === "registro" && n.linkRegistroId) {
       abrirRegistro(n.linkRegistroId);
-    } else if (n.tipo === "alerta_ia") {
-      setPaginaActiva("ia");
     }
   }
 
   function marcarTodasLeidas() {
-    setNotificacionesState((prev) => prev.map((x) => ({ ...x, leida: true })));
+    setNotificacionesState(prev => prev.map(x => TIPOS_VISIBLES.has(x.tipo) ? { ...x, leida: true } : x));
   }
 
   return (
@@ -223,56 +218,46 @@ function NotificacionesPopover() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[420px] bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden fade-in">
+        <div className="absolute right-0 top-full mt-2 w-96 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden fade-in">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <h3 className="font-semibold text-sm">Notificaciones</h3>
-            <div className="flex items-center gap-3">
-              {noLeidas > 0 && (
-                <>
-                  <span className="text-xs text-coordinadora-blue font-medium">{noLeidas} sin leer</span>
-                  <button onClick={marcarTodasLeidas} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-                    Marcar todas leídas
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="max-h-96 overflow-y-auto divide-y divide-border">
-            {notificacionesState.map((n) => {
-              const borderCls = NOTIF_BORDER[n.tipo] ?? "";
-              return (
-                <button
-                  key={n.id}
-                  className={`w-full text-left px-4 py-3 hover:bg-muted transition-colors flex gap-3 ${
-                    !n.leida ? "bg-blue-50/60" : ""
-                  } ${borderCls}`}
-                  onClick={() => handleClick(n)}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm leading-snug ${!n.leida ? "font-medium" : "text-muted-foreground"}`}>
-                      {n.texto}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-[11px] text-muted-foreground">{n.tiempo}</p>
-                      {n.tipo === "caso_escalado" && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Escalado</span>
-                      )}
-                      {n.tipo === "resolucion_aplicada" && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Resolución</span>
-                      )}
-                    </div>
-                  </div>
-                  {!n.leida && <div className="w-2 h-2 rounded-full bg-coordinadora-blue flex-shrink-0 mt-1.5" />}
+            <h3 className="font-semibold text-sm">Mis pendientes</h3>
+            {noLeidas > 0 && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-coordinadora-blue font-medium">{noLeidas} sin leer</span>
+                <button onClick={marcarTodasLeidas} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+                  Marcar leídas
                 </button>
-              );
-            })}
+              </div>
+            )}
           </div>
-          <button
-            className="w-full px-4 py-2.5 text-xs text-coordinadora-blue hover:bg-muted text-center border-t border-border transition-colors font-medium"
-            onClick={() => { setPaginaActiva("ia"); setOpen(false); }}
-          >
-            Ver todas las alertas →
-          </button>
+          <div className="max-h-80 overflow-y-auto divide-y divide-border">
+            {visibles.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                Sin eventos pendientes
+              </div>
+            ) : visibles.map(n => (
+              <button
+                key={n.id}
+                className={`w-full text-left px-4 py-3 hover:bg-muted transition-colors flex gap-3 ${
+                  !n.leida ? "bg-blue-50/60" : ""
+                } ${n.tipo === "caso_escalado" ? "border-l-4 border-l-amber-400" : ""}`}
+                onClick={() => handleClick(n)}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm leading-snug ${!n.leida ? "font-medium" : "text-muted-foreground"}`}>
+                    {n.texto}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[11px] text-muted-foreground">{n.tiempo}</p>
+                    {n.tipo === "caso_escalado" && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Escalado</span>
+                    )}
+                  </div>
+                </div>
+                {!n.leida && <div className="w-2 h-2 rounded-full bg-coordinadora-blue flex-shrink-0 mt-1.5" />}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

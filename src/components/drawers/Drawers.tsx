@@ -149,18 +149,12 @@ export function RecordDetailDrawer() {
   }
 
   function devolverAlCreador() {
-    const escaladoNombre = ev!.escaladoA?.nombre ?? "Investigador";
     avanzarFlujo("en_investigacion", {
       escaladoA: undefined,
       escaladoPor: undefined,
       fechaEscalamiento: undefined,
       motivoEscalamiento: undefined,
     });
-    agregarNotificacion(
-      "caso_devuelto",
-      `↩️ ${escaladoNombre} devolvió el evento ${ev!.id} — Investigación completada`,
-      ev!.id,
-    );
     toast({ title: "Evento devuelto al investigador original" });
   }
 
@@ -1490,7 +1484,7 @@ const DECISION_OPTIONS: { value: ResolucionFinal; label: string; icon: string; c
 const REQUIERE_OBSERVACIONES: ResolucionFinal[] = ["desvinculacion", "proceso_disciplinario"];
 
 export function ResolucionAcumulativaPanel() {
-  const { drawer, cerrarDrawer, abrirRegistro, agregarNotificacion } = useApp();
+  const { drawer, cerrarDrawer, abrirRegistro } = useApp();
   const [decision, setDecision] = useState<ResolucionFinal | "">("");
   const [observaciones, setObservaciones] = useState("");
   const [confirmado, setConfirmado] = useState(false);
@@ -1525,11 +1519,6 @@ export function ResolucionAcumulativaPanel() {
     setConfirmado(true);
     const decisionLabel = DECISION_OPTIONS.find(o => o.value === decision)?.label ?? decision;
     toast({ title: "Decisión registrada", description: `Se aplicó "${decisionLabel}" a ${evPersona.length} eventos de ${persona!.nombre}` });
-    agregarNotificacion(
-      "resolucion_aplicada",
-      `⚖️ Se aplicó resolución acumulativa "${decisionLabel}" a ${evPersona.length} eventos vinculados a ${persona!.nombre}`,
-      evPersona[0]?.id,
-    );
     setTimeout(() => {
       cerrarDrawer();
       setConfirmado(false);
