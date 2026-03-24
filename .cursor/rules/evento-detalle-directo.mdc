@@ -1,0 +1,16 @@
+---
+description: Al hacer clic en un evento en la tabla de Eventos, se abre el Drawer completo directamente (sin panel lateral intermedio)
+globs: src/pages/RegistrosPage.tsx
+alwaysApply: false
+---
+
+# Detalle de evento: un clic → reporte completo
+
+En la tabla de Eventos (`RegistrosPage.tsx`), al hacer clic en una fila se debe abrir directamente el Drawer con el detalle completo del evento via `abrirRegistro(e.id)`.
+
+## Reglas
+
+- NO crear un panel lateral intermedio ni un componente `EventoDetalle` inline
+- NO usar un estado `eventoSeleccionado` para mostrar un preview parcial
+- El flujo es: clic en fila → `abrirRegistro(id)` → Drawer completo con toda la info
+- Este comportamiento NO debe cambiarse a menos que el usuario lo solicite explícitamente

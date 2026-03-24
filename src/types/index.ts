@@ -11,6 +11,18 @@ export type CategoriaEvento =
 
 export type EstadoEvento = "abierto" | "cerrado";
 
+export type EstadoFlujo = "nuevo" | "en_investigacion" | "escalado" | "resuelto" | "cerrado";
+
+export type ResolucionFinal =
+  | "sin_hallazgos"
+  | "llamado_atencion_verbal"
+  | "llamado_atencion_escrito"
+  | "suspension_temporal"
+  | "proceso_disciplinario"
+  | "desvinculacion"
+  | "escalamiento_seguridad"
+  | "caso_insuficiente";
+
 export type SeveridadIA = "critica" | "alta" | "media" | "baja";
 
 export type EstadoPersona = "sin_novedad" | "en_seguimiento" | "bloqueado";
@@ -155,10 +167,35 @@ export interface Evento {
   gravedadFalta?: "leve" | "grave" | "gravisima";
   decisionGH?: string;
 
+  // === FLUJO DE TRABAJO ===
+  estadoFlujo: EstadoFlujo;
+  asignadoA: { id: string; nombre: string; cargo: string };
+  escaladoA?: { id: string; nombre: string; cargo: string };
+  escaladoPor?: { id: string; nombre: string };
+  fechaEscalamiento?: string;
+  motivoEscalamiento?: string;
+
+  // === RESOLUCIÓN ===
+  resolucionFinal?: ResolucionFinal;
+  observacionResolucion?: string;
+  fechaResolucion?: string;
+  resueltoPor?: { id: string; nombre: string };
+
   // === SEGUIMIENTO ===
   anotaciones: Anotacion[];
   historial: CambioHistorial[];
   diasAbierto: number;
+}
+
+// ---- Resolución acumulativa (decisión sobre persona con múltiples eventos) ----
+export interface ResolucionAcumulativa {
+  id: string;
+  personaId: string;
+  eventosVinculados: string[];
+  resolucion: ResolucionFinal;
+  observaciones: string;
+  fecha: string;
+  creadoPor: { id: string; nombre: string };
 }
 
 // ---- Estudio de Seguridad ----

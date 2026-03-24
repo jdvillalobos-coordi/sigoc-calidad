@@ -1,17 +1,13 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
-import { CategoriaBadge, EstadoBadge, formatDate, formatCurrency, categoriaConfig, AvatarInicial } from "@/lib/utils-app";
+import { CategoriaBadge, EstadoBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import {
-  Plus, ChevronUp, ChevronDown, CalendarIcon, X,
-  ExternalLink, Clock, User, MapPin, Hash,
-  ChevronRight, Tag, Building2, AlertCircle,
-} from "lucide-react";
-import type { CategoriaEvento, EstadoEvento, Evento } from "@/types";
+import { Plus, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
+import type { CategoriaEvento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, isWithinInterval, parseISO, subDays, formatDistanceToNow } from "date-fns";
+import { format, isWithinInterval, parseISO, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
@@ -25,14 +21,6 @@ const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
   { value: "pqr",                label: "📞 PQR" },
   { value: "disciplinarios",     label: "⚖️ Disciplinarios" },
 ];
-
-const FUENTE_LABEL: Record<CategoriaEvento, { fuente: string; icon: string; color: string }> = {
-  dineros:            { fuente: "SIGO Dineros",              icon: "💰", color: "text-green-700 bg-green-50 border-green-200" },
-  unidades:           { fuente: "SIGO NyS",                  icon: "📦", color: "text-blue-700 bg-blue-50 border-blue-200" },
-  listas_vinculantes: { fuente: "Truora / ClickCloud",       icon: "🛡️", color: "text-gray-700 bg-gray-50 border-gray-200" },
-  pqr:                { fuente: "Reporte CAL / AppSheet",    icon: "📞", color: "text-purple-700 bg-purple-50 border-purple-200" },
-  disciplinarios:     { fuente: "SuccessFactors / GH",       icon: "⚖️", color: "text-red-700 bg-red-50 border-red-200" },
-};
 
 const PRESETS = [
   { label: "Hoy",            days: 0  },
@@ -101,227 +89,10 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
   );
 }
 
-// ── Panel de detalle del evento (inline) ─────────────────────
-
-function EventoDetalle({ evento, onClose }: { evento: Evento; onClose: () => void }) {
-  const { abrirPersona, abrirGuia, abrirTerminal, abrirRegistro } = useApp();
-  const cfg = categoriaConfig[evento.categoria];
-  const fuente = FUENTE_LABEL[evento.categoria];
-
-  const allPersonas = [
-    ...evento.personasResponsables.map(p => ({ ...p, grupo: "Responsable" })),
-    ...evento.personasParticipantes.map(p => ({ ...p, grupo: "Participante" })),
-  ];
-
-  return (
-    <div className="h-full flex flex-col bg-card border-l border-border overflow-hidden">
-      {/* Header del panel */}
-      <div className="flex-shrink-0 px-5 py-4 border-b border-border">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-              <CategoriaBadge categoria={evento.categoria} />
-              <EstadoBadge estado={evento.estado} />
-              {evento.estado === "abierto" && evento.diasAbierto > 30 && (
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-destructive">
-                  <AlertCircle className="w-3 h-3" /> Vencido
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-muted-foreground">{evento.id}</span>
-              <button onClick={() => abrirRegistro(evento.id)}
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                <ExternalLink className="w-3 h-3" /> Ver detalle completo
-              </button>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors flex-shrink-0">
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
-        </div>
-
-        <h3 className="font-semibold text-sm mt-2 leading-snug">{evento.tipoEvento}</h3>
-
-        {/* Fuente de datos */}
-        <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg border text-xs font-medium ${fuente.color}`}>
-          <span>{fuente.icon}</span>
-          <span>Fuente: {fuente.fuente}</span>
-        </div>
-      </div>
-
-      {/* Cuerpo scrolleable */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-
-        {/* Metadatos clave */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-          <InfoRow icon={<MapPin className="w-3.5 h-3.5" />} label="Terminal">
-            <button onClick={() => abrirTerminal(evento.terminal)}
-              className="text-xs text-primary hover:underline font-medium">{evento.terminal}</button>
-          </InfoRow>
-          <InfoRow icon={<Clock className="w-3.5 h-3.5" />} label="Fecha">
-            <span className="text-xs">{formatDate(evento.fecha)}</span>
-          </InfoRow>
-          <InfoRow icon={<Building2 className="w-3.5 h-3.5" />} label="Entidad">
-            <span className="text-xs capitalize">{evento.tipoEntidad.replace(/_/g, " ")}</span>
-          </InfoRow>
-          <InfoRow icon={<Clock className="w-3.5 h-3.5" />} label="Días abierto">
-            <span className={cn("text-xs font-semibold",
-              evento.estado !== "cerrado" && evento.diasAbierto > 30 ? "text-destructive" :
-              evento.estado !== "cerrado" && evento.diasAbierto > 3  ? "text-amber-600"   : "text-muted-foreground"
-            )}>{evento.diasAbierto}d</span>
-          </InfoRow>
-          {evento.valorAfectacion && (
-            <InfoRow icon={<Hash className="w-3.5 h-3.5" />} label="Valor afectación">
-              <span className="text-xs font-semibold text-destructive">{formatCurrency(evento.valorAfectacion)}</span>
-            </InfoRow>
-          )}
-          {evento.codigoNovedad && (
-            <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label="Código novedad">
-              <span className="text-xs font-mono font-semibold">{evento.codigoNovedad}</span>
-            </InfoRow>
-          )}
-        </div>
-
-        {/* Guías */}
-        {evento.guias && evento.guias.length > 0 && (
-          <Section title="Guías asociadas" icon="📦">
-            <div className="flex flex-wrap gap-2">
-              {evento.guias.map((g) => (
-                <button key={g} onClick={() => abrirGuia(g)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs font-mono text-blue-700 hover:bg-blue-100 transition-colors">
-                  {g} <ExternalLink className="w-3 h-3" />
-                </button>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* Personas involucradas */}
-        {allPersonas.length > 0 && (
-          <Section title="Personas involucradas" icon="👤">
-            <div className="space-y-2">
-              {allPersonas.map((p) => (
-                <button key={`${p.personaId}-${p.grupo}`}
-                  onClick={() => abrirPersona(p.personaId)}
-                  className="w-full flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/60 transition-colors text-left group">
-                  <AvatarInicial nombre={p.nombre} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{p.nombre}</div>
-                    <div className="text-xs text-muted-foreground">ID {p.cedula}</div>
-                  </div>
-                  <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0",
-                    p.grupo === "Responsable" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-                  )}>{p.grupo}</span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* Descripción */}
-        <Section title="Descripción de los hechos" icon="📝">
-          <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-            {evento.descripcionHechos}
-          </p>
-        </Section>
-
-        {/* Campos específicos por categoría */}
-        {evento.categoria === "pqr" && (evento.nombreCliente || evento.nitCliente) && (
-          <Section title="Datos PQR" icon="📞">
-            <div className="space-y-1.5">
-              {evento.nombreCliente && <InfoRow icon={<User className="w-3.5 h-3.5" />} label="Cliente"><span className="text-xs">{evento.nombreCliente}</span></InfoRow>}
-              {evento.nitCliente && <InfoRow icon={<Hash className="w-3.5 h-3.5" />} label="NIT"><span className="text-xs font-mono">{evento.nitCliente}</span></InfoRow>}
-              {evento.rolSolicitante && <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label="Rol"><span className="text-xs capitalize">{evento.rolSolicitante}</span></InfoRow>}
-            </div>
-          </Section>
-        )}
-
-        {evento.categoria === "disciplinarios" && (evento.gravedadFalta || evento.decisionGH) && (
-          <Section title="Disciplinario" icon="⚖️">
-            <div className="space-y-1.5">
-              {evento.gravedadFalta && (
-                <InfoRow icon={<AlertCircle className="w-3.5 h-3.5" />} label="Gravedad">
-                  <span className={cn("text-xs font-semibold capitalize px-1.5 py-0.5 rounded",
-                    evento.gravedadFalta === "gravisima" ? "bg-red-100 text-red-700" :
-                    evento.gravedadFalta === "grave"     ? "bg-amber-100 text-amber-700" :
-                                                          "bg-yellow-100 text-yellow-700"
-                  )}>{evento.gravedadFalta}</span>
-                </InfoRow>
-              )}
-              {evento.decisionGH && <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label="Decisión GH"><span className="text-xs">{evento.decisionGH}</span></InfoRow>}
-            </div>
-          </Section>
-        )}
-
-        {/* Resultado IA (evidencias generadas automáticamente) */}
-        {evento.resultadoIA && (
-          <Section title="Resultado IA" icon="🤖">
-            <div className="space-y-1.5">
-              <InfoRow icon={<Tag className="w-3.5 h-3.5" />} label="Resultado IA">
-                <span className={cn("text-xs font-semibold",
-                  evento.resultadoIA === "cumple" ? "text-green-700" : "text-destructive"
-                )}>{evento.resultadoIA === "cumple" ? "✅ Cumple" : "❌ No cumple"}</span>
-              </InfoRow>
-              {evento.veredictoOperador && (
-                <InfoRow icon={<User className="w-3.5 h-3.5" />} label="Veredicto operador">
-                  <span className="text-xs capitalize">{evento.veredictoOperador.replace(/_/g, " ")}</span>
-                </InfoRow>
-              )}
-            </div>
-          </Section>
-        )}
-
-        {/* Anotaciones recientes */}
-        {evento.anotaciones.length > 0 && (
-          <Section title="Últimas anotaciones" icon="💬">
-            <div className="space-y-2">
-              {evento.anotaciones.slice(-2).map((a) => (
-                <div key={a.id} className="bg-muted/40 rounded-lg px-3 py-2">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[10px] font-semibold text-foreground">{a.autorId}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatDate(a.fecha)}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{a.texto}</p>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className="text-sm">{icon}</span>
-        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{title}</h4>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function InfoRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start gap-1.5">
-      <span className="text-muted-foreground mt-0.5 flex-shrink-0">{icon}</span>
-      <div>
-        <div className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium leading-none mb-0.5">{label}</div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, abrirGuia, setNuevaRegistroAbierto, busquedaQuery } = useApp();
+  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [paisFiltro, setPaisFiltro]           = useState("todos");
@@ -331,7 +102,6 @@ export default function RegistrosPage() {
   const [sortField, setSortField]             = useState<"fecha" | "diasAbierto" | "id">("fecha");
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
-  const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
   const PER_PAGE = 20;
 
   function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
@@ -411,12 +181,6 @@ export default function RegistrosPage() {
   function limpiarFiltros() {
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setPage(1);
   }
-
-  function seleccionar(evento: Evento) {
-    setEventoSeleccionado(prev => prev?.id === evento.id ? null : evento);
-  }
-
-  const panelAbierto = !!eventoSeleccionado;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -505,7 +269,7 @@ export default function RegistrosPage() {
       <div className="flex-1 flex overflow-hidden">
 
         {/* Tabla */}
-        <div className={cn("flex flex-col overflow-hidden transition-all duration-300", panelAbierto ? "flex-1" : "w-full")}>
+        <div className="flex flex-col overflow-hidden w-full">
           <div className="flex-1 overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-muted/90 backdrop-blur z-10">
@@ -516,9 +280,7 @@ export default function RegistrosPage() {
                     <span className="flex items-center gap-1">ID <SortIcon field="id" /></span>
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Tipo / Personas</th>
-                  {!panelAbierto && (
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32 hidden lg:table-cell">Entidad</th>
-                  )}
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32 hidden lg:table-cell">Entidad</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-28">Terminal</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-24">Estado</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-24"
@@ -534,17 +296,11 @@ export default function RegistrosPage() {
               <tbody className="divide-y divide-border">
 
                 {paged.map((e) => {
-                  const isSelected = eventoSeleccionado?.id === e.id;
                   const responsable = e.personasResponsables[0];
                   return (
                     <tr key={e.id}
-                      onClick={() => seleccionar(e)}
-                      className={cn(
-                        "cursor-pointer transition-colors",
-                        isSelected
-                          ? "bg-primary/5 border-l-2 border-l-primary"
-                          : "bg-card hover:bg-muted/40"
-                      )}>
+                      onClick={() => abrirRegistro(e.id)}
+                      className="cursor-pointer transition-colors bg-card hover:bg-muted/40">
                       <td className="px-4 py-3">
                         <CategoriaBadge categoria={e.categoria} />
                       </td>
@@ -564,11 +320,9 @@ export default function RegistrosPage() {
                           )}
                         </div>
                       </td>
-                      {!panelAbierto && (
-                        <td className="px-4 py-3 text-xs text-muted-foreground capitalize hidden lg:table-cell">
-                          {e.tipoEntidad.replace(/_/g, " ")}
-                        </td>
-                      )}
+                      <td className="px-4 py-3 text-xs text-muted-foreground capitalize hidden lg:table-cell">
+                        {e.tipoEntidad.replace(/_/g, " ")}
+                      </td>
                       <td className="px-4 py-3">
                         <button onClick={(ev) => { ev.stopPropagation(); abrirTerminal(e.terminal); }}
                           className="text-xs text-primary hover:underline font-medium">
@@ -629,13 +383,6 @@ export default function RegistrosPage() {
             </div>
           )}
         </div>
-
-        {/* Panel de detalle lateral */}
-        {panelAbierto && eventoSeleccionado && (
-          <div className="w-[360px] flex-shrink-0 overflow-hidden border-l border-border">
-            <EventoDetalle evento={eventoSeleccionado} onClose={() => setEventoSeleccionado(null)} />
-          </div>
-        )}
       </div>
     </div>
   );
