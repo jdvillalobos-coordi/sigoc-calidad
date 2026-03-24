@@ -7,7 +7,7 @@ import EvidenciasPage from "@/pages/EvidenciasPage";
 import IAPage from "@/pages/IAPage";
 import ConfiguracionPage from "@/pages/ConfiguracionPage";
 import BandejaPage from "@/pages/BandejaPage";
-import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer, Terminal360Drawer } from "@/components/drawers/Drawers";
+import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer, Terminal360Drawer, ResolucionAcumulativaPanel } from "@/components/drawers/Drawers";
 import NewRecordForm from "@/components/forms/NewRecordForm";
 import { Toaster } from "@/components/ui/toaster";
 import LoginPage from "@/pages/LoginPage";
@@ -31,6 +31,7 @@ function AppContent() {
       {drawer.tipo === "vehiculo360" && <Vehiculo360Drawer />}
       {drawer.tipo === "guia360"     && <Guia360Drawer />}
       {drawer.tipo === "terminal360" && <Terminal360Drawer />}
+      {drawer.tipo === "resolucion_acumulativa" && <ResolucionAcumulativaPanel />}
 
       {nuevaRegistroAbierto && (
         <NewRecordForm

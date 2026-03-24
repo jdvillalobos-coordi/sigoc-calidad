@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock } from "lucide-react";
-import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal } from "@/types";
+import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale } from "lucide-react";
+import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
 // ---- Flujo de trabajo ----
@@ -1458,6 +1458,209 @@ export function Terminal360Drawer() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---- Resolución Acumulativa ----
+const DECISION_OPTIONS: { value: ResolucionFinal; label: string; icon: string; color: string; selected: string }[] = [
+  { value: "caso_insuficiente",        label: "Sin acción — caso insuficiente",  icon: "✅", color: "border-green-200 bg-green-50/50 text-green-900",      selected: "border-green-500 bg-green-100 ring-2 ring-green-500/30" },
+  { value: "llamado_atencion_verbal",  label: "Llamado de atención verbal",     icon: "⚠️", color: "border-amber-200 bg-amber-50/50 text-amber-900",      selected: "border-amber-500 bg-amber-100 ring-2 ring-amber-500/30" },
+  { value: "llamado_atencion_escrito", label: "Llamado de atención escrito",    icon: "⚠️", color: "border-amber-200 bg-amber-50/50 text-amber-900",      selected: "border-amber-500 bg-amber-100 ring-2 ring-amber-500/30" },
+  { value: "suspension_temporal",      label: "Suspensión temporal",            icon: "🔶", color: "border-orange-200 bg-orange-50/50 text-orange-900",    selected: "border-orange-500 bg-orange-100 ring-2 ring-orange-500/30" },
+  { value: "proceso_disciplinario",    label: "Proceso disciplinario",          icon: "🔴", color: "border-red-200 bg-red-50/50 text-red-900",             selected: "border-red-500 bg-red-100 ring-2 ring-red-500/30" },
+  { value: "desvinculacion",           label: "Desvinculación",                 icon: "🚫", color: "border-red-200 bg-red-50/50 text-red-900",             selected: "border-red-600 bg-red-100 ring-2 ring-red-600/30" },
+  { value: "escalamiento_seguridad",   label: "Escalamiento a seguridad",       icon: "↗️", color: "border-purple-200 bg-purple-50/50 text-purple-900",    selected: "border-purple-500 bg-purple-100 ring-2 ring-purple-500/30" },
+];
+
+const REQUIERE_OBSERVACIONES: ResolucionFinal[] = ["desvinculacion", "proceso_disciplinario"];
+
+export function ResolucionAcumulativaPanel() {
+  const { drawer, cerrarDrawer, abrirRegistro } = useApp();
+  const [decision, setDecision] = useState<ResolucionFinal | "">("");
+  const [observaciones, setObservaciones] = useState("");
+  const [confirmado, setConfirmado] = useState(false);
+
+  if (drawer.tipo !== "resolucion_acumulativa" || !drawer.id) return null;
+
+  const alerta = alertasIA.find(a => a.id === drawer.id);
+  if (!alerta || alerta.tipo !== "reincidencia_persona") return null;
+
+  const personaEntidad = alerta.entidadesInvolucradas.find(e => e.tipo === "persona");
+  const persona = personaEntidad ? personas.find(p => p.id === personaEntidad.id) : null;
+  if (!persona) return null;
+
+  const evPersona = eventos.filter(e =>
+    e.personasResponsables.some(pv => pv.personaId === persona.id) ||
+    e.personasParticipantes.some(pv => pv.personaId === persona.id)
+  );
+
+  const evSorted = [...evPersona].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+  const conteoCategoria: Record<string, number> = {};
+  evPersona.forEach(e => { conteoCategoria[e.categoria] = (conteoCategoria[e.categoria] ?? 0) + 1; });
+  const desglose = Object.entries(conteoCategoria)
+    .map(([cat, n]) => `${n} ${categoriaConfig[cat as keyof typeof categoriaConfig]?.label ?? cat}`)
+    .join(" · ");
+
+  const necesitaObs = decision ? REQUIERE_OBSERVACIONES.includes(decision as ResolucionFinal) : false;
+  const puedeConfirmar = decision && (!necesitaObs || observaciones.trim().length > 0);
+
+  function confirmarDecision() {
+    if (!puedeConfirmar || confirmado) return;
+    setConfirmado(true);
+    toast({ title: "Decisión registrada", description: `Se aplicó "${DECISION_OPTIONS.find(o => o.value === decision)?.label}" a ${evPersona.length} eventos de ${persona!.nombre}` });
+    setTimeout(() => {
+      cerrarDrawer();
+      setConfirmado(false);
+      setDecision("");
+      setObservaciones("");
+    }, 600);
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={cerrarDrawer} />
+      <div className="fixed right-0 top-0 h-full w-[62%] bg-card shadow-drawer z-50 flex flex-col animate-slide-in-right overflow-hidden">
+        {/* Header */}
+        <div className="border-b border-border px-6 py-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <Scale className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-bold text-base">Resolución acumulativa</h2>
+              <p className="text-xs text-muted-foreground">Alerta {alerta.id} · {alerta.titulo}</p>
+            </div>
+          </div>
+          <button onClick={cerrarDrawer} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X className="w-5 h-5 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Two-panel body */}
+        <div className="flex-1 overflow-hidden flex">
+
+          {/* Left: Contexto de la persona */}
+          <div className="w-[40%] border-r border-border overflow-y-auto p-5 space-y-5">
+
+            {/* Persona card */}
+            <div className="bg-muted/40 rounded-xl p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <AvatarInicial nombre={persona.nombre} size="lg" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm">{persona.nombre}</div>
+                  <div className="text-xs text-muted-foreground">CC {persona.cedula} · {persona.cargo}</div>
+                  <div className="text-xs text-muted-foreground">{persona.terminal}</div>
+                </div>
+              </div>
+              <EstadoPersonaBadge estado={persona.estado} />
+            </div>
+
+            {/* Total prominente */}
+            <div className="text-center py-4 bg-destructive/5 border border-destructive/20 rounded-xl">
+              <div className="text-4xl font-black text-destructive">{evPersona.length}</div>
+              <div className="text-xs text-muted-foreground mt-1">eventos vinculados</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{desglose}</div>
+            </div>
+
+            {/* Timeline de eventos */}
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Eventos (cronología)</h3>
+              <div className="space-y-2">
+                {evSorted.map(e => (
+                  <button
+                    key={e.id}
+                    onClick={() => abrirRegistro(e.id)}
+                    className="w-full text-left p-3 rounded-xl border border-border hover:bg-muted/50 hover:border-primary/30 transition-all group"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <CategoriaBadge categoria={e.categoria} />
+                      <span className="font-mono text-[11px] text-muted-foreground">{e.id}</span>
+                      <EstadoBadge estado={e.estado} />
+                    </div>
+                    <div className="text-xs font-medium group-hover:text-primary transition-colors">{e.tipoEvento}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      {formatDate(e.fecha)} · {e.terminal}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Tomar decisión */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+
+            <div>
+              <h3 className="text-sm font-bold mb-1">Tomar decisión</h3>
+              <p className="text-xs text-muted-foreground">
+                Selecciona la resolución que aplica para <span className="font-semibold text-foreground">{persona.nombre}</span> considerando los {evPersona.length} eventos vinculados.
+                Al confirmar, todos los eventos abiertos se cerrarán con esta resolución.
+              </p>
+            </div>
+
+            {/* Radio buttons */}
+            <div className="space-y-2">
+              {DECISION_OPTIONS.map(opt => {
+                const isSelected = decision === opt.value;
+                return (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                      isSelected ? opt.selected : `${opt.color} hover:shadow-sm`
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="decision_acumulativa"
+                      value={opt.value}
+                      checked={isSelected}
+                      onChange={() => setDecision(opt.value)}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      isSelected ? "border-primary bg-primary" : "border-muted-foreground/30 bg-background"
+                    }`}>
+                      {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                    </div>
+                    <span className="text-lg leading-none">{opt.icon}</span>
+                    <span className="text-sm font-medium">{opt.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* Observaciones */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
+                Observaciones {necesitaObs && <span className="text-destructive">*obligatorio</span>}
+              </label>
+              <textarea
+                value={observaciones}
+                onChange={e => setObservaciones(e.target.value)}
+                className="w-full text-sm bg-background border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                rows={3}
+                placeholder="Justificación de la decisión, hallazgos relevantes..."
+              />
+            </div>
+
+            {/* Confirm */}
+            <div className="pt-2 border-t border-border">
+              <button
+                onClick={confirmarDecision}
+                disabled={!puedeConfirmar || confirmado}
+                className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 disabled:opacity-40 transition-all shadow-sm"
+              >
+                {confirmado ? "Registrando..." : `Confirmar decisión — ${evPersona.filter(e => e.estado === "abierto").length} eventos se cerrarán`}
+              </button>
+              <p className="text-[11px] text-muted-foreground text-center mt-2">
+                Esta acción cerrará todos los eventos abiertos, actualizará el estado de la persona y marcará la alerta como revisada.
+              </p>
+            </div>
           </div>
         </div>
       </div>

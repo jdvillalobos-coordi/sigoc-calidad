@@ -45,7 +45,7 @@ function Bar({ value, max }: { value: number; max: number }) {
 }
 
 export default function InicioPage() {
-  const { setPaginaActiva, abrirPersona, abrirVehiculo, abrirTerminal, abrirGuia, setNuevaRegistroAbierto } = useApp();
+  const { setPaginaActiva, abrirPersona, abrirVehiculo, abrirTerminal, abrirGuia, setNuevaRegistroAbierto, abrirResolucionAcumulativa } = useApp();
   const [alertas, setAlertas]     = React.useState<AlertaIA[]>(alertasIA);
   const [periodo, setPeriodo]     = React.useState<number>(30);
   const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
@@ -359,12 +359,20 @@ export default function InicioPage() {
                         </div>
                       )}
                     </div>
-                    {a.estado === "nueva" && (
-                      <button onClick={() => setAlertas((prev) => prev.map((x) => x.id === a.id ? { ...x, estado: "revisada" } : x))}
-                        className="flex-shrink-0 text-[10px] px-2 py-1 rounded-full border border-border bg-card text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
-                        Marcar revisada
-                      </button>
-                    )}
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      {a.tipo === "reincidencia_persona" && a.estado === "nueva" && (
+                        <button onClick={() => abrirResolucionAcumulativa(a.id)}
+                          className="text-[11px] px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors shadow-sm whitespace-nowrap">
+                          Iniciar resolución
+                        </button>
+                      )}
+                      {a.estado === "nueva" && (
+                        <button onClick={() => setAlertas((prev) => prev.map((x) => x.id === a.id ? { ...x, estado: "revisada" } : x))}
+                          className="text-[10px] px-2 py-1 rounded-full border border-border bg-card text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
+                          Marcar revisada
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
