@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useApp } from "@/context/AppContext";
-import { insumosRCE, insumosFaltantes, getGuia, getEventosPorGuia, terminales } from "@/data/mockData";
+import { insumosRCE, insumosFaltantes, getGuia, terminales } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, Search, CheckCircle2, AlertTriangle, Eye } from "lucide-react";
@@ -72,13 +72,11 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
-function PanelDetalle({ guiaNum, eventoGenerado }: { guiaNum: string; eventoGenerado?: string }) {
+function PanelDetalle({ guiaNum }: { guiaNum: string }) {
   const guia = getGuia(guiaNum);
-  const eventosGuia = getEventosPorGuia(guiaNum);
-  const { abrirRegistro } = useApp();
 
   return (
-    <div className="bg-muted/30 border-t border-border px-4 py-3 space-y-3">
+    <div className="bg-muted/30 border-t border-border px-4 py-3">
       {guia && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <div><span className="text-muted-foreground">Origen:</span> <span className="font-medium">{guia.terminalOrigen} ({guia.ciudadOrigen})</span></div>
@@ -88,27 +86,6 @@ function PanelDetalle({ guiaNum, eventoGenerado }: { guiaNum: string; eventoGene
           <div><span className="text-muted-foreground">Cliente:</span> <span className="font-medium">{guia.nombreCliente}</span></div>
           <div><span className="text-muted-foreground">NIT:</span> <span className="font-medium">{guia.nitCliente}</span></div>
         </div>
-      )}
-      {eventosGuia.length > 0 && (
-        <div>
-          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Eventos asociados a esta guía</p>
-          <div className="space-y-1">
-            {eventosGuia.map((ev) => (
-              <button key={ev.id} onClick={() => abrirRegistro(ev.id)}
-                className="flex items-center gap-2 w-full text-left text-xs p-2 rounded-lg bg-card border border-border hover:border-primary/30 transition-colors">
-                <span className="font-mono font-bold text-primary">{ev.id}</span>
-                <span className="text-muted-foreground">—</span>
-                <span className="flex-1 truncate">{ev.tipoEvento}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ev.estado === "abierto" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
-                  {ev.estado}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      {eventosGuia.length === 0 && !eventoGenerado && (
-        <p className="text-xs text-muted-foreground italic">Sin eventos previos para esta guía.</p>
       )}
     </div>
   );
@@ -347,7 +324,7 @@ export default function BandejaPage() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={10} className="p-0">
-                              <PanelDetalle guiaNum={item.guia} eventoGenerado={item.eventoGenerado} />
+                              <PanelDetalle guiaNum={item.guia} />
                             </td>
                           </tr>
                         )}
@@ -440,7 +417,7 @@ export default function BandejaPage() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={9} className="p-0">
-                              <PanelDetalle guiaNum={item.guia} eventoGenerado={item.eventoGenerado} />
+                              <PanelDetalle guiaNum={item.guia} />
                             </td>
                           </tr>
                         )}

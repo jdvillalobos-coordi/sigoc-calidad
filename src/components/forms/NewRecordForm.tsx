@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, terminales, getGuia, getPersonaPorCedula } from "@/data/mockData";
+import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import type { CategoriaEvento, FormPrefill } from "@/types";
@@ -52,6 +52,9 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [cedulas, setCedulas] = useState<string[]>([""]);
   const [cedulasNombre, setCedulasNombre] = useState<Record<number, string>>({});
   const [codigoNovedad, setCodigoNovedad] = useState(prefill?.codigoNovedad ?? "");
+  const [placaInput, setPlacaInput] = useState("");
+  const [placaData, setPlacaData] = useState<{ placa: string; tipo: string; conductorId: string; estado: string } | null>(null);
+  const [placaError, setPlacaError] = useState(false);
   const [resultadoIA, setResultadoIA] = useState("");
   const [veredicto, setVeredicto] = useState("");
   const [justificacion, setJustificacion] = useState("");
@@ -73,13 +76,25 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     }
   }
 
+  function buscarVehiculo(placa: string) {
+    const v = getVehiculoPorPlaca(placa.toUpperCase());
+    if (v) {
+      setPlacaData({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId, estado: v.estado });
+      setPlacaError(false);
+    } else if (placa.length >= 3) {
+      setPlacaData(null);
+      setPlacaError(true);
+    }
+  }
+
   function validarCedula(idx: number, ced: string) {
     const p = getPersonaPorCedula(ced);
     if (p) setCedulasNombre((prev) => ({ ...prev, [idx]: p.nombre }));
     else if (ced.length > 5) setCedulasNombre((prev) => ({ ...prev, [idx]: "" }));
   }
 
-  const puedeCrear = !!(categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion);
+  const esVehiculo = tipoEntidad === "Vehículo";
+  const puedeCrear = !!(categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion && (esVehiculo ? placaInput : true));
 
   function crear() {
     const prefix = categoria!.slice(0, 3).toUpperCase();
@@ -157,9 +172,33 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </div>
               </div>
 
-              {/* Guías */}
+              {/* Placa del vehículo (solo si entidad es Vehículo) */}
+              {esVehiculo && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Placa / Matrícula del vehículo *</label>
+                  <input
+                    className={`w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-ring ${placaError ? "border-red-400" : "border-border"}`}
+                    placeholder="ABC-123"
+                    value={placaInput}
+                    onChange={(e) => setPlacaInput(e.target.value.toUpperCase())}
+                    onBlur={() => placaInput && buscarVehiculo(placaInput)}
+                  />
+                  {placaError && <p className="text-xs text-red-500 mt-0.5">Vehículo no encontrado — verifica la placa</p>}
+                  {placaData && (
+                    <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2">
+                      {[["Placa", placaData.placa], ["Tipo", placaData.tipo], ["Conductor", placaData.conductorId], ["Estado", placaData.estado]].map(([l, v]) => (
+                        <span key={l} className={`text-xs bg-white border rounded px-1.5 py-0.5 ${placaData.estado === "bloqueado" && l === "Estado" ? "border-red-200 text-red-700" : "border-blue-200 text-blue-700"}`}>{l}: {v}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Guías (opcional para vehículos, normal para otros) */}
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Guía(s)</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                  Guía(s){esVehiculo ? "" : ""}
+                </label>
                 <div className="space-y-2">
                   {guiaInputs.map((g, i) => (
                     <div key={i}>
@@ -184,12 +223,18 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <Plus className="w-3 h-3" /> Agregar otra guía
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground/70 mt-1">Opcional — dejar vacío si el evento no está asociado a una guía</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  {esVehiculo
+                    ? "Opcional — no todos los eventos de vehículos están asociados a una guía"
+                    : "Opcional — dejar vacío si el evento no está asociado a una guía"}
+                </p>
               </div>
 
-              {/* Personas responsables */}
+              {/* Personas responsables (opcional para vehículos) */}
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Persona(s) responsable(s) *</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                  Persona(s) responsable(s){esVehiculo ? "" : " *"}
+                </label>
                 <div className="space-y-1.5">
                   {cedulas.map((ced, i) => (
                     <div key={i}>
@@ -207,6 +252,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <Plus className="w-3 h-3" /> Agregar persona
                   </button>
                 </div>
+                {esVehiculo && <p className="text-xs text-muted-foreground/70 mt-1">Opcional — puedes asociar el conductor u otra persona si aplica</p>}
               </div>
 
               {/* Descripción */}

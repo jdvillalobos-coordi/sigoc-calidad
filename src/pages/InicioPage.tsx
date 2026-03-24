@@ -228,54 +228,6 @@ export default function InicioPage() {
           })}
         </div>
 
-        {/* Alertas IA */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Bot className="w-4 h-4 text-primary" /> Alertas IA
-            </h2>
-            <button onClick={() => setPaginaActiva("ia")} className="text-xs text-primary font-medium flex items-center gap-0.5 hover:underline">
-              Ver todas <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="space-y-2">
-            {topAlertas.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground bg-card border border-border rounded-xl text-sm">
-                <Bot className="w-7 h-7 mx-auto mb-2 opacity-30" />Sin alertas activas
-              </div>
-            ) : topAlertas.map((a) => {
-              const dot = { critica: "bg-destructive", alta: "bg-orange-500", media: "bg-amber-400", baja: "bg-green-500" }[a.severidad];
-              const bg  = { critica: "border-destructive/20 bg-destructive/5", alta: "border-orange-200 bg-orange-50", media: "border-amber-200 bg-amber-50", baja: "border-green-200 bg-green-50" }[a.severidad];
-              return (
-                <div key={a.id} className={`rounded-xl border p-3.5 ${bg}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${dot}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{a.titulo}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{a.descripcion}</p>
-                      {a.entidadesInvolucradas.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-1.5">
-                          {a.entidadesInvolucradas.map((e) => (
-                            <button key={e.id}
-                              onClick={() => e.tipo === "persona" ? abrirPersona(e.id) : abrirTerminal(e.nombre)}
-                              className="text-[11px] font-medium text-primary underline hover:no-underline">{e.nombre}</button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    {a.estado === "nueva" && (
-                      <button onClick={() => setAlertas((prev) => prev.map((x) => x.id === a.id ? { ...x, estado: "revisada" } : x))}
-                        className="flex-shrink-0 text-[10px] px-2 py-1 rounded-full border border-border bg-card text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
-                        Marcar revisada
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Ranking con tabs */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           {/* Tabs */}
@@ -370,6 +322,54 @@ export default function InicioPage() {
                 ))}
             </div>
           )}
+        </div>
+
+        {/* Alertas IA */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Bot className="w-4 h-4 text-primary" /> Alertas IA
+            </h2>
+            <button onClick={() => setPaginaActiva("ia")} className="text-xs text-primary font-medium flex items-center gap-0.5 hover:underline">
+              Ver todas <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {topAlertas.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground bg-card border border-border rounded-xl text-sm">
+                <Bot className="w-7 h-7 mx-auto mb-2 opacity-30" />Sin alertas activas
+              </div>
+            ) : topAlertas.map((a) => {
+              const dot = { critica: "bg-destructive", alta: "bg-orange-500", media: "bg-amber-400", baja: "bg-green-500" }[a.severidad];
+              const bg  = { critica: "border-destructive/20 bg-destructive/5", alta: "border-orange-200 bg-orange-50", media: "border-amber-200 bg-amber-50", baja: "border-green-200 bg-green-50" }[a.severidad];
+              return (
+                <div key={a.id} className={`rounded-xl border p-3.5 ${bg}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground">{a.titulo}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{a.descripcion}</p>
+                      {a.entidadesInvolucradas.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {a.entidadesInvolucradas.map((e) => (
+                            <button key={e.id}
+                              onClick={() => e.tipo === "persona" ? abrirPersona(e.id) : abrirTerminal(e.nombre)}
+                              className="text-[11px] font-medium text-primary underline hover:no-underline">{e.nombre}</button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {a.estado === "nueva" && (
+                      <button onClick={() => setAlertas((prev) => prev.map((x) => x.id === a.id ? { ...x, estado: "revisada" } : x))}
+                        className="flex-shrink-0 text-[10px] px-2 py-1 rounded-full border border-border bg-card text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
+                        Marcar revisada
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
       </div>
