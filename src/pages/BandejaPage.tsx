@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { useApp } from "@/context/AppContext";
-import { insumosRCE, insumosFaltantes, getGuia, terminales } from "@/data/mockData";
+import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronRight, Search, CheckCircle2, AlertTriangle, Eye } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, Eye, X, Filter } from "lucide-react";
 import type { InsumoRCE, InsumoFaltante } from "@/types";
 
 type TabId = "rce" | "faltantes";
@@ -95,34 +95,55 @@ export default function BandejaPage() {
   const { abrirGuia, setNuevaRegistroAbierto, setFormPrefill } = useApp();
   const [tab, setTab] = useState<TabId>("rce");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [filtroTerminal, setFiltroTerminal] = useState("");
+  const [filtroRegional, setFiltroRegional] = useState("todos");
+  const [filtroTerminal, setFiltroTerminal] = useState("todos");
   const [filtroEstadoRCE, setFiltroEstadoRCE] = useState<FiltroEstadoRCE>("todas");
   const [filtroEstadoFalt, setFiltroEstadoFalt] = useState<FiltroEstadoFalt>("todas");
 
-  // Local state for managing review status
   const [rceData, setRceData] = useState<InsumoRCE[]>(insumosRCE);
   const [faltData, setFaltData] = useState<InsumoFaltante[]>(insumosFaltantes);
+
+  function handleRegionalChange(val: string) { setFiltroRegional(val); setFiltroTerminal("todos"); }
+
+  const regionalesDisponibles: string[] = useMemo(() =>
+    Object.values(PAISES_REGIONALES).flatMap((r) => Object.keys(r))
+  , []);
+
+  const terminalesDisponibles: string[] = useMemo(() =>
+    filtroRegional !== "todos"
+      ? REGIONALES_FLAT[filtroRegional] ?? []
+      : TODAS_TERMINALES
+  , [filtroRegional]);
+
+  const hayFiltrosGeo = filtroRegional !== "todos" || filtroTerminal !== "todos";
+
+  function matchTerminal(terminal: string): boolean {
+    if (filtroTerminal !== "todos") return terminal === filtroTerminal;
+    if (filtroRegional !== "todos") return (REGIONALES_FLAT[filtroRegional] ?? []).includes(terminal);
+    return true;
+  }
+
+  function limpiarFiltrosGeo() { setFiltroRegional("todos"); setFiltroTerminal("todos"); }
 
   const rceFiltered = useMemo(() => {
     return rceData.filter((i) => {
       if (filtroEstadoRCE !== "todas" && i.estadoRevision !== filtroEstadoRCE) return false;
-      if (filtroTerminal) {
+      if (filtroRegional !== "todos" || filtroTerminal !== "todos") {
         const g = getGuia(i.guia);
         if (!g) return false;
-        if (!g.terminalOrigen.toLowerCase().includes(filtroTerminal.toLowerCase()) &&
-            !g.terminalDestino.toLowerCase().includes(filtroTerminal.toLowerCase())) return false;
+        if (!matchTerminal(g.terminalOrigen) && !matchTerminal(g.terminalDestino)) return false;
       }
       return true;
     });
-  }, [rceData, filtroEstadoRCE, filtroTerminal]);
+  }, [rceData, filtroEstadoRCE, filtroRegional, filtroTerminal]);
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
       if (filtroEstadoFalt !== "todas" && i.estadoRevision !== filtroEstadoFalt) return false;
-      if (filtroTerminal && !i.terminal.toLowerCase().includes(filtroTerminal.toLowerCase())) return false;
+      if (!matchTerminal(i.terminal)) return false;
       return true;
     });
-  }, [faltData, filtroEstadoFalt, filtroTerminal]);
+  }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal]);
 
   const pendientesRCE = rceData.filter((i) => i.estadoRevision === "pendiente").length;
   const pendientesFalt = faltData.filter((i) => i.estadoRevision === "pendiente" || i.estadoRevision === "en_investigacion").length;
@@ -210,16 +231,37 @@ export default function BandejaPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 items-center">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Filtrar por terminal..."
+          <div className="flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+            <select
+              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+              value={filtroRegional}
+              onChange={(e) => handleRegionalChange(e.target.value)}
+            >
+              <option value="todos">Todas las regionales</option>
+              {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <select
+              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
               value={filtroTerminal}
               onChange={(e) => setFiltroTerminal(e.target.value)}
-              className="pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs bg-card focus:outline-none focus:ring-2 focus:ring-ring w-48"
-            />
+            >
+              <option value="todos">Todas las terminales</option>
+              {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            {hayFiltrosGeo && (
+              <button
+                onClick={limpiarFiltrosGeo}
+                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Limpiar filtros geográficos"
+              >
+                <X className="w-3 h-3" /> Limpiar
+              </button>
+            )}
           </div>
+
+          <div className="w-px h-5 bg-border mx-0.5" />
+
           {tab === "rce" && (
             <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
               {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoRCE, string][]).map(([val, label]) => (
@@ -241,6 +283,29 @@ export default function BandejaPage() {
             </div>
           )}
         </div>
+
+        {/* Pills de filtros activos */}
+        {hayFiltrosGeo && (
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Filtros:</span>
+            {filtroRegional !== "todos" && (
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                Regional: {filtroRegional}
+                <button onClick={() => handleRegionalChange("todos")} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors ml-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filtroTerminal !== "todos" && (
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                Terminal: {filtroTerminal}
+                <button onClick={() => setFiltroTerminal("todos")} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors ml-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Tabla RCE */}
         {tab === "rce" && (
