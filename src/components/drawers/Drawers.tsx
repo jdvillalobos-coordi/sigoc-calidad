@@ -764,12 +764,13 @@ export function RecordDetailDrawer() {
 }
 
 // ---- Persona 360 ----
+const CAT_ICON: Record<string, string> = {
+  dineros: "💰", unidades: "📦", listas_vinculantes: "📋", pqr: "📞", disciplinarios: "⚖️",
+};
+
 export function Persona360Drawer() {
-  const { drawer, cerrarDrawer, abrirRegistro, abrirTerminal } = useApp();
-  const [open, setOpen] = useState<Record<string, boolean>>({
-    dineros: true, unidades: true, listas: true, evidencias: true,
-    pqr: true, disciplinarios: true, estudios: true,
-  });
+  const { drawer, cerrarDrawer, abrirRegistro, abrirTerminal, abrirResolucionAcumulativa } = useApp();
+  const [estudiosOpen, setEstudiosOpen] = useState(true);
 
   if (drawer.tipo !== "persona360" || !drawer.id) return null;
   const persona = personas.find((p) => p.id === drawer.id);
@@ -779,82 +780,70 @@ export function Persona360Drawer() {
     e.personasResponsables.some((pv) => pv.personaId === persona.id) ||
     e.personasParticipantes.some((pv) => pv.personaId === persona.id)
   );
-  const evDineros = evPersona.filter((e) => e.categoria === "dineros");
-  const evUnidades = evPersona.filter((e) => e.categoria === "unidades");
-  const evListas = evPersona.filter((e) => e.categoria === "listas_vinculantes");
-  const evEvidencias = evPersona.filter((e) => e.resultadoIA != null);
-  const evPQR = persona.tipo === "cliente" && persona.nit
-    ? eventos.filter((e) => e.categoria === "pqr" && e.nitCliente === persona.nit)
-    : evPersona.filter((e) => e.categoria === "pqr");
-  const evDisciplinarios = evPersona.filter((e) => e.categoria === "disciplinarios");
   const estudios = estudiosSeguridad.filter((e) => e.personaId === persona.id);
-
   const totalEv = evPersona.length;
-  const riskScore = Math.min(100, totalEv * 15 + (persona.estado === "bloqueado" ? 40 : persona.estado === "en_seguimiento" ? 20 : 0));
-  const riskColor = riskScore >= 70 ? "bg-red-500" : riskScore >= 40 ? "bg-amber-500" : riskScore >= 20 ? "bg-yellow-400" : "bg-green-500";
-  const riskLabel = riskScore >= 70 ? "Alto" : riskScore >= 40 ? "Medio" : riskScore >= 20 ? "Bajo" : "Sin riesgo";
 
-  function Section({ id, title, count, source, children }: { id: string; title: string; count: number; source?: string; children: React.ReactNode }) {
-    return (
-      <div className="border border-border rounded-xl overflow-hidden">
-        <button
-          className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted transition-colors"
-          onClick={() => setOpen((s) => ({ ...s, [id]: !s[id] }))}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="font-semibold text-sm">{title}</span>
-            {source && <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded truncate hidden sm:block">Fuente: {source}</span>}
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs text-muted-foreground">{count}</span>
-            {open[id] ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-          </div>
-        </button>
-        {open[id] && <div className="p-4">{children}</div>}
-      </div>
-    );
-  }
+  // Risk score: (abiertos*2) + (cerrados con hallazgos*1) + (estudios con hallazgos*3)
+  const evAbiertos = evPersona.filter(e => e.estado === "abierto").length;
+  const evCerradosConHallazgos = evPersona.filter(e => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
+  const estudiosConHallazgos = estudios.filter(e => e.resultado === "hallazgos_encontrados").length;
+  const riskScore = (evAbiertos * 2) + (evCerradosConHallazgos * 1) + (estudiosConHallazgos * 3);
 
-  function EventosMiniTabla({ evs }: { evs: Evento[] }) {
-    return (
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="text-muted-foreground border-b border-border">
-            {["ID", "Tipo", "Terminal", "Fecha", "Estado", "Rol"].map((h) => (
-              <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {evs.map((e) => {
-            const esResp = e.personasResponsables.some((pv) => pv.personaId === persona.id);
-            return (
-              <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                <td className="py-2 font-mono">{e.id}</td>
-                <td className="py-2 max-w-[120px] truncate">{e.tipoEvento}</td>
-                <td className="py-2">{e.terminal}</td>
-                <td className="py-2">{e.fecha}</td>
-                <td className="py-2"><EstadoBadge estado={e.estado} /></td>
-                <td className="py-2 capitalize">{esResp ? "Responsable" : "Participante"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    );
-  }
+  const riskConfig = riskScore >= 13
+    ? { color: "bg-red-500", track: "bg-red-100", border: "border-red-200", bg: "bg-red-50", label: "Riesgo crítico", text: "text-red-800" }
+    : riskScore >= 8
+      ? { color: "bg-orange-500", track: "bg-orange-100", border: "border-orange-200", bg: "bg-orange-50", label: "Riesgo alto", text: "text-orange-800" }
+      : riskScore >= 4
+        ? { color: "bg-amber-400", track: "bg-amber-100", border: "border-amber-200", bg: "bg-amber-50", label: "Riesgo medio", text: "text-amber-800" }
+        : { color: "bg-green-500", track: "bg-green-100", border: "border-green-200", bg: "bg-green-50", label: "Bajo riesgo", text: "text-green-800" };
+
+  // GH decisions from disciplinary events
+  const decisiones = evPersona.filter(e => e.decisionGH).map(e => ({ decision: e.decisionGH!, fecha: e.fecha, eventoId: e.id, registradoPor: e.usuarioRegistro }));
+
+  // Unified timeline
+  const timelineItems: { fecha: string; icon: string; desc: string; badge?: React.ReactNode; eventoId?: string }[] = [];
+
+  evPersona.forEach(e => {
+    timelineItems.push({
+      fecha: e.fecha,
+      icon: CAT_ICON[e.categoria] ?? "📋",
+      desc: `${e.tipoEvento} — ${e.terminal}`,
+      badge: <EstadoBadge estado={e.estado} />,
+      eventoId: e.id,
+    });
+  });
+
+  const alertasPersona = alertasIA.filter(a => a.entidadesInvolucradas.some(e => e.tipo === "persona" && e.id === persona.id));
+  alertasPersona.forEach(a => {
+    timelineItems.push({
+      fecha: a.fechaDeteccion,
+      icon: "🤖",
+      desc: a.titulo,
+      badge: <SeveridadBadge severidad={a.severidad} />,
+    });
+  });
+
+  const timelineSorted = [...timelineItems].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+  // Desglose por categoría
+  const conteoCategoria: Record<string, number> = {};
+  evPersona.forEach(e => { conteoCategoria[e.categoria] = (conteoCategoria[e.categoria] ?? 0) + 1; });
+  const desglose = Object.entries(conteoCategoria)
+    .map(([cat, n]) => `${n} ${categoriaConfig[cat as keyof typeof categoriaConfig]?.label ?? cat}`)
+    .join(" · ");
 
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={cerrarDrawer} />
       <div className="fixed right-0 top-0 h-full w-[60%] bg-card shadow-drawer z-50 flex flex-col animate-slide-in-right overflow-hidden">
+        {/* Header */}
         <div className="border-b border-border px-6 py-4 flex items-start justify-between flex-shrink-0">
           <div className="flex items-center gap-4">
             <AvatarInicial nombre={persona.nombre} size="lg" />
             <div>
               <h2 className="font-bold text-lg">{persona.nombre}</h2>
               <div className="text-sm text-muted-foreground">
-                {persona.tipo === "cliente" ? `NIT ${persona.nit}` : `ID ${persona.cedula}`} · {persona.cargo} ·{" "}
+                {persona.tipo === "cliente" ? `NIT ${persona.nit}` : `CC ${persona.cedula}`} · {persona.cargo} ·{" "}
                 <button onClick={() => abrirTerminal(persona.terminal)} className="text-coordinadora-blue hover:underline">
                   {persona.terminal}
                 </button>
@@ -865,7 +854,7 @@ export function Persona360Drawer() {
                   : persona.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200"
                   : "bg-green-100 text-green-700 border border-green-200"
                 }`}>
-                  {persona.estado === "bloqueado" ? "🔴 Bloqueado" : persona.estado === "en_seguimiento" ? "🟡 En seguimiento" : "🟢 Sin novedad"}
+                  {persona.estado === "bloqueado" ? "Bloqueado" : persona.estado === "en_seguimiento" ? "En seguimiento" : "Sin novedad"}
                 </span>
               </div>
             </div>
@@ -876,196 +865,159 @@ export function Persona360Drawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {/* IA risk */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+
+          {/* 1. Score de riesgo — termómetro */}
+          <div className={`${riskConfig.bg} border ${riskConfig.border} rounded-xl p-4`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold">🤖 Análisis de riesgo IA</span>
-              <span className={`text-xs font-bold px-2 py-0.5 rounded-full text-white ${riskColor}`}>{riskLabel} ({riskScore}/100)</span>
+              <span className={`text-sm font-semibold ${riskConfig.text}`}>Indicador de riesgo</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-2xl font-black ${riskConfig.text}`}>{riskScore}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full text-white ${riskConfig.color}`}>{riskConfig.label}</span>
+              </div>
             </div>
-            <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden mb-3">
-              <div className={`h-full rounded-full transition-all ${riskColor}`} style={{ width: `${riskScore}%` }} />
+            <div className={`w-full h-3 ${riskConfig.track} rounded-full overflow-hidden`}>
+              <div className={`h-full rounded-full transition-all ${riskConfig.color}`} style={{ width: `${Math.min(100, (riskScore / 20) * 100)}%` }} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              {totalEv === 0
-                ? "Esta persona no aparece en ningún evento. Perfil sin novedad."
-                : `Esta persona aparece en ${totalEv} evento${totalEv !== 1 ? "s" : ""} del sistema. ${
-                    persona.estado === "en_seguimiento" ? "Se encuentra en cuadro de seguimiento activo."
-                    : persona.estado === "bloqueado" ? "Tiene bloqueo activo. Acceso restringido."
-                    : "Sin indicadores de riesgo crítico."
-                  }`
-              }
+            <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+              <span>0</span>
+              <span>Bajo</span>
+              <span>Medio</span>
+              <span>Alto</span>
+              <span>Crítico</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {evAbiertos} evento{evAbiertos !== 1 ? "s" : ""} abierto{evAbiertos !== 1 ? "s" : ""} · {evCerradosConHallazgos} cerrado{evCerradosConHallazgos !== 1 ? "s" : ""} con hallazgos · {estudiosConHallazgos} estudio{estudiosConHallazgos !== 1 ? "s" : ""} con hallazgos
             </p>
           </div>
 
-          {evDineros.length > 0 && (
-            <Section id="dineros" title="💰 Eventos de Dineros" count={evDineros.length} source="SIGO Dineros">
-              <EventosMiniTabla evs={evDineros} />
-            </Section>
+          {/* 2. CTA resolución acumulativa */}
+          {totalEv >= 3 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-amber-900">
+                  Esta persona tiene {totalEv} eventos registrados
+                </div>
+                <div className="text-xs text-amber-700 mt-0.5">{desglose}</div>
+              </div>
+              <button
+                onClick={() => abrirResolucionAcumulativa(persona.id)}
+                className="flex-shrink-0 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm"
+              >
+                Iniciar resolución acumulativa
+              </button>
+            </div>
           )}
-          {evUnidades.length > 0 && (
-            <Section id="unidades" title="📦 Eventos de Unidades" count={evUnidades.length} source="SIGO NyS">
-              <EventosMiniTabla evs={evUnidades} />
-            </Section>
+
+          {/* 3. Decisiones GH pasadas (lectura) */}
+          {decisiones.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Decisiones de Gestión Humana</h3>
+              <div className="flex flex-wrap gap-2">
+                {decisiones.map((d, i) => (
+                  <button key={i} onClick={() => abrirRegistro(d.eventoId)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs transition-colors">
+                    <span className="font-semibold">{d.decision}</span>
+                    <span className="text-muted-foreground">· {formatDate(d.fecha)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-          {evListas.length > 0 && (
-            <Section id="listas" title="📋 Listas Vinculantes" count={evListas.length} source="Truora / ClickCloud">
-              <EventosMiniTabla evs={evListas} />
-            </Section>
+
+          {/* 4. Timeline unificada */}
+          {timelineSorted.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Timeline ({timelineSorted.length} registros)
+              </h3>
+              <div className="space-y-1">
+                {timelineSorted.map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => item.eventoId && abrirRegistro(item.eventoId)}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border transition-colors ${
+                      item.eventoId ? "hover:bg-muted/50 hover:border-primary/30 cursor-pointer" : "cursor-default"
+                    }`}
+                  >
+                    <span className="text-xs font-mono text-muted-foreground w-[72px] flex-shrink-0">{item.fecha}</span>
+                    <span className="text-base leading-none flex-shrink-0">{item.icon}</span>
+                    <span className="text-xs flex-1 min-w-0 truncate">{item.desc}</span>
+                    {item.badge}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-          {evEvidencias.length > 0 && (
-            <Section id="evidencias" title="📸 Proceso Evidencias" count={evEvidencias.length} source="Módulo Evidencias">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-muted-foreground border-b border-border">
-                    {["ID", "Tipo", "Resultado IA", "Veredicto", "Fecha"].map((h) => (
-                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {evEvidencias.map((e) => (
-                    <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                      <td className="py-2 font-mono">{e.id}</td>
-                      <td className="py-2 max-w-[100px] truncate">{e.tipoEvento}</td>
-                      <td className="py-2">
-                        <span className={`px-1.5 py-0.5 rounded-full font-medium text-[11px] ${e.resultadoIA === "cumple" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {e.resultadoIA === "cumple" ? "✅ Cumple" : "❌ No cumple"}
-                        </span>
-                      </td>
-                      <td className="py-2 capitalize">{e.veredictoOperador ?? "—"}</td>
-                      <td className="py-2">{e.fecha}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Section>
-          )}
-          {evPQR.length > 0 && (
-            <Section id="pqr" title="📞 PQR asociadas" count={evPQR.length} source="Clientes / Agente CAL">
-              <EventosMiniTabla evs={evPQR} />
-            </Section>
-          )}
-          {evDisciplinarios.length > 0 && (
-            <Section id="disciplinarios" title="⚖️ Disciplinarios" count={evDisciplinarios.length} source="SuccessFactors / GH">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-muted-foreground border-b border-border">
-                    {["ID", "Tipo falta", "Gravedad", "Decisión GH", "Fecha"].map((h) => (
-                      <th key={h} className="text-left py-1.5 font-semibold">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {evDisciplinarios.map((e) => (
-                    <tr key={e.id} onClick={() => abrirRegistro(e.id)} className="cursor-pointer hover:bg-muted transition-colors border-b border-border last:border-0">
-                      <td className="py-2 font-mono">{e.id}</td>
-                      <td className="py-2 max-w-[120px] truncate">{e.tipoEvento}</td>
-                      <td className="py-2 capitalize">{e.gravedadFalta ?? "—"}</td>
-                      <td className="py-2 max-w-[120px] truncate">{e.decisionGH ?? "Sin decisión"}</td>
-                      <td className="py-2">{e.fecha}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Section>
-          )}
-          {/* ── Acciones rápidas ── */}
+
+          {/* 5. Acciones rápidas */}
           <div className="border border-border rounded-xl p-4">
-            <h3 className="font-semibold text-sm mb-3">⚡ Acciones rápidas</h3>
+            <h3 className="font-semibold text-sm mb-3">Acciones rápidas</h3>
             <div className="space-y-2">
-              {/* Cuadro de Contacto */}
               {persona.estado !== "en_seguimiento" && persona.estado !== "bloqueado" && (
                 <button
-                  onClick={() => toast({ title: "🟡 Persona agregada al Cuadro de Contacto", description: `${persona.nombre} ahora está en seguimiento.` })}
+                  onClick={() => toast({ title: "Persona agregada al Cuadro de Contacto", description: `${persona.nombre} ahora está en seguimiento.` })}
                   className="w-full text-left px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
                 >
-                  <div className="text-xs font-semibold text-amber-700">📋 Agregar al Cuadro de Contacto</div>
-                  <div className="text-xs text-amber-600/70 mt-0.5">Marcar como persona en seguimiento por sospecha de reincidencia</div>
+                  <div className="text-xs font-semibold text-amber-700">Agregar al Cuadro de Contacto</div>
+                  <div className="text-xs text-amber-600/70 mt-0.5">Marcar como persona en seguimiento</div>
                 </button>
               )}
               {persona.estado === "en_seguimiento" && (
                 <div className="px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-lg">
-                  <div className="text-xs font-semibold text-amber-700">📋 En Cuadro de Contacto</div>
-                  <div className="text-xs text-amber-600/70 mt-0.5">Esta persona está actualmente en seguimiento</div>
+                  <div className="text-xs font-semibold text-amber-700">En Cuadro de Contacto</div>
+                  <div className="text-xs text-amber-600/70 mt-0.5">Persona en seguimiento activo</div>
                 </div>
               )}
-              {/* Actividad Lesiva / Bloqueo */}
               {persona.estado !== "bloqueado" && (
                 <button
-                  onClick={() => toast({ title: "🔴 Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueado(a).` })}
+                  onClick={() => toast({ title: "Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueado(a).` })}
                   className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                 >
-                  <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva (Bloquear)</div>
-                  <div className="text-xs text-red-600/70 mt-0.5">Bloquear persona por responsabilidad directa en eventos</div>
+                  <div className="text-xs font-semibold text-red-700">Registrar Actividad Lesiva (Bloquear)</div>
+                  <div className="text-xs text-red-600/70 mt-0.5">Bloquear persona por responsabilidad directa</div>
                 </button>
               )}
               {persona.estado === "bloqueado" && (
                 <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
-                  <div className="text-xs font-semibold text-red-700">🚫 Persona Bloqueada</div>
+                  <div className="text-xs font-semibold text-red-700">Persona Bloqueada</div>
                   <div className="text-xs text-red-600/70 mt-0.5">Actividad lesiva activa — acceso restringido</div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Decisiones de Gestión Humana ── */}
-          <div className="border border-border rounded-xl p-4">
-            <h3 className="font-semibold text-sm mb-3">📋 Decisiones de Gestión Humana</h3>
-            {evDisciplinarios.filter(e => e.decisionGH).length > 0 && (
-              <div className="space-y-2 mb-3">
-                {evDisciplinarios.filter(e => e.decisionGH).map(e => (
-                  <div key={e.id} className="bg-muted/40 rounded-lg px-3 py-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold">{e.decisionGH}</span>
-                      <span className="text-xs text-muted-foreground">{formatDate(e.fecha)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{e.usuarioRegistro} · Evento {e.id}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <select className="w-full border border-border rounded-lg px-3 py-2 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring">
-                <option value="">Registrar nueva decisión...</option>
-                <option value="llamado_verbal">Llamado de atención verbal</option>
-                <option value="llamado_escrito">Llamado de atención escrito</option>
-                <option value="suspension">Suspensión temporal</option>
-                <option value="proceso_disciplinario">Inicio proceso disciplinario</option>
-                <option value="desvinculacion">Desvinculación</option>
-                <option value="escalamiento">Escalamiento a seguridad</option>
-                <option value="sin_accion">Sin acción — caso insuficiente</option>
-              </select>
-              <textarea
-                className="w-full border border-border rounded-lg px-3 py-2 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                rows={2}
-                placeholder="Observaciones de la decisión..."
-              />
-              <button
-                onClick={() => toast({ title: "✅ Decisión registrada", description: `Decisión de GH registrada para ${persona.nombre}` })}
-                className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
-              >
-                Registrar decisión
-              </button>
-            </div>
-          </div>
-
+          {/* 6. Estudios de seguridad — colapsable */}
           {estudios.length > 0 && (
-            <Section id="estudios" title="🔎 Estudios de seguridad" count={estudios.length}>
-              {estudios.map((e) => (
-                <div key={e.id} className={`border rounded-lg p-3 mb-2 last:mb-0 ${e.resultado === "hallazgos_encontrados" ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold">{e.proveedor}</span>
-                    <span className="text-xs text-muted-foreground">{e.fecha}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${e.resultado === "hallazgos_encontrados" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-                      {e.resultado === "hallazgos_encontrados" ? "⚠️ Hallazgos encontrados" : "✅ Sin hallazgos"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{e.observaciones}</p>
+            <div className="border border-border rounded-xl overflow-hidden">
+              <button
+                className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted transition-colors"
+                onClick={() => setEstudiosOpen(s => !s)}
+              >
+                <span className="font-semibold text-sm">🔎 Estudios de seguridad</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-xs text-muted-foreground">{estudios.length}</span>
+                  {estudiosOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                 </div>
-              ))}
-            </Section>
+              </button>
+              {estudiosOpen && (
+                <div className="p-4 space-y-2">
+                  {estudios.map((e) => (
+                    <div key={e.id} className={`border rounded-lg p-3 ${e.resultado === "hallazgos_encontrados" ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold">{e.proveedor}</span>
+                        <span className="text-xs text-muted-foreground">{e.fecha}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${e.resultado === "hallazgos_encontrados" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
+                          {e.resultado === "hallazgos_encontrados" ? "Hallazgos encontrados" : "Sin hallazgos"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{e.observaciones}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
+          {/* Empty state */}
           {totalEv === 0 && estudios.length === 0 && (
             <div className="text-center py-10 text-muted-foreground">
               <span className="text-4xl">👤</span>
@@ -1491,11 +1443,15 @@ export function ResolucionAcumulativaPanel() {
 
   if (drawer.tipo !== "resolucion_acumulativa" || !drawer.id) return null;
 
+  // Support both alertaId and personaId
+  let persona: typeof personas[0] | undefined;
   const alerta = alertasIA.find(a => a.id === drawer.id);
-  if (!alerta || alerta.tipo !== "reincidencia_persona") return null;
-
-  const personaEntidad = alerta.entidadesInvolucradas.find(e => e.tipo === "persona");
-  const persona = personaEntidad ? personas.find(p => p.id === personaEntidad.id) : null;
+  if (alerta && alerta.tipo === "reincidencia_persona") {
+    const personaEntidad = alerta.entidadesInvolucradas.find(e => e.tipo === "persona");
+    persona = personaEntidad ? personas.find(p => p.id === personaEntidad.id) : undefined;
+  } else {
+    persona = personas.find(p => p.id === drawer.id);
+  }
   if (!persona) return null;
 
   const evPersona = eventos.filter(e =>
