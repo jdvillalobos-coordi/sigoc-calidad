@@ -2,42 +2,52 @@ import React, { useState } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck } from "lucide-react";
-import type { Evento, EstadoEvento, EstadoFlujo } from "@/types";
+import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock } from "lucide-react";
+import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
 // ---- Flujo de trabajo ----
 const FLUJO_STEPS: { key: EstadoFlujo; label: string; icon: string }[] = [
-  { key: "nuevo",              label: "Nuevo",             icon: "📥" },
-  { key: "en_investigacion",   label: "En investigación",  icon: "🔍" },
-  { key: "escalado",           label: "Escalado",          icon: "⬆️" },
-  { key: "resuelto",           label: "Resuelto",          icon: "✅" },
-  { key: "cerrado",            label: "Cerrado",           icon: "🔒" },
+  { key: "nuevo",            label: "Nuevo",            icon: "📥" },
+  { key: "en_investigacion", label: "Investigación",    icon: "🔍" },
+  { key: "escalado",         label: "Escalado",         icon: "⬆️" },
+  { key: "resuelto",         label: "Resuelto",         icon: "✅" },
+  { key: "cerrado",          label: "Cerrado",          icon: "🔒" },
 ];
 
 const FLUJO_INDEX: Record<EstadoFlujo, number> = { nuevo: 0, en_investigacion: 1, escalado: 2, resuelto: 3, cerrado: 4 };
 
-function FlujoStepper({ current }: { current: EstadoFlujo }) {
+function FlujoStepper({ current, wasEscalated }: { current: EstadoFlujo; wasEscalated: boolean }) {
   const idx = FLUJO_INDEX[current];
+  const escaladoSkipped = !wasEscalated && current !== "escalado" && idx > 2;
+
   return (
-    <div className="flex items-center gap-0 w-full">
+    <div className="flex items-center gap-0 w-full h-[36px]">
       {FLUJO_STEPS.map((step, i) => {
+        const isEscalado = step.key === "escalado";
+        const isSkipped = isEscalado && escaladoSkipped;
         const isActive = i === idx;
         const isPast = i < idx;
+
         return (
           <React.Fragment key={step.key}>
             {i > 0 && (
-              <div className={`flex-shrink-0 w-6 h-0.5 ${isPast || isActive ? "bg-primary" : "bg-border"}`} />
+              <div className={`flex-shrink-0 w-5 h-0.5 transition-colors ${
+                isSkipped ? "bg-border border-t border-dashed border-muted-foreground/30 h-0"
+                : (isPast || isActive) ? "bg-primary" : "bg-border"
+              }`} />
             )}
-            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              isActive
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : isPast
-                  ? "bg-primary/10 text-primary"
-                  : "bg-muted/50 text-muted-foreground"
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all ${
+              isSkipped
+                ? "bg-muted/30 text-muted-foreground/40 line-through"
+                : isActive
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : isPast
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted/50 text-muted-foreground"
             }`}>
-              <span className="text-sm">{isPast ? "✓" : step.icon}</span>
-              <span className="hidden sm:inline">{step.label}</span>
+              <span className="text-xs leading-none">{isSkipped ? "—" : isPast ? "✓" : step.icon}</span>
+              <span>{step.label}</span>
             </div>
           </React.Fragment>
         );
@@ -46,16 +56,26 @@ function FlujoStepper({ current }: { current: EstadoFlujo }) {
   );
 }
 
-const RESOLUCION_LABELS: Record<string, string> = {
-  sin_hallazgos: "Sin hallazgos",
-  llamado_atencion_verbal: "Llamado de atención verbal",
-  llamado_atencion_escrito: "Llamado de atención escrito",
-  suspension_temporal: "Suspensión temporal",
-  proceso_disciplinario: "Proceso disciplinario",
-  desvinculacion: "Desvinculación",
-  escalamiento_seguridad: "Escalamiento a seguridad",
-  caso_insuficiente: "Caso insuficiente",
-};
+const RESOLUCION_OPTIONS: { value: ResolucionFinal; label: string }[] = [
+  { value: "sin_hallazgos",            label: "Sin hallazgos" },
+  { value: "llamado_atencion_verbal",  label: "Llamado de atención verbal" },
+  { value: "llamado_atencion_escrito", label: "Llamado de atención escrito" },
+  { value: "suspension_temporal",      label: "Suspensión temporal" },
+  { value: "proceso_disciplinario",    label: "Proceso disciplinario" },
+  { value: "desvinculacion",           label: "Desvinculación" },
+  { value: "escalamiento_seguridad",   label: "Escalamiento a seguridad" },
+  { value: "caso_insuficiente",        label: "Caso insuficiente" },
+];
+
+const RESOLUCION_LABELS: Record<string, string> = Object.fromEntries(RESOLUCION_OPTIONS.map(o => [o.value, o.label]));
+
+const PERSONAS_ESCALAMIENTO = [
+  { id: "u-jefe-seg", nombre: "Carlos Mendoza", cargo: "Jefe de Seguridad" },
+  { id: "u-dir-calidad", nombre: "María Elena Rojas", cargo: "Directora de Calidad" },
+  { id: "u-coord-dineros", nombre: "Jorge Castaño", cargo: "Coordinador Nacional Dineros" },
+  { id: "u-coord-unidades", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
+  { id: "u-gerente-ops", nombre: "Andrés Gutiérrez", cargo: "Gerente de Operaciones" },
+];
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
@@ -65,6 +85,12 @@ export function RecordDetailDrawer() {
   const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo");
   const [complementando, setComplementando] = useState(false);
   const [complementoTexto, setComplementoTexto] = useState("");
+  const [resolviendoAbierto, setResolviendoAbierto] = useState(false);
+  const [resolucionSeleccionada, setResolucionSeleccionada] = useState<ResolucionFinal | "">("");
+  const [observacionResolucion, setObservacionResolucion] = useState("");
+  const [escalandoAbierto, setEscalandoAbierto] = useState(false);
+  const [escaladoPersonaId, setEscaladoPersonaId] = useState("");
+  const [escaladoMotivo, setEscaladoMotivo] = useState("");
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
@@ -72,20 +98,68 @@ export function RecordDetailDrawer() {
   if (!ev) return null;
 
   const relacionados = getEventosRelacionados(ev.id);
+  const wasEscalated = !!(ev.escaladoA || ev.fechaEscalamiento);
 
-  function avanzarFlujo(nuevoFlujo: EstadoFlujo) {
+  function avanzarFlujo(nuevoFlujo: EstadoFlujo, extras: Partial<Evento> = {}) {
     const prevLabel = FLUJO_STEPS.find(s => s.key === ev!.estadoFlujo)?.label ?? ev!.estadoFlujo;
     const newLabel = FLUJO_STEPS.find(s => s.key === nuevoFlujo)?.label ?? nuevoFlujo;
     const nuevoEstado: EstadoEvento = nuevoFlujo === "cerrado" ? "cerrado" : "abierto";
     setLocalEventos((lst) =>
       lst.map((e) => e.id === ev!.id ? {
         ...e,
+        ...extras,
         estado: nuevoEstado,
         estadoFlujo: nuevoFlujo,
         historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Cambió flujo de '${prevLabel}' a '${newLabel}'` }]
       } : e)
     );
     toast({ title: `Estado actualizado a "${newLabel}"` });
+  }
+
+  function confirmarResolucion() {
+    if (!resolucionSeleccionada) return;
+    avanzarFlujo("resuelto", {
+      resolucionFinal: resolucionSeleccionada as ResolucionFinal,
+      observacionResolucion: observacionResolucion || undefined,
+      fechaResolucion: new Date().toISOString(),
+      resueltoPor: { id: "u-coord-unidades", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
+    });
+    setResolviendoAbierto(false);
+    setResolucionSeleccionada("");
+    setObservacionResolucion("");
+  }
+
+  function confirmarEscalamiento() {
+    const persona = PERSONAS_ESCALAMIENTO.find(p => p.id === escaladoPersonaId);
+    if (!persona || !escaladoMotivo.trim()) return;
+    avanzarFlujo("escalado", {
+      escaladoA: persona,
+      escaladoPor: { id: "u-coord-unidades", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
+      fechaEscalamiento: new Date().toISOString(),
+      motivoEscalamiento: escaladoMotivo,
+    });
+    setEscalandoAbierto(false);
+    setEscaladoPersonaId("");
+    setEscaladoMotivo("");
+  }
+
+  function devolverAlCreador() {
+    avanzarFlujo("en_investigacion", {
+      escaladoA: undefined,
+      escaladoPor: undefined,
+      fechaEscalamiento: undefined,
+      motivoEscalamiento: undefined,
+    });
+    toast({ title: "Evento devuelto al investigador original" });
+  }
+
+  function reabrirEvento() {
+    avanzarFlujo("en_investigacion", {
+      resolucionFinal: undefined,
+      observacionResolucion: undefined,
+      fechaResolucion: undefined,
+      resueltoPor: undefined,
+    });
   }
 
   function agregarAnotacion() {
@@ -129,6 +203,11 @@ export function RecordDetailDrawer() {
                     <AlertTriangle className="w-3 h-3" /> Vencido
                   </span>
                 )}
+                {ev.estadoFlujo === "cerrado" && ev.resolucionFinal && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-green-100 text-green-800 px-2 py-0.5 rounded-full border border-green-200">
+                    <Lock className="w-3 h-3" /> {RESOLUCION_LABELS[ev.resolucionFinal] ?? ev.resolucionFinal}
+                  </span>
+                )}
               </div>
               <p className="font-semibold text-base">{ev.tipoEvento}</p>
             </div>
@@ -138,58 +217,159 @@ export function RecordDetailDrawer() {
           </div>
 
           {/* Stepper del flujo */}
-          <FlujoStepper current={ev.estadoFlujo} />
+          <FlujoStepper current={ev.estadoFlujo} wasEscalated={wasEscalated} />
 
-          {/* Info de asignación + acciones rápidas */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Asignado a <span className="font-semibold text-foreground">{ev.asignadoA.nombre}</span></span>
-                <span className="text-muted-foreground/60">· {ev.asignadoA.cargo}</span>
-              </div>
-              {ev.estadoFlujo === "escalado" && ev.escaladoA && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+          {/* Bloque de asignación */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-medium">
+              <UserCheck className="w-3 h-3" />
+              {ev.asignadoA.nombre} · {ev.asignadoA.cargo}
+            </span>
+            {ev.estadoFlujo === "escalado" && ev.escaladoA && (
+              <>
+                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200 font-medium">
                   <AlertTriangle className="w-3 h-3" />
-                  <span>Escalado a <span className="font-semibold">{ev.escaladoA.nombre}</span></span>
-                </div>
-              )}
-            </div>
-
-            {/* Botones de avance de flujo */}
-            <div className="flex items-center gap-1.5">
-              {ev.estadoFlujo === "nuevo" && (
-                <button onClick={() => avanzarFlujo("en_investigacion")}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-[11px] font-medium transition-colors">
-                  <ArrowRight className="w-3 h-3" /> Iniciar investigación
+                  Escalado a: {ev.escaladoA.nombre} · Motivo: {ev.motivoEscalamiento ?? "—"}
+                </span>
+                <button
+                  onClick={devolverAlCreador}
+                  className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors font-medium"
+                >
+                  <RotateCcw className="w-3 h-3" /> Devolver al creador
                 </button>
-              )}
-              {ev.estadoFlujo === "en_investigacion" && (
-                <>
-                  <button onClick={() => avanzarFlujo("escalado")}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 text-[11px] font-medium transition-colors">
-                    <AlertTriangle className="w-3 h-3" /> Escalar
-                  </button>
-                  <button onClick={() => avanzarFlujo("resuelto")}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 text-[11px] font-medium transition-colors">
-                    <Check className="w-3 h-3" /> Resolver
-                  </button>
-                </>
-              )}
-              {ev.estadoFlujo === "escalado" && (
-                <button onClick={() => avanzarFlujo("resuelto")}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 text-[11px] font-medium transition-colors">
-                  <Check className="w-3 h-3" /> Resolver
-                </button>
-              )}
-              {ev.estadoFlujo === "resuelto" && (
-                <button onClick={() => avanzarFlujo("cerrado")}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-[11px] font-medium transition-colors">
-                  <Check className="w-3 h-3" /> Cerrar
-                </button>
-              )}
-            </div>
+              </>
+            )}
           </div>
+
+          {/* Acciones contextuales */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {ev.estadoFlujo === "nuevo" && (
+              <button onClick={() => avanzarFlujo("en_investigacion")}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
+                <ArrowRight className="w-3.5 h-3.5" /> Iniciar investigación
+              </button>
+            )}
+            {ev.estadoFlujo === "en_investigacion" && (
+              <>
+                <button onClick={() => setEscalandoAbierto(!escalandoAbierto)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Escalar
+                </button>
+                <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
+                  <Check className="w-3.5 h-3.5" /> Resolver
+                </button>
+              </>
+            )}
+            {ev.estadoFlujo === "escalado" && (
+              <button onClick={() => { setComplementando(true); }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-muted text-xs font-medium transition-colors">
+                + Agregar hallazgo
+              </button>
+            )}
+            {ev.estadoFlujo === "resuelto" && (
+              <>
+                <button onClick={() => avanzarFlujo("cerrado")}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
+                  <Lock className="w-3.5 h-3.5" /> Cerrar evento
+                </button>
+                <button onClick={reabrirEvento}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-colors">
+                  <RotateCcw className="w-3.5 h-3.5" /> Reabrir
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Mini-form de escalamiento */}
+          {escalandoAbierto && ev.estadoFlujo === "en_investigacion" && (
+            <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 space-y-3">
+              <div className="text-xs font-semibold text-amber-800">Escalar evento</div>
+              <select
+                value={escaladoPersonaId}
+                onChange={(e) => setEscaladoPersonaId(e.target.value)}
+                className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Seleccionar persona...</option>
+                {PERSONAS_ESCALAMIENTO.map(p => (
+                  <option key={p.id} value={p.id}>{p.nombre} — {p.cargo}</option>
+                ))}
+              </select>
+              <textarea
+                value={escaladoMotivo}
+                onChange={(e) => setEscaladoMotivo(e.target.value)}
+                className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                rows={2}
+                placeholder="Motivo del escalamiento..."
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={confirmarEscalamiento}
+                  disabled={!escaladoPersonaId || !escaladoMotivo.trim()}
+                  className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:opacity-40 transition-colors"
+                >
+                  Escalar evento
+                </button>
+                <button
+                  onClick={() => { setEscalandoAbierto(false); setEscaladoPersonaId(""); setEscaladoMotivo(""); }}
+                  className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Panel de resolución */}
+          {resolviendoAbierto && ev.estadoFlujo === "en_investigacion" && (
+            <div className="border border-green-200 bg-green-50/50 rounded-xl p-4 space-y-3">
+              <div className="text-xs font-semibold text-green-800">Resolver evento</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {RESOLUCION_OPTIONS.map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-xs transition-colors ${
+                      resolucionSeleccionada === opt.value
+                        ? "border-green-500 bg-green-100 text-green-900 font-medium"
+                        : "border-border bg-background text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="resolucion"
+                      value={opt.value}
+                      checked={resolucionSeleccionada === opt.value}
+                      onChange={() => setResolucionSeleccionada(opt.value)}
+                      className="accent-green-600 w-3 h-3"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+              <textarea
+                value={observacionResolucion}
+                onChange={(e) => setObservacionResolucion(e.target.value)}
+                className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                rows={2}
+                placeholder="Observaciones de la resolución (opcional)..."
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={confirmarResolucion}
+                  disabled={!resolucionSeleccionada}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-40 transition-colors"
+                >
+                  Confirmar resolución
+                </button>
+                <button
+                  onClick={() => { setResolviendoAbierto(false); setResolucionSeleccionada(""); setObservacionResolucion(""); }}
+                  className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Body */}
@@ -209,33 +389,38 @@ export function RecordDetailDrawer() {
             </section>
           )}
 
-          {/* Escalamiento */}
-          {ev.estadoFlujo === "escalado" && ev.escaladoA && (
-            <section className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <h3 className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4" /> Evento escalado
+          {/* Escalamiento — visible while active or as history */}
+          {ev.escaladoA && (
+            <section className={`border rounded-xl p-4 ${
+              ev.estadoFlujo === "escalado" ? "bg-amber-50 border-amber-200" : "bg-muted/30 border-border"
+            }`}>
+              <h3 className={`text-sm font-semibold mb-2 flex items-center gap-1.5 ${
+                ev.estadoFlujo === "escalado" ? "text-amber-800" : "text-muted-foreground"
+              }`}>
+                <AlertTriangle className="w-4 h-4" />
+                {ev.estadoFlujo === "escalado" ? "Evento escalado" : "Fue escalado"}
               </h3>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <div className="text-amber-700/70 mb-0.5">Escalado a</div>
-                  <div className="font-medium text-amber-900">{ev.escaladoA.nombre} · {ev.escaladoA.cargo}</div>
+                  <div className="text-muted-foreground mb-0.5">Escalado a</div>
+                  <div className="font-medium">{ev.escaladoA.nombre} · {ev.escaladoA.cargo}</div>
                 </div>
                 {ev.escaladoPor && (
                   <div>
-                    <div className="text-amber-700/70 mb-0.5">Escalado por</div>
-                    <div className="font-medium text-amber-900">{ev.escaladoPor.nombre}</div>
+                    <div className="text-muted-foreground mb-0.5">Escalado por</div>
+                    <div className="font-medium">{ev.escaladoPor.nombre}</div>
                   </div>
                 )}
                 {ev.fechaEscalamiento && (
                   <div>
-                    <div className="text-amber-700/70 mb-0.5">Fecha</div>
-                    <div className="font-medium text-amber-900">{formatDate(ev.fechaEscalamiento)}</div>
+                    <div className="text-muted-foreground mb-0.5">Fecha</div>
+                    <div className="font-medium">{formatDate(ev.fechaEscalamiento)}</div>
                   </div>
                 )}
                 {ev.motivoEscalamiento && (
                   <div className="col-span-2">
-                    <div className="text-amber-700/70 mb-0.5">Motivo</div>
-                    <div className="font-medium text-amber-900">{ev.motivoEscalamiento}</div>
+                    <div className="text-muted-foreground mb-0.5">Motivo</div>
+                    <div className="font-medium">{ev.motivoEscalamiento}</div>
                   </div>
                 )}
               </div>
