@@ -2,9 +2,60 @@ import React, { useState } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight } from "lucide-react";
-import type { Evento, EstadoEvento } from "@/types";
+import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck } from "lucide-react";
+import type { Evento, EstadoEvento, EstadoFlujo } from "@/types";
 import { toast } from "@/hooks/use-toast";
+
+// ---- Flujo de trabajo ----
+const FLUJO_STEPS: { key: EstadoFlujo; label: string; icon: string }[] = [
+  { key: "nuevo",              label: "Nuevo",             icon: "📥" },
+  { key: "en_investigacion",   label: "En investigación",  icon: "🔍" },
+  { key: "escalado",           label: "Escalado",          icon: "⬆️" },
+  { key: "resuelto",           label: "Resuelto",          icon: "✅" },
+  { key: "cerrado",            label: "Cerrado",           icon: "🔒" },
+];
+
+const FLUJO_INDEX: Record<EstadoFlujo, number> = { nuevo: 0, en_investigacion: 1, escalado: 2, resuelto: 3, cerrado: 4 };
+
+function FlujoStepper({ current }: { current: EstadoFlujo }) {
+  const idx = FLUJO_INDEX[current];
+  return (
+    <div className="flex items-center gap-0 w-full">
+      {FLUJO_STEPS.map((step, i) => {
+        const isActive = i === idx;
+        const isPast = i < idx;
+        return (
+          <React.Fragment key={step.key}>
+            {i > 0 && (
+              <div className={`flex-shrink-0 w-6 h-0.5 ${isPast || isActive ? "bg-primary" : "bg-border"}`} />
+            )}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              isActive
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : isPast
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted/50 text-muted-foreground"
+            }`}>
+              <span className="text-sm">{isPast ? "✓" : step.icon}</span>
+              <span className="hidden sm:inline">{step.label}</span>
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+const RESOLUCION_LABELS: Record<string, string> = {
+  sin_hallazgos: "Sin hallazgos",
+  llamado_atencion_verbal: "Llamado de atención verbal",
+  llamado_atencion_escrito: "Llamado de atención escrito",
+  suspension_temporal: "Suspensión temporal",
+  proceso_disciplinario: "Proceso disciplinario",
+  desvinculacion: "Desvinculación",
+  escalamiento_seguridad: "Escalamiento a seguridad",
+  caso_insuficiente: "Caso insuficiente",
+};
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
@@ -22,15 +73,19 @@ export function RecordDetailDrawer() {
 
   const relacionados = getEventosRelacionados(ev.id);
 
-  function cambiarEstado(nuevoEstado: EstadoEvento) {
-    const prev = estadoConfig[ev!.estado].label;
+  function avanzarFlujo(nuevoFlujo: EstadoFlujo) {
+    const prevLabel = FLUJO_STEPS.find(s => s.key === ev!.estadoFlujo)?.label ?? ev!.estadoFlujo;
+    const newLabel = FLUJO_STEPS.find(s => s.key === nuevoFlujo)?.label ?? nuevoFlujo;
+    const nuevoEstado: EstadoEvento = nuevoFlujo === "cerrado" ? "cerrado" : "abierto";
     setLocalEventos((lst) =>
       lst.map((e) => e.id === ev!.id ? {
-        ...e, estado: nuevoEstado,
-        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Cambió estado de '${prev}' a '${estadoConfig[nuevoEstado].label}'` }]
+        ...e,
+        estado: nuevoEstado,
+        estadoFlujo: nuevoFlujo,
+        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Cambió flujo de '${prevLabel}' a '${newLabel}'` }]
       } : e)
     );
-    toast({ title: `✅ Estado actualizado a "${estadoConfig[nuevoEstado].label}"` });
+    toast({ title: `Estado actualizado a "${newLabel}"` });
   }
 
   function agregarAnotacion() {
@@ -63,28 +118,77 @@ export function RecordDetailDrawer() {
       <div className="fixed inset-0 bg-black/30 z-40" onClick={cerrarDrawer} />
       <div className="fixed right-0 top-0 h-full w-[60%] bg-card shadow-drawer z-50 flex flex-col animate-slide-in-right overflow-hidden">
         {/* Header */}
-        <div className="border-b border-border px-6 py-4 flex items-start justify-between gap-4 flex-shrink-0">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <CategoriaBadge categoria={ev.categoria} />
-              <span className="font-mono text-sm font-bold">{ev.id}</span>
+        <div className="border-b border-border px-6 py-4 flex-shrink-0 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <CategoriaBadge categoria={ev.categoria} />
+                <span className="font-mono text-sm font-bold">{ev.id}</span>
+                {ev.estado !== "cerrado" && ev.diasAbierto > 30 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-full">
+                    <AlertTriangle className="w-3 h-3" /> Vencido
+                  </span>
+                )}
+              </div>
+              <p className="font-semibold text-base">{ev.tipoEvento}</p>
             </div>
-            <p className="font-semibold text-base">{ev.tipoEvento}</p>
-            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{ev.descripcionHechos}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={ev.estado}
-              onChange={(e) => cambiarEstado(e.target.value as EstadoEvento)}
-              className={`text-xs px-2 py-1 rounded-full border font-medium focus:outline-none cursor-pointer ${estadoConfig[ev.estado].color}`}
-            >
-              {Object.entries(estadoConfig).map(([k, v]) => (
-                <option key={k} value={k}>{v.label}</option>
-              ))}
-            </select>
-            <button onClick={cerrarDrawer} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <button onClick={cerrarDrawer} className="p-1.5 rounded-lg hover:bg-muted transition-colors flex-shrink-0">
               <X className="w-5 h-5 text-muted-foreground" />
             </button>
+          </div>
+
+          {/* Stepper del flujo */}
+          <FlujoStepper current={ev.estadoFlujo} />
+
+          {/* Info de asignación + acciones rápidas */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Asignado a <span className="font-semibold text-foreground">{ev.asignadoA.nombre}</span></span>
+                <span className="text-muted-foreground/60">· {ev.asignadoA.cargo}</span>
+              </div>
+              {ev.estadoFlujo === "escalado" && ev.escaladoA && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>Escalado a <span className="font-semibold">{ev.escaladoA.nombre}</span></span>
+                </div>
+              )}
+            </div>
+
+            {/* Botones de avance de flujo */}
+            <div className="flex items-center gap-1.5">
+              {ev.estadoFlujo === "nuevo" && (
+                <button onClick={() => avanzarFlujo("en_investigacion")}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 text-[11px] font-medium transition-colors">
+                  <ArrowRight className="w-3 h-3" /> Iniciar investigación
+                </button>
+              )}
+              {ev.estadoFlujo === "en_investigacion" && (
+                <>
+                  <button onClick={() => avanzarFlujo("escalado")}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 text-[11px] font-medium transition-colors">
+                    <AlertTriangle className="w-3 h-3" /> Escalar
+                  </button>
+                  <button onClick={() => avanzarFlujo("resuelto")}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 text-[11px] font-medium transition-colors">
+                    <Check className="w-3 h-3" /> Resolver
+                  </button>
+                </>
+              )}
+              {ev.estadoFlujo === "escalado" && (
+                <button onClick={() => avanzarFlujo("resuelto")}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 text-[11px] font-medium transition-colors">
+                  <Check className="w-3 h-3" /> Resolver
+                </button>
+              )}
+              {ev.estadoFlujo === "resuelto" && (
+                <button onClick={() => avanzarFlujo("cerrado")}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 text-[11px] font-medium transition-colors">
+                  <Check className="w-3 h-3" /> Cerrar
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -101,6 +205,72 @@ export function RecordDetailDrawer() {
                     {id}
                   </button>
                 ))}
+              </div>
+            </section>
+          )}
+
+          {/* Escalamiento */}
+          {ev.estadoFlujo === "escalado" && ev.escaladoA && (
+            <section className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4" /> Evento escalado
+              </h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-amber-700/70 mb-0.5">Escalado a</div>
+                  <div className="font-medium text-amber-900">{ev.escaladoA.nombre} · {ev.escaladoA.cargo}</div>
+                </div>
+                {ev.escaladoPor && (
+                  <div>
+                    <div className="text-amber-700/70 mb-0.5">Escalado por</div>
+                    <div className="font-medium text-amber-900">{ev.escaladoPor.nombre}</div>
+                  </div>
+                )}
+                {ev.fechaEscalamiento && (
+                  <div>
+                    <div className="text-amber-700/70 mb-0.5">Fecha</div>
+                    <div className="font-medium text-amber-900">{formatDate(ev.fechaEscalamiento)}</div>
+                  </div>
+                )}
+                {ev.motivoEscalamiento && (
+                  <div className="col-span-2">
+                    <div className="text-amber-700/70 mb-0.5">Motivo</div>
+                    <div className="font-medium text-amber-900">{ev.motivoEscalamiento}</div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Resolución */}
+          {(ev.estadoFlujo === "resuelto" || ev.estadoFlujo === "cerrado") && ev.resolucionFinal && (
+            <section className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-1.5">
+                <Check className="w-4 h-4" /> Resolución del evento
+              </h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <div className="text-green-700/70 mb-0.5">Resolución</div>
+                  <div className="font-medium text-green-900">{RESOLUCION_LABELS[ev.resolucionFinal] ?? ev.resolucionFinal}</div>
+                </div>
+                {ev.resueltoPor && (
+                  <div>
+                    <div className="text-green-700/70 mb-0.5">Resuelto por</div>
+                    <div className="font-medium text-green-900">{ev.resueltoPor.nombre}</div>
+                  </div>
+                )}
+                {ev.fechaResolucion && (
+                  <div>
+                    <div className="text-green-700/70 mb-0.5">Fecha resolución</div>
+                    <div className="font-medium text-green-900">{formatDate(ev.fechaResolucion)}</div>
+                  </div>
+                )}
+                {ev.observacionResolucion && (
+                  <div className="col-span-2">
+                    <div className="text-green-700/70 mb-0.5">Observaciones</div>
+                    <div className="font-medium text-green-900">{ev.observacionResolucion}</div>
+                  </div>
+                )}
               </div>
             </section>
           )}
