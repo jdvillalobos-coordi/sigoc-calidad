@@ -192,7 +192,7 @@ export function RecordDetailDrawer() {
                       <AvatarInicial nombre={p.nombre} size="md" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm">{p.nombre}</div>
-                        <div className="text-xs text-muted-foreground">CC {p.cedula} · {p.cargo}</div>
+                        <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Responsable</span>
                       <EstadoPersonaBadge estado={p.estado} />
@@ -220,7 +220,7 @@ export function RecordDetailDrawer() {
                       <AvatarInicial nombre={p.nombre} size="md" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm">{p.nombre}</div>
-                        <div className="text-xs text-muted-foreground">CC {p.cedula} · {p.cargo}</div>
+                        <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Participante</span>
                       <EstadoPersonaBadge estado={p.estado} />
@@ -494,7 +494,7 @@ export function Persona360Drawer() {
             <div>
               <h2 className="font-bold text-lg">{persona.nombre}</h2>
               <div className="text-sm text-muted-foreground">
-                {persona.tipo === "cliente" ? `NIT ${persona.nit}` : `CC ${persona.cedula}`} · {persona.cargo} ·{" "}
+                {persona.tipo === "cliente" ? `NIT ${persona.nit}` : `ID ${persona.cedula}`} · {persona.cargo} ·{" "}
                 <button onClick={() => abrirTerminal(persona.terminal)} className="text-coordinadora-blue hover:underline">
                   {persona.terminal}
                 </button>
@@ -1054,7 +1054,7 @@ export function Terminal360Drawer() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-muted-foreground border-b border-border bg-muted/10">
-                    {["Nombre", "Cédula", "Apariciones", "Estado"].map((h) => (
+                    {["Nombre", "ID empleado", "Apariciones", "Estado"].map((h) => (
                       <th key={h} className="text-left px-4 py-2 font-semibold">{h}</th>
                     ))}
                   </tr>

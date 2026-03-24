@@ -123,7 +123,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
                 {ev.operadorNombre ? (
                   <div className="space-y-0.5">
                     <div className="text-xs font-medium">{ev.operadorNombre}</div>
-                    <div className="text-xs text-muted-foreground">{ev.operadorCargo} · CC {ev.operadorCedula}</div>
+                    <div className="text-xs text-muted-foreground">{ev.operadorCargo} · ID {ev.operadorCedula}</div>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground italic">Sin información del operador</p>

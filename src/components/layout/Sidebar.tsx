@@ -1,11 +1,12 @@
 import React from "react";
-import { Home, FileText, Bot, ChevronRight, ChevronLeft, Camera } from "lucide-react";
+import { Home, FileText, Bot, ChevronRight, ChevronLeft, Camera, Inbox } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useSidebarState } from "@/context/SidebarContext";
 import type { PaginaActiva } from "@/types";
 
 const items: { id: PaginaActiva; icon: React.ElementType; label: string }[] = [
   { id: "inicio", icon: Home, label: "Inicio" },
+  { id: "bandeja", icon: Inbox, label: "Bandeja" },
   { id: "registros", icon: FileText, label: "Eventos" },
   { id: "evidencias", icon: Camera, label: "Evidencias" },
   { id: "ia", icon: Bot, label: "Asistente IA" },

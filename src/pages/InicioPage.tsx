@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES } from "@/data/mockData";
+import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { EstadoPersonaBadge, formatCurrency } from "@/lib/utils-app";
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X } from "lucide-react";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
@@ -207,10 +207,10 @@ export default function InicioPage() {
         {/* KPIs — fila 1: estado de eventos */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Eventos abiertos",        value: abiertos.length,  sub: `de ${filtrados.length} en período`,      icon: FolderOpen, color: "default", onClick: () => setPaginaActiva("registros") },
-            { label: "Vencidos >30d",            value: vencidos.length,  sub: vencidos.length > 0 ? "urgente" : "ok",  icon: Clock,      color: vencidos.length > 0 ? "red" : "default", onClick: () => setPaginaActiva("registros") },
+            { label: "Insumos pendientes",       value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente" || i.estadoRevision === "en_investigacion").length, sub: "guías por revisar hoy", icon: Inbox, color: "amber", onClick: () => setPaginaActiva("bandeja") },
+            { label: "Eventos abiertos",          value: abiertos.length,  sub: `de ${filtrados.length} en período`,      icon: FolderOpen, color: "default", onClick: () => setPaginaActiva("registros") },
             { label: "Alertas IA activas",       value: nuevasIA.length,  sub: criticas.length > 0 ? `${criticas.length} críticas` : "sin críticas", icon: Bot, color: criticas.length > 0 ? "red" : "blue", onClick: () => setPaginaActiva("ia") },
-            { label: "Personas en seguimiento",  value: enSeguim.length,  sub: `${personas.filter(p => p.estado === "bloqueado").length} bloqueadas`, icon: Users, color: "amber" },
+            { label: "Vencidos >30d",            value: vencidos.length,  sub: vencidos.length > 0 ? "urgente" : "ok",  icon: Clock,      color: vencidos.length > 0 ? "red" : "default", onClick: () => setPaginaActiva("registros") },
           ].map(({ label, value, sub, icon: Icon, color, onClick }) => {
             const iconCls = { default: "bg-primary/10 text-primary", red: "bg-destructive/10 text-destructive", amber: "bg-amber-100 text-amber-600", blue: "bg-blue-100 text-blue-600" }[color as string];
             const valCls  = { default: "text-foreground", red: "text-destructive", amber: "text-amber-600", blue: "text-blue-600" }[color as string];

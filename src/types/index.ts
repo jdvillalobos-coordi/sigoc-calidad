@@ -225,8 +225,40 @@ export interface Evidencia {
   revisadoPor?: string;
 }
 
+// ---- Insumos Bandeja ----
+export interface InsumoRCE {
+  id: string;
+  guia: string;
+  valorRecaudo: number;
+  estadoRevision: "pendiente" | "revisada_sin_novedad" | "con_novedad";
+  fechaAsignacion: string;
+  revisadoPor?: string;
+  fechaRevision?: string;
+  eventoGenerado?: string;
+}
+
+export interface InsumoFaltante {
+  id: string;
+  guia: string;
+  codigoNovedad: "100" | "300" | "400" | "403" | "529";
+  estadoRevision: "pendiente" | "en_investigacion" | "revisada_sin_novedad" | "con_novedad";
+  fechaNovedad: string;
+  terminal: string;
+  ciudad: string;
+  revisadoPor?: string;
+  fechaRevision?: string;
+  eventoGenerado?: string;
+}
+
+export interface FormPrefill {
+  categoria?: CategoriaEvento;
+  guia?: string;
+  terminal?: string;
+  codigoNovedad?: string;
+}
+
 // ---- Navegación ----
-export type PaginaActiva = "inicio" | "registros" | "evidencias" | "ia" | "configuracion";
+export type PaginaActiva = "inicio" | "registros" | "evidencias" | "ia" | "configuracion" | "bandeja";
 export type DrawerTipo = "registro" | "persona360" | "vehiculo360" | "guia360" | "terminal360" | null;
 
 export interface DrawerState {

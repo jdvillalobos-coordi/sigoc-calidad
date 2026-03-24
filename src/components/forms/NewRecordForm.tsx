@@ -4,7 +4,7 @@ import { useApp } from "@/context/AppContext";
 import { guias, terminales, getGuia, getPersonaPorCedula } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import type { CategoriaEvento } from "@/types";
+import type { CategoriaEvento, FormPrefill } from "@/types";
 
 const CATEGORIAS = [
   { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
@@ -15,7 +15,7 @@ const CATEGORIAS = [
 ] as const;
 
 const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[] }[]> = {
-  dineros:            [{ opciones: ["Hurto de dinero", "Faltante de dinero", "Faltante injustificado"] }],
+  dineros:            [{ opciones: ["Hurto de dinero", "Faltante de dinero", "Faltante injustificado", "Seguimiento RCE"] }],
   unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
   listas_vinculantes: [{ opciones: ["Denuncia penal", "Accidente de tránsito", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] }],
   pqr:                [{ opciones: ["Unidad no entregada", "Producto incompleto", "Producto en mal estado", "Incumplimiento de funcionario", "Entrega trocada", "Entrega no reconocida", "Pérdida total", "Deterioro"] }],
@@ -32,21 +32,26 @@ const FUENTES: Record<CategoriaEvento, string> = {
 
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
 
-export default function NewRecordForm({ onClose }: { onClose: () => void }) {
-  const [categoria, setCategoria] = useState<CategoriaEvento | null>(null);
+export default function NewRecordForm({ onClose, prefill }: { onClose: () => void; prefill?: FormPrefill }) {
+  const [categoria, setCategoria] = useState<CategoriaEvento | null>(prefill?.categoria ?? null);
   const [tipoEvento, setTipoEvento] = useState("");
   const [tipoEntidad, setTipoEntidad] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
-  const [terminal, setTerminal] = useState("");
+  const [terminal, setTerminal] = useState(prefill?.terminal ?? "");
   const [descripcion, setDescripcion] = useState("");
   const [valorAfectacion, setValorAfectacion] = useState("");
-  const [guiaInputs, setGuiaInputs] = useState<string[]>([""]);
-  const [guiasData, setGuiasData] = useState<Record<number, GuiaData>>({});
+  const [guiaInputs, setGuiaInputs] = useState<string[]>([prefill?.guia ?? ""]);
+  const [guiasData, setGuiasData] = useState<Record<number, GuiaData>>(() => {
+    if (prefill?.guia) {
+      const g = getGuia(prefill.guia);
+      if (g) return { 0: { terminal: g.terminalOrigen, ciudad: g.ciudadOrigen, cliente: g.nombreCliente, nit: g.nitCliente, valor: g.valorDeclarado } };
+    }
+    return {};
+  });
   const [guiaErrors, setGuiaErrors] = useState<Record<number, boolean>>({});
   const [cedulas, setCedulas] = useState<string[]>([""]);
   const [cedulasNombre, setCedulasNombre] = useState<Record<number, string>>({});
-  // Específicos
-  const [codigoNovedad, setCodigoNovedad] = useState("");
+  const [codigoNovedad, setCodigoNovedad] = useState(prefill?.codigoNovedad ?? "");
   const [resultadoIA, setResultadoIA] = useState("");
   const [veredicto, setVeredicto] = useState("");
   const [justificacion, setJustificacion] = useState("");
@@ -190,7 +195,7 @@ export default function NewRecordForm({ onClose }: { onClose: () => void }) {
                     <div key={i}>
                       <input
                         className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        placeholder="Número de cédula"
+                        placeholder="ID empleado"
                         value={ced}
                         onChange={(e) => setCedulas((prev) => prev.map((x, j) => j === i ? e.target.value : x))}
                         onBlur={() => validarCedula(i, ced)}

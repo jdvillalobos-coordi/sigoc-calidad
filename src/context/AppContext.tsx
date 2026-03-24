@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import type { PaginaActiva, DrawerState } from "@/types";
+import type { PaginaActiva, DrawerState, FormPrefill } from "@/types";
 
 interface AppContextType {
   paginaActiva: PaginaActiva;
@@ -15,6 +15,8 @@ interface AppContextType {
   setNuevaRegistroAbierto: (v: boolean) => void;
   busquedaQuery: string;
   setBusquedaQuery: (q: string) => void;
+  formPrefill: FormPrefill | null;
+  setFormPrefill: (p: FormPrefill | null) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -24,6 +26,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [drawer, setDrawer] = useState<DrawerState>({ tipo: null, id: null });
   const [nuevaRegistroAbierto, setNuevaRegistroAbierto] = useState(false);
   const [busquedaQuery, setBusquedaQuery] = useState("");
+  const [formPrefill, setFormPrefill] = useState<FormPrefill | null>(null);
 
   const abrirRegistro = useCallback((id: string) => setDrawer({ tipo: "registro", id }), []);
   const abrirPersona = useCallback((id: string) => setDrawer({ tipo: "persona360", id }), []);
@@ -48,6 +51,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setNuevaRegistroAbierto,
         busquedaQuery,
         setBusquedaQuery,
+        formPrefill,
+        setFormPrefill,
       }}
     >
       {children}

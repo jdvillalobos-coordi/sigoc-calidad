@@ -47,7 +47,7 @@ function SearchBar() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
         <input
           className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent placeholder:text-muted-foreground"
-          placeholder="Buscar por guía, cédula, placa, NIT o nombre..."
+          placeholder="Buscar por guía, ID empleado, placa, NIT o nombre..."
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(e.target.value.length > 1); }}
           onFocus={() => query.length > 1 && setOpen(true)}
@@ -84,7 +84,7 @@ function SearchBar() {
                   <div>
                     <div className="font-medium">{p.nombre}</div>
                     <div className="text-xs text-muted-foreground">
-                      CC {p.cedula || p.nit} · {p.tipo === "cliente" ? "Cliente" : p.cargo} · {p.terminal}
+                      ID {p.cedula || p.nit} · {p.tipo === "cliente" ? "Cliente" : p.cargo} · {p.terminal}
                     </div>
                   </div>
                 </button>

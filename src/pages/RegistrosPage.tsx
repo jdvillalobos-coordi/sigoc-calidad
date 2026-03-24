@@ -208,7 +208,7 @@ function EventoDetalle({ evento, onClose }: { evento: Evento; onClose: () => voi
                   <AvatarInicial nombre={p.nombre} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-medium truncate">{p.nombre}</div>
-                    <div className="text-xs text-muted-foreground">{p.cedula}</div>
+                    <div className="text-xs text-muted-foreground">ID {p.cedula}</div>
                   </div>
                   <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0",
                     p.grupo === "Responsable" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
