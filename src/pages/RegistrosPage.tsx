@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { eventos, guias, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
+import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, formatDate, formatCurrency, categoriaConfig, AvatarInicial } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import {
@@ -334,23 +334,6 @@ export default function RegistrosPage() {
   const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
   const PER_PAGE = 20;
 
-  // ── Guías RCE sin evento: filas virtuales en la tabla ────────
-  // Son guías con recaudo >$1M o con_novedad sin evento asociado.
-  // Aparecen como filas al inicio de la tabla con badge "RCE Pendiente"
-  // y botón "Crear evento" — el analista las convierte en eventos reales.
-  const guiasSinGestion = useMemo(() => {
-    const conEventos = new Set<string>();
-    eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
-    return guias
-      .filter((g) => !conEventos.has(g.numero.trim()))
-      .filter((g) => g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")
-      .map((g) => ({
-        ...g,
-        diasSinGestionar: Math.floor((Date.now() - new Date(g.fechaCreacion).getTime()) / 86_400_000),
-      }))
-      .sort((a, b) => b.valorDeclarado - a.valorDeclarado);
-  }, []);
-
   function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
   function handleRegionalChange(val: string) { setRegionalFiltro(val); setTerminalFiltro("todos"); setPage(1); }
 
@@ -369,18 +352,6 @@ export default function RegistrosPage() {
   , [regionalFiltro, paisFiltro]);
 
   const q = busquedaQuery.toLowerCase().trim();
-
-  // Guías pendientes filtradas (se ocultan si filtro de categoría ≠ todos/dineros o estado = cerrado)
-  const guiasFiltradas = useMemo(() => {
-    if (estadoFiltro === "cerrado") return [];
-    if (categoriaFiltro !== "todos" && categoriaFiltro !== "dineros") return [];
-    return guiasSinGestion.filter((g) => {
-      if (terminalFiltro !== "todos" && g.terminalDestino !== terminalFiltro) return false;
-      if (q && !g.numero.includes(q) && !g.nombreCliente.toLowerCase().includes(q)
-          && !g.terminalDestino.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [guiasSinGestion, estadoFiltro, categoriaFiltro, terminalFiltro, q]);
 
   const filtered = useMemo(() => eventos
     .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
@@ -435,7 +406,7 @@ export default function RegistrosPage() {
   }
 
   const hayFiltrosActivos = paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
-  const totalVisible = filtered.length + guiasFiltradas.length;
+  const totalVisible = filtered.length;
 
   function limpiarFiltros() {
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setPage(1);
@@ -562,67 +533,6 @@ export default function RegistrosPage() {
               </thead>
               <tbody className="divide-y divide-border">
 
-                {/* ── Filas de guías RCE pendientes (al inicio, antes de los eventos) ── */}
-                {guiasFiltradas.map((g) => (
-                  <tr key={`rce-${g.numero}`}
-                    className="bg-amber-50/60 border-l-2 border-l-amber-400 hover:bg-amber-50 transition-colors">
-                    {/* Categoría: badge especial RCE */}
-                    <td className="px-4 py-3">
-                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-600 flex-shrink-0" />
-                        RCE
-                      </span>
-                    </td>
-                    {/* ID: pendiente — aún no es un evento */}
-                    <td className="px-4 py-3">
-                      <span className="text-[10px] text-amber-600 font-medium italic">Sin crear</span>
-                    </td>
-                    {/* Tipo / Personas */}
-                    <td className="px-4 py-3 max-w-0">
-                      <span className="truncate block text-xs font-medium text-foreground">Seguimiento RCE</span>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
-                          {g.nombreCliente} · {formatCurrency(g.valorDeclarado)}
-                        </span>
-                        <button onClick={(ev) => { ev.stopPropagation(); abrirGuia(g.numero); }}
-                          className="text-[10px] text-primary hover:underline font-mono whitespace-nowrap">
-                          · Guía {g.numero}
-                        </button>
-                      </div>
-                    </td>
-                    {/* Entidad */}
-                    {!panelAbierto && (
-                      <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell">
-                        Cliente
-                      </td>
-                    )}
-                    {/* Terminal destino */}
-                    <td className="px-4 py-3">
-                      <button onClick={(ev) => { ev.stopPropagation(); abrirTerminal(g.terminalDestino); }}
-                        className="text-xs text-primary hover:underline font-medium">
-                        {g.terminalDestino}
-                      </button>
-                    </td>
-                    {/* Estado: Sin gestionar */}
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
-                        Sin gestionar
-                      </span>
-                    </td>
-                    {/* Fecha creación */}
-                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {format(parseISO(g.fechaCreacion), "dd MMM yy", { locale: es })}
-                    </td>
-                    {/* Días */}
-                    <td className="px-4 py-3">
-                      <span className={cn("text-xs font-semibold", g.diasSinGestionar > 3 ? "text-amber-600" : "text-muted-foreground")}>
-                        {g.diasSinGestionar > 3 ? `⏰ ${g.diasSinGestionar}d` : `${g.diasSinGestionar}d`}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-
-                {/* ── Filas de eventos reales ── */}
                 {paged.map((e) => {
                   const isSelected = eventoSeleccionado?.id === e.id;
                   const responsable = e.personasResponsables[0];
@@ -682,7 +592,7 @@ export default function RegistrosPage() {
                 })}
               </tbody>
             </table>
-            {filtered.length === 0 && guiasFiltradas.length === 0 && (
+            {filtered.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <span className="text-4xl mb-3">📋</span>
                 <p className="font-medium">No se encontraron eventos</p>
