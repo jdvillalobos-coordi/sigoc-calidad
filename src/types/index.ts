@@ -11,7 +11,7 @@ export type CategoriaEvento =
 
 export type EstadoEvento = "abierto" | "cerrado";
 
-export type EstadoFlujo = "nuevo" | "en_investigacion" | "escalado" | "resuelto" | "cerrado";
+export type EstadoFlujo = "abierto" | "escalado" | "cerrado";
 
 export type ResolucionFinal =
   | "sin_hallazgos"

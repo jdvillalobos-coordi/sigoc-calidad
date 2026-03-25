@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado } from "@/data/mockData";
+import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado, solicitudesCCTV } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Search } from "lucide-react";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Video } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
@@ -70,16 +70,15 @@ export default function InicioPage() {
   }, [periodo, cat, dateRange]);
 
   /* ── Mi trabajo ── */
-  const misEventos   = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
-  const escaladosAMi = eventos.filter((e) => e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado");
+  const misEventos    = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
+  const escaladosAMi  = eventos.filter((e) => e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado");
 
   /* ── KPIs ── */
-  const enInvestigacion = filtrados.filter((e) => e.estadoFlujo === "en_investigacion");
-  const pendientesRes   = filtrados.filter((e) => e.estadoFlujo === "resuelto");
-  const vencidos   = filtrados.filter((e) => e.diasAbierto > 30 && e.estado === "abierto");
-  const nuevasIA   = alertas.filter((a) => a.estado === "nueva");
-  const criticas   = nuevasIA.filter((a) => a.severidad === "critica");
-  const enSeguim   = personas.filter((p) => p.estado === "en_seguimiento" || p.estado === "bloqueado");
+  const abiertos        = filtrados.filter((e) => e.estadoFlujo === "abierto");
+  const escaladosTotal  = filtrados.filter((e) => e.estadoFlujo === "escalado");
+  const vencidos        = filtrados.filter((e) => e.diasAbierto > 30 && e.estado === "abierto");
+  const nuevasIA        = alertas.filter((a) => a.estado === "nueva");
+  const criticas        = nuevasIA.filter((a) => a.severidad === "critica");
 
   /* ── Brechas de cobertura ──
      Guías que el sistema detecta como problemáticas pero que no
@@ -238,11 +237,11 @@ export default function InicioPage() {
             <button onClick={() => setPaginaActiva("registros")}
               className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-left w-full hover:shadow-md hover:border-primary/30 transition-all">
               <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-                <Search className="w-5 h-5" />
+                <Video className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-2xl font-bold text-foreground">{enInvestigacion.length}</div>
-                <div className="text-[11px] text-muted-foreground leading-tight">En investigación</div>
+                <div className="text-2xl font-bold text-foreground">{solicitudesCCTV.filter(s => s.estado === "pendiente").length}</div>
+                <div className="text-[11px] text-muted-foreground leading-tight">CCTV pendientes</div>
               </div>
             </button>
           </div>
@@ -251,12 +250,11 @@ export default function InicioPage() {
         {/* KPIs — estado general de la operación */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Insumos pendientes",       value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente" || i.estadoRevision === "en_investigacion").length, sub: "guías por revisar hoy", icon: Inbox, color: "amber", onClick: () => setPaginaActiva("bandeja") },
-            { label: "En investigación",          value: enInvestigacion.length, sub: `de ${filtrados.length} en período`, icon: FolderOpen, color: "default", onClick: () => setPaginaActiva("registros") },
-            { label: "Pendientes resolución",     value: pendientesRes.length,  sub: pendientesRes.length > 0 ? "resueltos sin cerrar" : "al día", icon: Clock, color: pendientesRes.length > 0 ? "amber" : "default", onClick: () => setPaginaActiva("registros") },
+            { label: "Insumos pendientes",       value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente").length, sub: "guías por revisar hoy", icon: Inbox, color: "amber", onClick: () => setPaginaActiva("bandeja") },
+            { label: "Eventos abiertos",          value: abiertos.length, sub: `de ${filtrados.length} en período`, icon: FolderOpen, color: "default", onClick: () => setPaginaActiva("registros") },
             { label: "Alertas IA activas",       value: nuevasIA.length,  sub: criticas.length > 0 ? `${criticas.length} críticas` : "sin críticas", icon: Bot, color: criticas.length > 0 ? "red" : "blue", onClick: () => setPaginaActiva("ia") },
-            { label: "Vencidos >30d",            value: vencidos.length,  sub: vencidos.length > 0 ? "urgente" : "ok",  icon: Clock,      color: vencidos.length > 0 ? "red" : "default", onClick: () => setPaginaActiva("registros") },
-            { label: "Personas seguimiento",     value: enSeguim.length,  sub: `${personas.filter(p => p.estado === "bloqueado").length} bloqueados`, icon: Users, color: enSeguim.length > 0 ? "amber" : "default", onClick: () => {} },
+            { label: "Vencidos >30d",            value: vencidos.length,        sub: vencidos.length > 0 ? "urgente" : "al día",           icon: Clock,  color: vencidos.length > 0 ? "red" : "default",          onClick: () => setPaginaActiva("registros") },
+            { label: "Escalados activos",        value: escaladosTotal.length,  sub: escaladosTotal.length > 0 ? "requieren atención" : "sin escalados", icon: ArrowUpRight, color: escaladosTotal.length > 0 ? "amber" : "default", onClick: () => setPaginaActiva("registros") },
           ].map(({ label, value, sub, icon: Icon, color, onClick }) => {
             const iconCls = { default: "bg-primary/10 text-primary", red: "bg-destructive/10 text-destructive", amber: "bg-amber-100 text-amber-600", blue: "bg-blue-100 text-blue-600" }[color as string];
             const valCls  = { default: "text-foreground", red: "text-destructive", amber: "text-amber-600", blue: "text-blue-600" }[color as string];

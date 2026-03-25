@@ -2,24 +2,22 @@ import React, { useState } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
+import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
-// ---- Flujo de trabajo ----
+// ---- Flujo de trabajo (simplificado: Abierto → Escalado? → Cerrado) ----
 const FLUJO_STEPS: { key: EstadoFlujo; label: string; icon: string }[] = [
-  { key: "nuevo",            label: "Nuevo",            icon: "📥" },
-  { key: "en_investigacion", label: "Investigación",    icon: "🔍" },
-  { key: "escalado",         label: "Escalado",         icon: "⬆️" },
-  { key: "resuelto",         label: "Resuelto",         icon: "✅" },
-  { key: "cerrado",          label: "Cerrado",          icon: "🔒" },
+  { key: "abierto",  label: "Abierto",  icon: "🔍" },
+  { key: "escalado", label: "Escalado", icon: "⬆️" },
+  { key: "cerrado",  label: "Cerrado",  icon: "🔒" },
 ];
 
-const FLUJO_INDEX: Record<EstadoFlujo, number> = { nuevo: 0, en_investigacion: 1, escalado: 2, resuelto: 3, cerrado: 4 };
+const FLUJO_INDEX: Record<EstadoFlujo, number> = { abierto: 0, escalado: 1, cerrado: 2 };
 
 function FlujoStepper({ current, wasEscalated }: { current: EstadoFlujo; wasEscalated: boolean }) {
   const idx = FLUJO_INDEX[current];
-  const escaladoSkipped = !wasEscalated && current !== "escalado" && idx > 2;
+  const escaladoSkipped = !wasEscalated && current !== "escalado" && idx > 1;
 
   return (
     <div className="flex items-center gap-0 w-full h-[36px]">
@@ -32,12 +30,12 @@ function FlujoStepper({ current, wasEscalated }: { current: EstadoFlujo; wasEsca
         return (
           <React.Fragment key={step.key}>
             {i > 0 && (
-              <div className={`flex-shrink-0 w-5 h-0.5 transition-colors ${
+              <div className={`flex-shrink-0 w-8 h-0.5 transition-colors ${
                 isSkipped ? "bg-border border-t border-dashed border-muted-foreground/30 h-0"
                 : (isPast || isActive) ? "bg-primary" : "bg-border"
               }`} />
             )}
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all ${
+            <div className={`flex items-center gap-1 px-3 py-1 rounded-md text-[11px] font-medium whitespace-nowrap transition-all ${
               isSkipped
                 ? "bg-muted/30 text-muted-foreground/40 line-through"
                 : isActive
@@ -122,11 +120,11 @@ export function RecordDetailDrawer() {
 
   function confirmarResolucion() {
     if (!resolucionSeleccionada) return;
-    avanzarFlujo("resuelto", {
+    avanzarFlujo("cerrado", {
       resolucionFinal: resolucionSeleccionada as ResolucionFinal,
       observacionResolucion: observacionResolucion || undefined,
       fechaResolucion: new Date().toISOString(),
-      resueltoPor: { id: "u-coord-unidades", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
+      resueltoPor: { id: "u-coord-unidades", nombre: "Sandra Herrera" },
     });
     setResolviendoAbierto(false);
     setResolucionSeleccionada("");
@@ -153,7 +151,7 @@ export function RecordDetailDrawer() {
   }
 
   function devolverAlCreador() {
-    avanzarFlujo("en_investigacion", {
+    avanzarFlujo("abierto", {
       escaladoA: undefined,
       escaladoPor: undefined,
       fechaEscalamiento: undefined,
@@ -163,7 +161,7 @@ export function RecordDetailDrawer() {
   }
 
   function reabrirEvento() {
-    avanzarFlujo("en_investigacion", {
+    avanzarFlujo("abierto", {
       resolucionFinal: undefined,
       observacionResolucion: undefined,
       fechaResolucion: undefined,
@@ -303,13 +301,7 @@ export function RecordDetailDrawer() {
 
           {/* Acciones contextuales */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {ev.estadoFlujo === "nuevo" && (
-              <button onClick={() => avanzarFlujo("en_investigacion")}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
-                <ArrowRight className="w-3.5 h-3.5" /> Iniciar investigación
-              </button>
-            )}
-            {ev.estadoFlujo === "en_investigacion" && (
+            {ev.estadoFlujo === "abierto" && (
               <>
                 <button onClick={() => setEscalandoAbierto(!escalandoAbierto)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors">
@@ -317,7 +309,7 @@ export function RecordDetailDrawer() {
                 </button>
                 <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
-                  <Check className="w-3.5 h-3.5" /> Resolver
+                  <Check className="w-3.5 h-3.5" /> Resolver y cerrar
                 </button>
               </>
             )}
@@ -327,22 +319,16 @@ export function RecordDetailDrawer() {
                 + Agregar hallazgo
               </button>
             )}
-            {ev.estadoFlujo === "resuelto" && (
-              <>
-                <button onClick={() => avanzarFlujo("cerrado")}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
-                  <Lock className="w-3.5 h-3.5" /> Cerrar evento
-                </button>
-                <button onClick={reabrirEvento}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-colors">
-                  <RotateCcw className="w-3.5 h-3.5" /> Reabrir
-                </button>
-              </>
+            {ev.estadoFlujo === "cerrado" && (
+              <button onClick={reabrirEvento}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-colors">
+                <RotateCcw className="w-3.5 h-3.5" /> Reabrir
+              </button>
             )}
           </div>
 
           {/* Mini-form de escalamiento */}
-          {escalandoAbierto && ev.estadoFlujo === "en_investigacion" && (
+          {escalandoAbierto && ev.estadoFlujo === "abierto" && (
             <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 space-y-3">
               <div className="text-xs font-semibold text-amber-800">Escalar evento</div>
               <select
@@ -381,7 +367,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Panel de resolución */}
-          {resolviendoAbierto && ev.estadoFlujo === "en_investigacion" && (
+          {resolviendoAbierto && ev.estadoFlujo === "abierto" && (
             <div className="border border-green-200 bg-green-50/50 rounded-xl p-4 space-y-3">
               <div className="text-xs font-semibold text-green-800">Resolver evento</div>
               <div className="grid grid-cols-2 gap-1.5">
@@ -488,7 +474,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Resolución */}
-          {(ev.estadoFlujo === "resuelto" || ev.estadoFlujo === "cerrado") && ev.resolucionFinal && (
+          {ev.estadoFlujo === "cerrado" && ev.resolucionFinal && (
             <section className="bg-green-50 border border-green-200 rounded-xl p-4">
               <h3 className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-1.5">
                 <Check className="w-4 h-4" /> Resolución del evento

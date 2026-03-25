@@ -173,7 +173,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       rolSolicitante: rolSolicitante as Evento["rolSolicitante"] || undefined,
       gravedadFalta: gravedadFalta as Evento["gravedadFalta"] || undefined,
       decisionGH: decisionGH || undefined,
-      estadoFlujo: "nuevo",
+      estadoFlujo: "abierto",
       asignadoA: {
         id: usuarioLogueado.id,
         nombre: usuarioLogueado.nombre,
@@ -218,7 +218,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
           </div>
           {categoria && !eventoCreado && (
             <p className="text-xs text-muted-foreground mt-2">
-              Este evento se asignará automáticamente a <span className="font-semibold text-foreground">{usuarioLogueado.nombre}</span> · Estado inicial: <span className="font-semibold text-foreground">Nuevo</span>
+              Este evento se asignará automáticamente a <span className="font-semibold text-foreground">{usuarioLogueado.nombre}</span> · Estado: <span className="font-semibold text-foreground">Abierto</span>
             </p>
           )}
         </div>
@@ -495,8 +495,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     </>)}
                     <span className="text-muted-foreground">Asignado a:</span>
                     <span className="font-medium">{usuarioLogueado.nombre}</span>
-                    <span className="text-muted-foreground">Estado inicial:</span>
-                    <span className="font-medium">Nuevo</span>
+                    <span className="text-muted-foreground">Estado:</span>
+                    <span className="font-medium">Abierto</span>
                   </div>
                 </div>
               )}
