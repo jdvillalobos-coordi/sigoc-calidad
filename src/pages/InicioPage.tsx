@@ -430,13 +430,13 @@ export default function InicioPage() {
                       }`}>
                         {p.estado === "bloqueado" ? "Bloqueado" : p.estado === "en_seguimiento" ? "Seguimiento" : "Normal"}
                       </span>
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex-shrink-0">{p.totalEventos}</span>
-                      <div className="flex items-center gap-1 flex-shrink-0" title={`Riesgo: ${p.riesgo}`}>
-                        <div className={`w-2 h-2 rounded-full ${riskColor}`} />
-                        <span className="text-[10px] font-bold w-4 text-right">{p.riesgo}</span>
-                      </div>
+                      {p.totalEventos > 0 && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold flex-shrink-0">
+                          {p.totalEventos} evento{p.totalEventos !== 1 ? "s" : ""}
+                        </span>
+                      )}
                       {p.lesivas > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium flex-shrink-0">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium flex-shrink-0">
                           {p.lesivas} lesiva{p.lesivas > 1 ? "s" : ""}
                         </span>
                       )}
