@@ -104,6 +104,7 @@ export default function RegistrosPage() {
   const [paisFiltro, setPaisFiltro]           = useState("todos");
   const [regionalFiltro, setRegionalFiltro]   = useState("todos");
   const [terminalFiltro, setTerminalFiltro]   = useState("todos");
+  const [asignadoFiltro, setAsignadoFiltro]   = useState("todos");
   const [dateRange, setDateRange]             = useState<DateRange | undefined>(undefined);
   const [sortField, setSortField]             = useState<"fecha" | "diasAbierto" | "id">("fecha");
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
@@ -143,6 +144,12 @@ export default function RegistrosPage() {
         : terminales
   , [regionalFiltro, paisFiltro]);
 
+  const asignadosUnicos = useMemo(() => {
+    const map = new Map<string, string>();
+    eventos.forEach((e) => { if (e.asignadoA?.id) map.set(e.asignadoA.id, e.asignadoA.nombre); });
+    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, []);
+
   const q = busquedaQuery.toLowerCase().trim();
 
   const filtered = useMemo(() => eventos
@@ -150,6 +157,7 @@ export default function RegistrosPage() {
     .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
     .filter((e) => estadoFlujoFiltro === "todos" || e.estadoFlujo === estadoFlujoFiltro)
     .filter((e) => !soloMios || e.asignadoA.id === usuarioLogueado.id)
+    .filter((e) => asignadoFiltro === "todos" || e.asignadoA.id === asignadoFiltro)
     .filter((e) => !soloCerrados || e.estadoFlujo === "cerrado")
     .filter((e) => !soloEscaladosAMi || (e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado"))
     .filter((e) => !soloVencidos || (e.diasAbierto > 30 && e.estado === "abierto"))
@@ -187,7 +195,7 @@ export default function RegistrosPage() {
       else                                  cmp = a.id.localeCompare(b.id);
       return sortDir === "asc" ? cmp : -cmp;
     })
-  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
+  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
 
   const pages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -203,11 +211,11 @@ export default function RegistrosPage() {
   }
 
   const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloCerrados || soloEscaladosAMi || soloVencidos || estadoFiltro !== "todos";
-  const hayFiltrosActivos = hayFiltrosNav || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
+  const hayFiltrosActivos = hayFiltrosNav || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || !!dateRange?.from || !!q;
   const totalVisible = filtered.length;
 
   function limpiarFiltros() {
-    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos");
+    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setAsignadoFiltro("todos");
     setDateRange(undefined); setBusquedaQuery(""); setEstadoFiltro("todos");
     setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false); setSoloEscaladosAMi(false);
     setSoloVencidos(false); setNavEtiqueta(null); setPage(1);
@@ -246,6 +254,15 @@ export default function RegistrosPage() {
             <option value="todos">Todos los estados</option>
             <option value="abierto">Abierto</option>
             <option value="cerrado">Cerrado</option>
+          </select>
+
+          {/* Asignado a */}
+          <select
+            className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+            value={asignadoFiltro}
+            onChange={(e) => { setAsignadoFiltro(e.target.value); setPage(1); }}>
+            <option value="todos">Todos los asignados</option>
+            {asignadosUnicos.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
 
           {/* País → Regional → Terminal (cascada) */}
@@ -291,6 +308,7 @@ export default function RegistrosPage() {
             {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
+            {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${asignadosUnicos.find(a => a.id === asignadoFiltro)?.nombre ?? asignadoFiltro}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
             {dateRange?.from && (
               <FilterPill
                 label={`Fechas: ${format(dateRange.from, "dd MMM", { locale: es })}${dateRange.to ? ` – ${format(dateRange.to, "dd MMM", { locale: es })}` : ""}`}
