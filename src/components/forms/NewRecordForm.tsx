@@ -18,7 +18,33 @@ const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[]
   dineros:            [{ opciones: ["Hurto de dinero", "Faltante de dinero", "Faltante injustificado", "Seguimiento RCE"] }],
   unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
   listas_vinculantes: [{ opciones: ["Denuncia penal", "Accidente de tránsito", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] }],
-  pqr:                [{ opciones: ["Unidad no entregada", "Producto incompleto", "Producto en mal estado", "Incumplimiento de funcionario", "Entrega trocada", "Entrega no reconocida", "Pérdida total", "Deterioro"] }],
+  pqr: [{ opciones: [
+    "Alerta NYS no atendida",
+    "Certificación de entrega - mala entrega",
+    "Destinatario confirma recibido - Registrar fecha de entrega",
+    "Deterioro posterior a la entrega",
+    "Devolución pago realizado por el link de recaudo por guías no entregadas",
+    "Doble cobro Flete (origen)",
+    "Doble cobro Flete o RCE (Destino)",
+    "Faltante / faltante interno posterior a la entrega",
+    "Guía sin trazabilidad o movimiento - destino",
+    "Guía sin trazabilidad o movimiento - origen",
+    "Incumplimiento citas",
+    "Incumplimiento de servicio RD",
+    "Incumplimiento en el trámite de la solución",
+    "Incumplimiento en TPS (Caso particular con reclamación previa y puntual por parte del cliente)",
+    "Incumplimiento entrega grandes destinatarios (cadenas, zonas francas, puertos)",
+    "Incumplimiento recogidas",
+    "Novedad 200-302-402-404 superior a 48 horas hábiles sin gestión",
+    "Novedad 300-400-403-829 superior a 72 horas hábiles sin gestión",
+    "Novedad 401 sin movimiento",
+    "Novedad 402 superior a 48 horas hábiles en estado 'Aprobada' sin gestión",
+    "Novedad falsa / Solicitud nuevo intento sin cobro",
+    "Novedad operativa - (guía mal liquidada, guía mal elaborada)",
+    "Recogidas efectivas sin guía",
+    "Solicitud cierre trámite de indemnización",
+    "Validación de pago de RCE o FCE no realizado por link de recaudo",
+  ] }],
   disciplinarios:     [{ opciones: ["Llegada tarde", "Llamado de atención verbal", "Llamado de atención escrito", "Desacato", "Falta leve", "Falta grave", "Falta gravísima"] }],
 };
 
@@ -64,13 +90,28 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [rolSolicitante, setRolSolicitante] = useState("");
   const [gravedadFalta, setGravedadFalta] = useState("");
   const [decisionGH, setDecisionGH] = useState("");
+  const [terminalDestino, setTerminalDestino] = useState("");
+  const [ciudadDestino, setCiudadDestino] = useState("");
+  const [tipoPoblacionOrigen, setTipoPoblacionOrigen] = useState("");
+  const [tipoPoblacionDestino, setTipoPoblacionDestino] = useState("");
+  const [equipoRecogida, setEquipoRecogida] = useState("");
+  const [equipoEntrega, setEquipoEntrega] = useState("");
+  const [equipoTenencia, setEquipoTenencia] = useState(1);
   const [eventoCreado, setEventoCreado] = useState<string | null>(null);
 
   function buscarGuia(idx: number, num: string) {
     const g = getGuia(num);
     if (g) {
       setGuiasData((prev) => ({ ...prev, [idx]: { terminal: g.terminalOrigen, ciudad: g.ciudadOrigen, cliente: g.nombreCliente, nit: g.nitCliente, valor: g.valorDeclarado } }));
-      if (idx === 0) setTerminal(g.terminalOrigen);
+      if (idx === 0) {
+        setTerminal(g.terminalOrigen);
+        if (categoria === "pqr") {
+          setTerminalDestino(g.terminalDestino);
+          setCiudadDestino(g.ciudadDestino);
+          setNitCliente(g.nitCliente);
+          setNombreCliente(g.nombreCliente);
+        }
+      }
       setGuiaErrors((prev) => ({ ...prev, [idx]: false }));
     } else if (num.length > 4) {
       setGuiasData((prev) => { const n = { ...prev }; delete n[idx]; return n; });
@@ -122,6 +163,13 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setRolSolicitante("");
     setGravedadFalta("");
     setDecisionGH("");
+    setTerminalDestino("");
+    setCiudadDestino("");
+    setTipoPoblacionOrigen("");
+    setTipoPoblacionDestino("");
+    setEquipoRecogida("");
+    setEquipoEntrega("");
+    setEquipoTenencia(1);
     setEventoCreado(null);
   }
 
@@ -173,6 +221,13 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       rolSolicitante: rolSolicitante as Evento["rolSolicitante"] || undefined,
       gravedadFalta: gravedadFalta as Evento["gravedadFalta"] || undefined,
       decisionGH: decisionGH || undefined,
+      terminalDestino: categoria === "pqr" ? terminalDestino || undefined : undefined,
+      ciudadDestino: categoria === "pqr" ? ciudadDestino || undefined : undefined,
+      tipoPoblacionOrigen: categoria === "pqr" ? tipoPoblacionOrigen as Evento["tipoPoblacionOrigen"] || undefined : undefined,
+      tipoPoblacionDestino: categoria === "pqr" ? tipoPoblacionDestino as Evento["tipoPoblacionDestino"] || undefined : undefined,
+      equipoRecogida: categoria === "pqr" ? equipoRecogida || undefined : undefined,
+      equipoEntrega: categoria === "pqr" ? equipoEntrega || undefined : undefined,
+      equipoTenencia: categoria === "pqr" ? equipoTenencia : undefined,
       estadoFlujo: "abierto",
       asignadoA: {
         id: usuarioLogueado.id,
@@ -423,6 +478,55 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
 
               {categoria === "pqr" && (
                 <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal destino *</label>
+                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminalDestino} onChange={(e) => setTerminalDestino(e.target.value)}>
+                        <option value="">Seleccionar...</option>
+                        {terminales.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Ciudad destino *</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Ciudad destino" value={ciudadDestino} onChange={(e) => setCiudadDestino(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo población origen *</label>
+                      <div className="flex gap-2">
+                        {[["directa_domestica", "Directa/Doméstica"], ["reexpedicion", "Reexpedición"]].map(([v, l]) => (
+                          <button key={v} onClick={() => setTipoPoblacionOrigen(v)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${tipoPoblacionOrigen === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo población destino *</label>
+                      <div className="flex gap-2">
+                        {[["directa_domestica", "Directa/Doméstica"], ["reexpedicion", "Reexpedición"]].map(([v, l]) => (
+                          <button key={v} onClick={() => setTipoPoblacionDestino(v)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${tipoPoblacionDestino === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo recogida *</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-BOG-045" value={equipoRecogida} onChange={(e) => setEquipoRecogida(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo entrega</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-MDE-012 (opcional)" value={equipoEntrega} onChange={(e) => setEquipoEntrega(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo tenencia (unidades) *</label>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setEquipoTenencia(Math.max(1, equipoTenencia - 1))} className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors">−</button>
+                      <span className="text-lg font-bold w-8 text-center">{equipoTenencia}</span>
+                      <button onClick={() => setEquipoTenencia(equipoTenencia + 1)} className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors">+</button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground mb-1 block">NIT Cliente</label>

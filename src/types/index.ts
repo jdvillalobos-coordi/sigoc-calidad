@@ -161,10 +161,17 @@ export interface Evento {
   resultadoIA?: "cumple" | "no_cumple";
   veredictoOperador?: "confirma" | "falso_negativo" | "falso_positivo";
   justificacionOperador?: string;
-  // PQR:
+  // PQR (Posventa):
   rolSolicitante?: "remitente" | "destinatario" | "tercero";
   nitCliente?: string;
   nombreCliente?: string;
+  terminalDestino?: string;
+  ciudadDestino?: string;
+  tipoPoblacionOrigen?: "directa_domestica" | "reexpedicion";
+  tipoPoblacionDestino?: "directa_domestica" | "reexpedicion";
+  equipoRecogida?: string;
+  equipoEntrega?: string;
+  equipoTenencia?: number;
   // Disciplinarios:
   gravedadFalta?: "leve" | "grave" | "gravisima";
   decisionGH?: string;
