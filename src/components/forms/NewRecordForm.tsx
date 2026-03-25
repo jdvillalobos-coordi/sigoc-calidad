@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca } from "@/data/mockData";
-import { formatCurrency } from "@/lib/utils-app";
+import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado } from "@/data/mockData";
+import { formatCurrency, EstadoPersonaBadge } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import type { CategoriaEvento, FormPrefill } from "@/types";
+import type { CategoriaEvento, FormPrefill, Persona } from "@/types";
 
 const CATEGORIAS = [
   { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
@@ -33,6 +33,7 @@ const FUENTES: Record<CategoriaEvento, string> = {
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
 
 export default function NewRecordForm({ onClose, prefill }: { onClose: () => void; prefill?: FormPrefill }) {
+  const { abrirRegistro } = useApp();
   const [categoria, setCategoria] = useState<CategoriaEvento | null>(prefill?.categoria ?? null);
   const [tipoEvento, setTipoEvento] = useState("");
   const [tipoEntidad, setTipoEntidad] = useState("");
@@ -50,7 +51,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   });
   const [guiaErrors, setGuiaErrors] = useState<Record<number, boolean>>({});
   const [cedulas, setCedulas] = useState<string[]>([""]);
-  const [cedulasNombre, setCedulasNombre] = useState<Record<number, string>>({});
+  const [cedulasPersona, setCedulasPersona] = useState<Record<number, Persona>>({});
   const [codigoNovedad, setCodigoNovedad] = useState(prefill?.codigoNovedad ?? "");
   const [placaInput, setPlacaInput] = useState("");
   const [placaData, setPlacaData] = useState<{ placa: string; tipo: string; conductorId: string; estado: string } | null>(null);
@@ -63,6 +64,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [rolSolicitante, setRolSolicitante] = useState("");
   const [gravedadFalta, setGravedadFalta] = useState("");
   const [decisionGH, setDecisionGH] = useState("");
+  const [eventoCreado, setEventoCreado] = useState<string | null>(null);
 
   function buscarGuia(idx: number, num: string) {
     const g = getGuia(num);
@@ -89,32 +91,66 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
 
   function validarCedula(idx: number, ced: string) {
     const p = getPersonaPorCedula(ced);
-    if (p) setCedulasNombre((prev) => ({ ...prev, [idx]: p.nombre }));
-    else if (ced.length > 5) setCedulasNombre((prev) => ({ ...prev, [idx]: "" }));
+    if (p) setCedulasPersona((prev) => ({ ...prev, [idx]: p }));
+    else if (ced.length > 5) setCedulasPersona((prev) => { const n = { ...prev }; delete n[idx]; return n; });
   }
 
   const esVehiculo = tipoEntidad === "Vehículo";
   const puedeCrear = !!(categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion && (esVehiculo ? placaInput : true));
 
+  const primerPersona = Object.values(cedulasPersona)[0];
+
+  function resetForm() {
+    setCategoria(null);
+    setTipoEvento("");
+    setTipoEntidad("");
+    setFecha(new Date().toISOString().split("T")[0]);
+    setTerminal("");
+    setDescripcion("");
+    setValorAfectacion("");
+    setGuiaInputs([""]);
+    setGuiasData({});
+    setGuiaErrors({});
+    setCedulas([""]);
+    setCedulasPersona({});
+    setCodigoNovedad("");
+    setPlacaInput("");
+    setPlacaData(null);
+    setPlacaError(false);
+    setNitCliente("");
+    setNombreCliente("");
+    setRolSolicitante("");
+    setGravedadFalta("");
+    setDecisionGH("");
+    setEventoCreado(null);
+  }
+
   function crear() {
     const prefix = categoria!.slice(0, 3).toUpperCase();
     const id = `${prefix}-${String(Math.floor(Math.random() * 900) + 100)}`;
-    toast({ title: `✅ Evento ${id} creado exitosamente` });
-    onClose();
+    setEventoCreado(id);
+    toast({ title: `Evento ${id} creado exitosamente` });
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="border-b border-border px-6 py-4 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            {categoria && <button onClick={() => setCategoria(null)} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
-            <h2 className="font-bold text-base">
-              {categoria ? `Nuevo evento — ${CATEGORIAS.find(c => c.id === categoria)?.label}` : "Nuevo evento"}
-            </h2>
+        <div className="border-b border-border px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {categoria && !eventoCreado && <button onClick={() => setCategoria(null)} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
+              <h2 className="font-bold text-base">
+                {eventoCreado ? `Evento ${eventoCreado} creado` : categoria ? `Nuevo evento — ${CATEGORIAS.find(c => c.id === categoria)?.label}` : "Nuevo evento"}
+              </h2>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><X className="w-5 h-5 text-muted-foreground" /></button>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><X className="w-5 h-5 text-muted-foreground" /></button>
+          {categoria && !eventoCreado && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Este evento se asignará automáticamente a <span className="font-semibold text-foreground">{usuarioLogueado.nombre}</span> · Estado inicial: <span className="font-semibold text-foreground">Nuevo</span>
+            </p>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -235,7 +271,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   Persona(s) responsable(s){esVehiculo ? "" : " *"}
                 </label>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {cedulas.map((ced, i) => (
                     <div key={i}>
                       <input
@@ -245,7 +281,29 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                         onChange={(e) => setCedulas((prev) => prev.map((x, j) => j === i ? e.target.value : x))}
                         onBlur={() => validarCedula(i, ced)}
                       />
-                      {cedulasNombre[i] && <span className="text-xs text-green-600 font-medium mt-0.5 block">{cedulasNombre[i]}</span>}
+                      {cedulasPersona[i] && (
+                        <div className="mt-1.5 space-y-1.5">
+                          <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-semibold text-blue-900">{cedulasPersona[i].nombre}</span>
+                            <span className="text-[11px] text-blue-700">· {cedulasPersona[i].cargo}</span>
+                            <span className="text-[11px] text-blue-700">· {cedulasPersona[i].terminal}</span>
+                            <EstadoPersonaBadge estado={cedulasPersona[i].estado} />
+                          </div>
+                          {cedulasPersona[i].estado === "en_seguimiento" && (
+                            <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                              ⚠️ Esta persona está en seguimiento — tiene eventos previos registrados
+                            </div>
+                          )}
+                          {cedulasPersona[i].estado === "bloqueado" && (
+                            <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                              🚫 Esta persona está bloqueada — verificar antes de continuar
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {ced.length > 5 && !cedulasPersona[i] && (
+                        <span className="text-xs text-muted-foreground mt-0.5 block">Persona no encontrada</span>
+                      )}
                     </div>
                   ))}
                   <button onClick={() => setCedulas((prev) => [...prev, ""])} className="text-xs text-primary flex items-center gap-1 hover:underline">
@@ -341,12 +399,67 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 <span className="text-xs text-muted-foreground">Fuente:</span>
                 <span className="text-xs font-semibold">{FUENTES[categoria]}</span>
               </div>
+
+              {/* Preview / resumen */}
+              {puedeCrear && !eventoCreado && (
+                <div className="p-4 bg-muted/40 rounded-xl border border-border space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">📋 Resumen del evento</p>
+                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                    <span className="text-muted-foreground">Categoría:</span>
+                    <span className="font-medium">{CATEGORIAS.find(c => c.id === categoria)?.label}</span>
+                    <span className="text-muted-foreground">Tipo:</span>
+                    <span className="font-medium">{tipoEvento}</span>
+                    {guiaInputs[0] && (<>
+                      <span className="text-muted-foreground">Guía:</span>
+                      <span className="font-medium font-mono">{guiaInputs[0]}</span>
+                    </>)}
+                    <span className="text-muted-foreground">Terminal:</span>
+                    <span className="font-medium">{terminal}</span>
+                    {primerPersona && (<>
+                      <span className="text-muted-foreground">Persona responsable:</span>
+                      <span className="font-medium">
+                        {primerPersona.nombre} (ID {primerPersona.cedula})
+                        {primerPersona.estado === "en_seguimiento" && <span className="ml-1 text-amber-600">⚠️ En seguimiento</span>}
+                        {primerPersona.estado === "bloqueado" && <span className="ml-1 text-red-600">🚫 Bloqueado</span>}
+                      </span>
+                    </>)}
+                    <span className="text-muted-foreground">Asignado a:</span>
+                    <span className="font-medium">{usuarioLogueado.nombre}</span>
+                    <span className="text-muted-foreground">Estado inicial:</span>
+                    <span className="font-medium">Nuevo</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Post-create actions */}
+          {eventoCreado && (
+            <div className="flex flex-col items-center gap-4 py-8">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-2xl">✅</div>
+              <p className="text-sm text-center text-muted-foreground">
+                El evento <span className="font-bold text-foreground">{eventoCreado}</span> fue creado exitosamente y asignado a <span className="font-semibold">{usuarioLogueado.nombre}</span>.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { onClose(); abrirRegistro(eventoCreado); }}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Abrir evento
+                </button>
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors"
+                >
+                  Crear otro
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {categoria && (
+        {categoria && !eventoCreado && (
           <div className="border-t border-border px-6 py-4 flex justify-end gap-3 flex-shrink-0">
             <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors">Cancelar</button>
             <button
