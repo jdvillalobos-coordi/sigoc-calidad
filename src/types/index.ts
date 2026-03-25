@@ -377,7 +377,7 @@ export interface FormPrefill {
 }
 
 // ---- Navegación ----
-export type PaginaActiva = "inicio" | "registros" | "evidencias" | "ia" | "configuracion" | "bandeja" | "cuadro_contacto";
+export type PaginaActiva = "inicio" | "registros" | "evidencias" | "ia" | "configuracion" | "bandeja";
 export type DrawerTipo = "registro" | "persona360" | "vehiculo360" | "guia360" | "terminal360" | "resolucion_acumulativa" | null;
 
 export interface DrawerState {

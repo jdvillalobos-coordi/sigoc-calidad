@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado } from "@/data/mockData";
+import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado, actividadesLesivas, estudiosSeguridad } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Check } from "lucide-react";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Check, Lock, Search } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
@@ -28,10 +28,11 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
 ];
 
 const RANKING_TABS = [
-  { id: "regionales",  label: "Regionales", icon: MapPin },
-  { id: "terminales",  label: "Terminales", icon: Building2 },
-  { id: "personas",    label: "Personas",   icon: Users },
-  { id: "vehiculos",   label: "Vehículos",  icon: Car },
+  { id: "regionales",       label: "Regionales",        icon: MapPin },
+  { id: "terminales",       label: "Terminales",        icon: Building2 },
+  { id: "personas",         label: "Personas",          icon: Users },
+  { id: "vehiculos",        label: "Vehículos",         icon: Car },
+  { id: "cuadro_contacto",  label: "Cuadro de Contacto",icon: Lock },
 ] as const;
 
 type RankingTab = typeof RANKING_TABS[number]["id"];
@@ -76,6 +77,7 @@ export default function InicioPage() {
 
   /* ── KPIs ── */
   const abiertos        = filtrados.filter((e) => e.estadoFlujo === "abierto");
+  const cerradosPeriodo = filtrados.filter((e) => e.estadoFlujo === "cerrado");
   const escaladosTotal  = filtrados.filter((e) => e.estadoFlujo === "escalado");
   const vencidos        = filtrados.filter((e) => e.diasAbierto > 30 && e.estado === "abierto");
   const nuevasIA        = alertas.filter((a) => a.estado === "nueva");
@@ -135,6 +137,39 @@ export default function InicioPage() {
     });
     return Object.values(c).sort((a, b) => b.count - a.count).slice(0, 8);
   }, [filtrados]);
+
+  /* ── Cuadro de Contacto: personas con eventos ── */
+  const [ccBusqueda, setCcBusqueda] = React.useState("");
+  const [ccFiltro, setCcFiltro] = React.useState<"todos" | "en_seguimiento" | "bloqueado">("todos");
+
+  const cuadroContacto = React.useMemo(() => {
+    return personas.map((p) => {
+      const evs = eventos.filter((e) =>
+        e.personasResponsables.some((pv) => pv.personaId === p.id) ||
+        e.personasParticipantes.some((pv) => pv.personaId === p.id)
+      );
+      if (evs.length === 0 && p.estado === "sin_novedad") return null;
+      const evAbiertos = evs.filter((e) => e.estado === "abierto").length;
+      const evCerradosConHallazgo = evs.filter((e) => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
+      const estudios = estudiosSeguridad.filter((e) => e.personaId === p.id);
+      const estudiosConHallazgo = estudios.filter((e) => e.resultado === "hallazgos_encontrados").length;
+      const riesgo = (evAbiertos * 2) + (evCerradosConHallazgo * 1) + (estudiosConHallazgo * 3);
+      let dinero = 0;
+      evs.forEach((e) => { if (e.valorAfectacion) dinero += e.valorAfectacion; if (e.valorDinero) dinero += e.valorDinero; });
+      return { ...p, totalEventos: evs.length, riesgo, dinero, lesivas: actividadesLesivas.filter((a) => a.personaId === p.id).length };
+    }).filter(Boolean).sort((a, b) => (b?.riesgo ?? 0) - (a?.riesgo ?? 0));
+  }, []);
+
+  const cuadroFiltrado = React.useMemo(() => {
+    let result = cuadroContacto;
+    if (ccFiltro === "en_seguimiento") result = result.filter((p) => p?.estado === "en_seguimiento");
+    if (ccFiltro === "bloqueado") result = result.filter((p) => p?.estado === "bloqueado");
+    if (ccBusqueda) {
+      const q = ccBusqueda.toLowerCase();
+      result = result.filter((p) => p?.nombre.toLowerCase().includes(q) || p?.cedula.toLowerCase().includes(q) || p?.terminal.toLowerCase().includes(q));
+    }
+    return result;
+  }, [cuadroContacto, ccFiltro, ccBusqueda]);
 
   const topAlertas = [...alertas]
     .filter((a) => a.estado !== "descartada")
@@ -253,12 +288,13 @@ export default function InicioPage() {
           {[
             { label: "Insumos pendientes",  value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente").length, sub: "guías por revisar hoy",                                                                         icon: Inbox,        color: "amber",                                          onClick: () => setPaginaActiva("bandeja") },
             { label: "Eventos abiertos",    value: abiertos.length,           sub: `de ${filtrados.length} en período`,                                                                                                                                                                             icon: FolderOpen,   color: "default",                                        onClick: () => irARegistros({ soloAbiertos: true, etiqueta: "Eventos abiertos" }) },
+            { label: "Eventos cerrados",    value: cerradosPeriodo.length,    sub: `en período`,                                                                                                                                                                                              icon: Check,        color: "green",                                          onClick: () => irARegistros({ soloCerrados: true, etiqueta: "Eventos cerrados" }) },
             { label: "Alertas IA activas",  value: nuevasIA.length,           sub: criticas.length > 0 ? `${criticas.length} críticas` : "sin críticas",                                                                                                                                            icon: Bot,          color: criticas.length > 0 ? "red" : "blue",             onClick: () => setPaginaActiva("ia") },
             { label: "Vencidos >30d",       value: vencidos.length,           sub: vencidos.length > 0 ? "urgente" : "al día",                                                                                                                                                                      icon: Clock,        color: vencidos.length > 0 ? "red" : "default",          onClick: () => irARegistros({ soloVencidos: true, etiqueta: "Vencidos >30d" }) },
             { label: "Escalados activos",   value: escaladosTotal.length,     sub: escaladosTotal.length > 0 ? "requieren atención" : "sin escalados",                                                                                                                                              icon: ArrowUpRight, color: escaladosTotal.length > 0 ? "amber" : "default",   onClick: () => irARegistros({ estadoFlujo: "escalado", etiqueta: "Escalados activos" }) },
           ].map(({ label, value, sub, icon: Icon, color, onClick }) => {
-            const iconCls = { default: "bg-primary/10 text-primary", red: "bg-destructive/10 text-destructive", amber: "bg-amber-100 text-amber-600", blue: "bg-blue-100 text-blue-600" }[color as string];
-            const valCls  = { default: "text-foreground", red: "text-destructive", amber: "text-amber-600", blue: "text-blue-600" }[color as string];
+            const iconCls = { default: "bg-primary/10 text-primary", red: "bg-destructive/10 text-destructive", amber: "bg-amber-100 text-amber-600", blue: "bg-blue-100 text-blue-600", green: "bg-green-100 text-green-600" }[color as string];
+            const valCls  = { default: "text-foreground", red: "text-destructive", amber: "text-amber-600", blue: "text-blue-600", green: "text-green-600" }[color as string];
             return (
               <button key={label} onClick={onClick}
                 className={`bg-card border border-border rounded-xl p-4 flex flex-col gap-2 text-left w-full transition-all ${onClick ? "hover:shadow-md hover:border-primary/30 cursor-pointer" : "cursor-default"}`}>
@@ -369,6 +405,77 @@ export default function InicioPage() {
                     </span>
                   </div>
                 ))}
+            </div>
+          )}
+
+          {/* Cuadro de Contacto */}
+          {tab === "cuadro_contacto" && (
+            <div>
+              {/* Mini KPIs + búsqueda */}
+              <div className="px-4 py-3 border-b border-border flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="Buscar nombre, cédula o terminal..."
+                    value={ccBusqueda}
+                    onChange={(e) => setCcBusqueda(e.target.value)}
+                  />
+                </div>
+                {(["todos", "en_seguimiento", "bloqueado"] as const).map((f) => {
+                  const labels = { todos: "Todos", en_seguimiento: "Seguimiento", bloqueado: "Bloqueados" };
+                  const counts = {
+                    todos: cuadroContacto.length,
+                    en_seguimiento: cuadroContacto.filter((p) => p?.estado === "en_seguimiento").length,
+                    bloqueado: cuadroContacto.filter((p) => p?.estado === "bloqueado").length,
+                  };
+                  return (
+                    <button key={f} onClick={() => setCcFiltro(f)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${ccFiltro === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+                      {labels[f]} ({counts[f]})
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Tabla compacta */}
+              <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
+                {cuadroFiltrado.length === 0 ? (
+                  <p className="text-center py-8 text-muted-foreground text-xs">Sin personas con los filtros aplicados</p>
+                ) : cuadroFiltrado.map((p) => {
+                  if (!p) return null;
+                  const riskColor = p.riesgo >= 13 ? "bg-red-500" : p.riesgo >= 8 ? "bg-orange-500" : p.riesgo >= 4 ? "bg-amber-400" : "bg-green-500";
+                  return (
+                    <button key={p.id} onClick={() => abrirPersona(p.id)}
+                      className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-muted/30 transition-colors">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                        {p.nombre.split(" ").slice(0, 2).map((n) => n[0]).join("")}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-semibold text-foreground truncate block">{p.nombre}</span>
+                        <span className="text-[10px] text-muted-foreground">{p.cargo} · {p.terminal}</span>
+                      </div>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${
+                        p.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200"
+                        : p.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200"
+                        : "bg-green-100 text-green-700 border border-green-200"
+                      }`}>
+                        {p.estado === "bloqueado" ? "Bloqueado" : p.estado === "en_seguimiento" ? "Seguimiento" : "Normal"}
+                      </span>
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex-shrink-0">{p.totalEventos}</span>
+                      <div className="flex items-center gap-1 flex-shrink-0" title={`Riesgo: ${p.riesgo}`}>
+                        <div className={`w-2 h-2 rounded-full ${riskColor}`} />
+                        <span className="text-[10px] font-bold w-4 text-right">{p.riesgo}</span>
+                      </div>
+                      {p.lesivas > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium flex-shrink-0">
+                          {p.lesivas} lesiva{p.lesivas > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
