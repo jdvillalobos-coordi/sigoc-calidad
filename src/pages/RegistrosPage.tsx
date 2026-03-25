@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT } from "@/data/mockData";
+import { useState, useMemo, useEffect } from "react";
+import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT, usuarioLogueado } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { Plus, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
@@ -92,9 +92,14 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery, setBusquedaQuery } = useApp();
+  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
+  const [estadoFlujoFiltro, setEstadoFlujoFiltro] = useState<string>("todos");
+  const [soloMios, setSoloMios]               = useState(false);
+  const [soloEscaladosAMi, setSoloEscaladosAMi] = useState(false);
+  const [soloVencidos, setSoloVencidos]       = useState(false);
+  const [navEtiqueta, setNavEtiqueta]         = useState<string | null>(null);
   const [paisFiltro, setPaisFiltro]           = useState("todos");
   const [regionalFiltro, setRegionalFiltro]   = useState("todos");
   const [terminalFiltro, setTerminalFiltro]   = useState("todos");
@@ -103,6 +108,20 @@ export default function RegistrosPage() {
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
   const PER_PAGE = 20;
+
+  // Aplica el filtro de navegación al montar (viene del Panel de Control)
+  useEffect(() => {
+    if (!registrosNavFiltro) return;
+    const f = registrosNavFiltro;
+    if (f.soloAbiertos)       setEstadoFiltro("abierto");
+    if (f.estadoFlujo)        setEstadoFlujoFiltro(f.estadoFlujo);
+    if (f.soloMios)           setSoloMios(true);
+    if (f.soloEscaladosAMi)   setSoloEscaladosAMi(true);
+    if (f.soloVencidos)       setSoloVencidos(true);
+    if (f.etiqueta)           setNavEtiqueta(f.etiqueta);
+    setPage(1);
+    setRegistrosNavFiltro(null); // consume el filtro
+  }, [registrosNavFiltro]);
 
   function handlePaisChange(val: string) { setPaisFiltro(val); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setPage(1); }
   function handleRegionalChange(val: string) { setRegionalFiltro(val); setTerminalFiltro("todos"); setPage(1); }
@@ -126,6 +145,10 @@ export default function RegistrosPage() {
   const filtered = useMemo(() => eventos
     .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
     .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
+    .filter((e) => estadoFlujoFiltro === "todos" || e.estadoFlujo === estadoFlujoFiltro)
+    .filter((e) => !soloMios || e.asignadoA.id === usuarioLogueado.id)
+    .filter((e) => !soloEscaladosAMi || (e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado"))
+    .filter((e) => !soloVencidos || (e.diasAbierto > 30 && e.estado === "abierto"))
     .filter((e) => {
       if (terminalFiltro  !== "todos") return e.terminal === terminalFiltro;
       if (regionalFiltro  !== "todos") return (REGIONALES_FLAT[regionalFiltro] ?? []).includes(e.terminal);
@@ -160,7 +183,7 @@ export default function RegistrosPage() {
       else                                  cmp = a.id.localeCompare(b.id);
       return sortDir === "asc" ? cmp : -cmp;
     })
-  , [categoriaFiltro, estadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
+  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloEscaladosAMi, soloVencidos, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
 
   const pages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -175,11 +198,15 @@ export default function RegistrosPage() {
     return sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
   }
 
-  const hayFiltrosActivos = paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
+  const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloEscaladosAMi || soloVencidos || estadoFiltro !== "todos";
+  const hayFiltrosActivos = hayFiltrosNav || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
   const totalVisible = filtered.length;
 
   function limpiarFiltros() {
-    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setBusquedaQuery(""); setPage(1);
+    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos");
+    setDateRange(undefined); setBusquedaQuery(""); setEstadoFiltro("todos");
+    setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloEscaladosAMi(false);
+    setSoloVencidos(false); setNavEtiqueta(null); setPage(1);
   }
 
   return (
@@ -250,6 +277,12 @@ export default function RegistrosPage() {
         {hayFiltrosActivos && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground">Filtrando por:</span>
+            {navEtiqueta && (
+              <FilterPill label={navEtiqueta} onRemove={() => {
+                setNavEtiqueta(null); setEstadoFlujoFiltro("todos"); setSoloMios(false);
+                setSoloEscaladosAMi(false); setSoloVencidos(false); setEstadoFiltro("todos"); setPage(1);
+              }} />
+            )}
             {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => { setBusquedaQuery(""); setPage(1); }} />}
             {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}

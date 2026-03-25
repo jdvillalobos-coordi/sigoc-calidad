@@ -2,6 +2,15 @@ import React, { createContext, useContext, useState, useCallback } from "react";
 import type { PaginaActiva, DrawerState, FormPrefill, Notificacion, TipoNotificacion } from "@/types";
 import { notificaciones as notificacionesIniciales } from "@/data/mockData";
 
+export interface RegistrosNavFiltro {
+  estadoFlujo?: string;
+  soloAbiertos?: boolean;
+  soloVencidos?: boolean;
+  soloMios?: boolean;
+  soloEscaladosAMi?: boolean;
+  etiqueta?: string; // texto que se muestra como pill activo
+}
+
 interface AppContextType {
   paginaActiva: PaginaActiva;
   setPaginaActiva: (p: PaginaActiva) => void;
@@ -22,6 +31,9 @@ interface AppContextType {
   notificacionesState: Notificacion[];
   setNotificacionesState: React.Dispatch<React.SetStateAction<Notificacion[]>>;
   agregarNotificacion: (tipo: TipoNotificacion, texto: string, linkRegistroId?: string) => void;
+  registrosNavFiltro: RegistrosNavFiltro | null;
+  setRegistrosNavFiltro: (f: RegistrosNavFiltro | null) => void;
+  irARegistros: (filtro: RegistrosNavFiltro) => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -33,6 +45,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [busquedaQuery, setBusquedaQuery] = useState("");
   const [formPrefill, setFormPrefill] = useState<FormPrefill | null>(null);
   const [notificacionesState, setNotificacionesState] = useState<Notificacion[]>(notificacionesIniciales);
+  const [registrosNavFiltro, setRegistrosNavFiltro] = useState<RegistrosNavFiltro | null>(null);
+
+  const irARegistros = useCallback((filtro: RegistrosNavFiltro) => {
+    setRegistrosNavFiltro(filtro);
+    setPaginaActiva("registros");
+  }, []);
 
   const agregarNotificacion = useCallback((tipo: TipoNotificacion, texto: string, linkRegistroId?: string) => {
     setNotificacionesState(prev => [{
@@ -76,6 +94,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         notificacionesState,
         setNotificacionesState,
         agregarNotificacion,
+        registrosNavFiltro,
+        setRegistrosNavFiltro,
+        irARegistros,
       }}
     >
       {children}
