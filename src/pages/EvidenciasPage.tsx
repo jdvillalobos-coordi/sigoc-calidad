@@ -298,95 +298,82 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   );
 }
 
-export default function EvidenciasPage() {
+export function EvidenciasPanel({ filtroTerminalExt }: { filtroTerminalExt?: string }) {
   const [filtroRevision, setFiltroRevision] = useState<FiltroRevision>("todos");
   const [filtroIA, setFiltroIA] = useState<FiltroIA>("todos");
-  const [filtroTerminal, setFiltroTerminal] = useState("todos");
-
-  const pendientes = evidencias.filter((e) => !e.veredictoOperador).length;
 
   const filtradas = evidencias.filter((ev) => {
     if (filtroRevision === "pendientes" && ev.veredictoOperador) return false;
     if (filtroRevision === "revisados" && !ev.veredictoOperador) return false;
     if (filtroIA === "cumple" && ev.resultadoIA !== "cumple") return false;
     if (filtroIA === "no_cumple" && ev.resultadoIA !== "no_cumple") return false;
-    if (filtroTerminal !== "todos" && ev.terminal !== filtroTerminal) return false;
+    if (filtroTerminalExt && filtroTerminalExt !== "todos" && ev.terminal !== filtroTerminalExt) return false;
     return true;
   });
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-border px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <Camera className="w-5 h-5 text-muted-foreground" />
-              Gestión de Evidencias
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Revisa las evidencias de entrega validadas por IA y confirma o corrige el resultado
-            </p>
-          </div>
-          {pendientes > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
-              ⏳ {pendientes} pendientes de revisión
-            </span>
-          )}
-        </div>
-
-        {/* Filtros */}
-        <div className="flex items-center gap-3 mt-4">
-          <select
-            value={filtroRevision}
-            onChange={(e) => setFiltroRevision(e.target.value as FiltroRevision)}
-            className="border border-border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="todos">Todos</option>
-            <option value="pendientes">Pendientes</option>
-            <option value="revisados">Revisados</option>
-          </select>
-          <select
-            value={filtroIA}
-            onChange={(e) => setFiltroIA(e.target.value as FiltroIA)}
-            className="border border-border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="todos">Resultado IA: Todos</option>
-            <option value="cumple">✅ Cumple</option>
-            <option value="no_cumple">❌ No cumple</option>
-          </select>
-          <select
-            value={filtroTerminal}
-            onChange={(e) => setFiltroTerminal(e.target.value)}
-            className="border border-border rounded-lg px-3 py-1.5 text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="todos">Todas las terminales</option>
-            {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <span className="text-xs text-muted-foreground ml-auto">{filtradas.length} evidencias</span>
-        </div>
+    <>
+      <div className="flex flex-wrap gap-2 items-center mb-4">
+        <select
+          value={filtroRevision}
+          onChange={(e) => setFiltroRevision(e.target.value as FiltroRevision)}
+          className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="todos">Todos</option>
+          <option value="pendientes">Pendientes</option>
+          <option value="revisados">Revisados</option>
+        </select>
+        <select
+          value={filtroIA}
+          onChange={(e) => setFiltroIA(e.target.value as FiltroIA)}
+          className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="todos">Resultado IA: Todos</option>
+          <option value="cumple">✅ Cumple</option>
+          <option value="no_cumple">❌ No cumple</option>
+        </select>
+        <span className="text-xs text-muted-foreground ml-auto">{filtradas.length} evidencias</span>
       </div>
 
-      {/* Lista */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="bg-card border border-border rounded-xl mx-6 my-4 overflow-hidden">
-          {/* Encabezados */}
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
-            <span>Guía / Terminal</span>
-            <span>Tipo</span>
-            <span>Resultado IA</span>
-            <span>Estado revisión</span>
-            <span>Fecha</span>
-            <span />
-          </div>
-          {filtradas.length === 0 ? (
-            <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              No hay evidencias que coincidan con los filtros seleccionados.
-            </div>
-          ) : (
-            filtradas.map((ev) => <EvidenciaRow key={ev.id} ev={ev} />)
-          )}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
+          <span>Guía / Terminal</span>
+          <span>Tipo</span>
+          <span>Resultado IA</span>
+          <span>Estado revisión</span>
+          <span>Fecha</span>
+          <span />
         </div>
+        {filtradas.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+            No hay evidencias que coincidan con los filtros seleccionados.
+          </div>
+        ) : (
+          filtradas.map((ev) => <EvidenciaRow key={ev.id} ev={ev} />)
+        )}
+      </div>
+    </>
+  );
+}
+
+export function evidenciasPendientesCount(): number {
+  return evidencias.filter((e) => !e.veredictoOperador).length;
+}
+
+export default function EvidenciasPage() {
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="border-b border-border px-6 py-4 flex-shrink-0">
+        <h1 className="text-lg font-bold flex items-center gap-2">
+          <Camera className="w-5 h-5 text-muted-foreground" />
+          Gestión de Evidencias
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Revisa las evidencias de entrega validadas por IA y confirma o corrige el resultado
+        </p>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6">
+        <EvidenciasPanel />
       </div>
     </div>
   );

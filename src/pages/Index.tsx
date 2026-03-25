@@ -3,7 +3,6 @@ import { AppProvider, useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import InicioPage from "@/pages/InicioPage";
 import RegistrosPage from "@/pages/RegistrosPage";
-import EvidenciasPage from "@/pages/EvidenciasPage";
 import IAPage from "@/pages/IAPage";
 import ConfiguracionPage from "@/pages/ConfiguracionPage";
 import BandejaPage from "@/pages/BandejaPage";
@@ -21,7 +20,6 @@ function AppContent() {
         {paginaActiva === "bandeja"        && <BandejaPage />}
         {paginaActiva === "inicio"         && <InicioPage />}
         {paginaActiva === "registros"      && <RegistrosPage />}
-        {paginaActiva === "evidencias"     && <EvidenciasPage />}
         {paginaActiva === "ia"             && <IAPage />}
         {paginaActiva === "configuracion"  && <ConfiguracionPage />}
       </div>

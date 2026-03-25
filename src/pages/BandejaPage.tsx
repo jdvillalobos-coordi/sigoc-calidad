@@ -4,9 +4,10 @@ import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FL
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter } from "lucide-react";
+import { EvidenciasPanel, evidenciasPendientesCount } from "./EvidenciasPage";
 import type { InsumoRCE, InsumoFaltante } from "@/types";
 
-type TabId = "rce" | "faltantes";
+type TabId = "rce" | "faltantes" | "evidencias";
 type FiltroEstadoRCE = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
 type FiltroEstadoFalt = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
 
@@ -151,6 +152,7 @@ export default function BandejaPage() {
 
   const pendientesRCE = rceData.filter((i) => i.estadoRevision === "pendiente").length;
   const pendientesFalt = faltData.filter((i) => i.estadoRevision === "pendiente").length;
+  const pendientesEvi = evidenciasPendientesCount();
 
   function marcarRCESinNovedad(id: string) {
     setRceData((prev) =>
@@ -203,7 +205,7 @@ export default function BandejaPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground">Carga de Trabajo</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Guías pendientes de revisión — tu insumo diario de trabajo
+            Insumos pendientes de revisión — tu carga de trabajo diaria
           </p>
         </div>
 
@@ -215,68 +217,73 @@ export default function BandejaPage() {
           <TabButton active={tab === "faltantes"} onClick={() => setTab("faltantes")}>
             📦 Faltantes ({faltFiltered.length} guías)
           </TabButton>
+          <TabButton active={tab === "evidencias"} onClick={() => setTab("evidencias")}>
+            📸 Evidencias ({pendientesEvi} pendientes)
+          </TabButton>
           <div className="flex-1" />
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-2">
             <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-              {pendientesRCE + pendientesFalt} pendientes
+              {pendientesRCE + pendientesFalt + pendientesEvi} pendientes
             </span>
           </div>
         </div>
 
         {/* Filtros */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-            <select
-              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-              value={filtroRegional}
-              onChange={(e) => handleRegionalChange(e.target.value)}
-            >
-              <option value="todos">Todas las regionales</option>
-              {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <select
-              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-              value={filtroTerminal}
-              onChange={(e) => setFiltroTerminal(e.target.value)}
-            >
-              <option value="todos">Todas las terminales</option>
-              {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-            {hayFiltrosGeo && (
-              <button
-                onClick={limpiarFiltrosGeo}
-                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Limpiar filtros geográficos"
+        {tab !== "evidencias" && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+              <select
+                className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+                value={filtroRegional}
+                onChange={(e) => handleRegionalChange(e.target.value)}
               >
-                <X className="w-3 h-3" /> Limpiar
-              </button>
+                <option value="todos">Todas las regionales</option>
+                {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <select
+                className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+                value={filtroTerminal}
+                onChange={(e) => setFiltroTerminal(e.target.value)}
+              >
+                <option value="todos">Todas las terminales</option>
+                {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+              {hayFiltrosGeo && (
+                <button
+                  onClick={limpiarFiltrosGeo}
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  title="Limpiar filtros geográficos"
+                >
+                  <X className="w-3 h-3" /> Limpiar
+                </button>
+              )}
+            </div>
+
+            <div className="w-px h-5 bg-border mx-0.5" />
+
+            {tab === "rce" && (
+              <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
+                {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoRCE, string][]).map(([val, label]) => (
+                  <button key={val} onClick={() => setFiltroEstadoRCE(val)}
+                    className={`px-3 py-1.5 transition-colors ${filtroEstadoRCE === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {tab === "faltantes" && (
+              <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
+                {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoFalt, string][]).map(([val, label]) => (
+                  <button key={val} onClick={() => setFiltroEstadoFalt(val)}
+                    className={`px-3 py-1.5 transition-colors ${filtroEstadoFalt === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-
-          <div className="w-px h-5 bg-border mx-0.5" />
-
-          {tab === "rce" && (
-            <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-              {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoRCE, string][]).map(([val, label]) => (
-                <button key={val} onClick={() => setFiltroEstadoRCE(val)}
-                  className={`px-3 py-1.5 transition-colors ${filtroEstadoRCE === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-          {tab === "faltantes" && (
-            <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-              {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoFalt, string][]).map(([val, label]) => (
-                <button key={val} onClick={() => setFiltroEstadoFalt(val)}
-                  className={`px-3 py-1.5 transition-colors ${filtroEstadoFalt === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Pills de filtros activos */}
         {hayFiltrosGeo && (
@@ -394,6 +401,11 @@ export default function BandejaPage() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Panel Evidencias */}
+        {tab === "evidencias" && (
+          <EvidenciasPanel filtroTerminalExt={filtroTerminal} />
         )}
 
         {/* Tabla Faltantes */}
