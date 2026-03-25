@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
@@ -959,6 +959,12 @@ const CAT_ICON: Record<string, string> = {
 export function Persona360Drawer() {
   const { drawer, cerrarDrawer, abrirRegistro, abrirTerminal, abrirResolucionAcumulativa } = useApp();
   const [estudiosOpen, setEstudiosOpen] = useState(true);
+  const [lesivaOpen, setLesivaOpen] = useState(false);
+  const [lesivaCat, setLesivaCat] = useState("");
+  const [lesivaSub, setLesivaSub] = useState("");
+  const [lesivaObs, setLesivaObs] = useState("");
+  const [seguimientoOpen, setSeguimientoOpen] = useState(false);
+  const [seguimientoMotivo, setSeguimientoMotivo] = useState("");
 
   if (drawer.tipo !== "persona360" || !drawer.id) return null;
   const persona = personas.find((p) => p.id === drawer.id);
@@ -1110,11 +1116,40 @@ export function Persona360Drawer() {
             </div>
           )}
 
-          {/* Acciones rápidas */}
+          {/* Actividades Lesivas registradas */}
+          {(() => {
+            const actLesivas = getActividadesLesivasPorPersona(persona.id);
+            if (actLesivas.length === 0) return null;
+            return (
+              <div className="border border-red-200 bg-red-50/50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-red-800 mb-2">Actividades Lesivas ({actLesivas.length})</h3>
+                <div className="space-y-2">
+                  {actLesivas.map((al) => (
+                    <div key={al.id} className="bg-white border border-red-100 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold text-red-700">{CATEGORIAS_LESIVAS[al.categoria]?.label}</span>
+                        <span className="text-[10px] text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">{al.subcategoria}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{al.observaciones}</p>
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
+                        <span>{al.fechaRegistro}</span>
+                        <span>· {al.terminalReporta}</span>
+                        <span>· {al.registradoPor.nombre}</span>
+                        {al.archivoAdjunto && <span className="text-blue-600">📎 Adjunto</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Acciones: Cuadro de Contacto + Actividad Lesiva */}
           <div className="flex gap-2">
             {persona.estado !== "en_seguimiento" && persona.estado !== "bloqueado" && (
               <button
-                onClick={() => toast({ title: "🟡 Persona agregada al Cuadro de Contacto", description: `${persona.nombre} ahora está en seguimiento.` })}
+                onClick={() => setSeguimientoOpen(!seguimientoOpen)}
                 className="flex-1 text-left px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors"
               >
                 <div className="text-xs font-semibold text-amber-700">📋 Agregar al Cuadro de Contacto</div>
@@ -1127,7 +1162,7 @@ export function Persona360Drawer() {
             )}
             {persona.estado !== "bloqueado" && (
               <button
-                onClick={() => toast({ title: "🔴 Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueado(a).` })}
+                onClick={() => setLesivaOpen(!lesivaOpen)}
                 className="flex-1 text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
               >
                 <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva</div>
@@ -1139,6 +1174,101 @@ export function Persona360Drawer() {
               </div>
             )}
           </div>
+
+          {/* Mini-form: Cuadro de Contacto */}
+          {seguimientoOpen && (
+            <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-amber-800">Agregar al Cuadro de Contacto</h4>
+              <p className="text-xs text-amber-700/70">Registrar por qué esta persona requiere seguimiento.</p>
+              <textarea
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
+                rows={3}
+                placeholder="Motivo del seguimiento: guías involucradas, hechos, montos..."
+                value={seguimientoMotivo}
+                onChange={(e) => setSeguimientoMotivo(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button
+                  disabled={!seguimientoMotivo.trim()}
+                  onClick={() => {
+                    persona.estado = "en_seguimiento";
+                    toast({ title: "📋 Persona en seguimiento", description: `${persona.nombre} agregada al Cuadro de Contacto.` });
+                    setSeguimientoOpen(false);
+                    setSeguimientoMotivo("");
+                  }}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Confirmar seguimiento
+                </button>
+                <button onClick={() => { setSeguimientoOpen(false); setSeguimientoMotivo(""); }} className="px-4 py-2 border border-border rounded-lg text-xs hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mini-form: Actividad Lesiva */}
+          {lesivaOpen && (
+            <div className="border border-red-200 bg-red-50/50 rounded-xl p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-red-800">Registrar Actividad Lesiva</h4>
+              <p className="text-xs text-red-700/70">Bloquear a esta persona por responsabilidad directa en eventos.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Categoría</label>
+                  <select
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-red-300"
+                    value={lesivaCat}
+                    onChange={(e) => { setLesivaCat(e.target.value); setLesivaSub(""); }}
+                  >
+                    <option value="">Seleccionar...</option>
+                    {Object.entries(CATEGORIAS_LESIVAS).map(([key, cat]) => (
+                      <option key={key} value={key}>{cat.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Subcategoría</label>
+                  <select
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-red-300"
+                    value={lesivaSub}
+                    onChange={(e) => setLesivaSub(e.target.value)}
+                    disabled={!lesivaCat}
+                  >
+                    <option value="">Seleccionar...</option>
+                    {lesivaCat && CATEGORIAS_LESIVAS[lesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.subcategorias.map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <textarea
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+                rows={3}
+                placeholder="Observaciones: describir hechos, guías, evidencias, montos involucrados..."
+                value={lesivaObs}
+                onChange={(e) => setLesivaObs(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button
+                  disabled={!lesivaCat || !lesivaSub || !lesivaObs.trim()}
+                  onClick={() => {
+                    persona.estado = "bloqueado";
+                    toast({ title: "🚫 Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueada. Categoría: ${CATEGORIAS_LESIVAS[lesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.label} — ${lesivaSub}` });
+                    setLesivaOpen(false);
+                    setLesivaCat("");
+                    setLesivaSub("");
+                    setLesivaObs("");
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Confirmar bloqueo
+                </button>
+                <button onClick={() => { setLesivaOpen(false); setLesivaCat(""); setLesivaSub(""); setLesivaObs(""); }} className="px-4 py-2 border border-border rounded-lg text-xs hover:bg-muted transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Timeline unificada */}
           {timeline.length > 0 && (
@@ -1211,6 +1341,10 @@ export function Persona360Drawer() {
 // ---- Vehículo 360 ----
 export function Vehiculo360Drawer() {
   const { drawer, cerrarDrawer, abrirPersona, abrirRegistro } = useApp();
+  const [vehLesivaOpen, setVehLesivaOpen] = useState(false);
+  const [vehLesivaCat, setVehLesivaCat] = useState("");
+  const [vehLesivaSub, setVehLesivaSub] = useState("");
+  const [vehLesivaObs, setVehLesivaObs] = useState("");
   if (drawer.tipo !== "vehiculo360" || !drawer.id) return null;
   const vehiculo = vehiculos.find((v) => v.id === drawer.id);
   if (!vehiculo) return null;
@@ -1250,19 +1384,79 @@ export function Vehiculo360Drawer() {
             </p>
           </div>
 
-          {/* Actividad Lesiva */}
+          {/* Actividades lesivas registradas */}
+          {(() => {
+            const actLesivas = getActividadesLesivasPorVehiculo(vehiculo.id);
+            if (actLesivas.length === 0) return null;
+            return (
+              <div className="border border-red-200 bg-red-50/50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-red-800 mb-2">Actividades Lesivas</h3>
+                {actLesivas.map((al) => (
+                  <div key={al.id} className="bg-white border border-red-100 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-semibold text-red-700">{CATEGORIAS_LESIVAS[al.categoria]?.label}</span>
+                      <span className="text-xs text-muted-foreground">{al.subcategoria}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{al.observaciones}</p>
+                    <div className="text-[10px] text-muted-foreground mt-1">{al.fechaRegistro} · {al.registradoPor.nombre}</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Actividad Lesiva — botón + formulario inline */}
           {vehiculo.estado !== "bloqueado" ? (
-            <button
-              onClick={() => toast({ title: "🔴 Vehículo bloqueado", description: `Vehículo ${vehiculo.placa} registrado en actividades lesivas.` })}
-              className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-            >
-              <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva (Bloquear vehículo)</div>
-              <div className="text-xs text-red-600/70 mt-0.5">Bloquear vehículo por presencia en eventos de novedad</div>
-            </button>
+            <>
+              <button
+                onClick={() => setVehLesivaOpen(!vehLesivaOpen)}
+                className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+              >
+                <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva (Bloquear vehículo)</div>
+              </button>
+              {vehLesivaOpen && (
+                <div className="border border-red-200 bg-red-50/50 rounded-xl p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Categoría</label>
+                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" value={vehLesivaCat} onChange={(e) => { setVehLesivaCat(e.target.value); setVehLesivaSub(""); }}>
+                        <option value="">Seleccionar...</option>
+                        {Object.entries(CATEGORIAS_LESIVAS).map(([key, cat]) => (
+                          <option key={key} value={key}>{cat.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Subcategoría</label>
+                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background" value={vehLesivaSub} onChange={(e) => setVehLesivaSub(e.target.value)} disabled={!vehLesivaCat}>
+                        <option value="">Seleccionar...</option>
+                        {vehLesivaCat && CATEGORIAS_LESIVAS[vehLesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.subcategorias.map((sub) => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <textarea className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none" rows={3} placeholder="Observaciones..." value={vehLesivaObs} onChange={(e) => setVehLesivaObs(e.target.value)} />
+                  <div className="flex gap-2">
+                    <button
+                      disabled={!vehLesivaCat || !vehLesivaSub || !vehLesivaObs.trim()}
+                      onClick={() => {
+                        vehiculo.estado = "bloqueado";
+                        toast({ title: "🚫 Vehículo bloqueado", description: `${vehiculo.placa} registrado en actividades lesivas.` });
+                        setVehLesivaOpen(false); setVehLesivaCat(""); setVehLesivaSub(""); setVehLesivaObs("");
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Confirmar bloqueo
+                    </button>
+                    <button onClick={() => { setVehLesivaOpen(false); setVehLesivaCat(""); setVehLesivaSub(""); setVehLesivaObs(""); }} className="px-4 py-2 border border-border rounded-lg text-xs hover:bg-muted">Cancelar</button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
               <div className="text-xs font-semibold text-red-700">🚫 Vehículo Bloqueado</div>
-              <div className="text-xs text-red-600/70 mt-0.5">Actividad lesiva activa</div>
             </div>
           )}
 

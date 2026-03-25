@@ -197,6 +197,47 @@ export interface Evento {
   diasAbierto: number;
 }
 
+// ---- Actividad Lesiva (bloqueo de persona o vehículo con evidencia) ----
+export type TipoImplicado =
+  | "empleado"
+  | "aliado_goo"
+  | "aliado_droop"
+  | "reexpedidor"
+  | "vehiculo"
+  | "remitente"
+  | "destinatario"
+  | "delincuencia"
+  | "candidato_descartado";
+
+export type CategoriaLesiva =
+  | "antecedentes"
+  | "suplantacion"
+  | "hurto"
+  | "hurto_dinero"
+  | "hurto_vehiculos"
+  | "entrega"
+  | "infraccion_transito"
+  | "siplaft"
+  | "fuga_informacion"
+  | "delincuencia_comun";
+
+export interface ActividadLesiva {
+  id: string;
+  tipoImplicado: TipoImplicado;
+  identificacion: string;
+  nombre: string;
+  placa?: string;
+  categoria: CategoriaLesiva;
+  subcategoria: string;
+  observaciones: string;
+  terminalReporta: string;
+  archivoAdjunto?: string;
+  fechaRegistro: string;
+  registradoPor: { id: string; nombre: string };
+  personaId?: string;
+  vehiculoId?: string;
+}
+
 // ---- Resolución acumulativa (decisión sobre persona con múltiples eventos) ----
 export interface ResolucionAcumulativa {
   id: string;
@@ -336,7 +377,7 @@ export interface FormPrefill {
 }
 
 // ---- Navegación ----
-export type PaginaActiva = "inicio" | "registros" | "evidencias" | "ia" | "configuracion" | "bandeja";
+export type PaginaActiva = "inicio" | "registros" | "evidencias" | "ia" | "configuracion" | "bandeja" | "cuadro_contacto";
 export type DrawerTipo = "registro" | "persona360" | "vehiculo360" | "guia360" | "terminal360" | "resolucion_acumulativa" | null;
 
 export interface DrawerState {

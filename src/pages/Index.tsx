@@ -7,6 +7,7 @@ import EvidenciasPage from "@/pages/EvidenciasPage";
 import IAPage from "@/pages/IAPage";
 import ConfiguracionPage from "@/pages/ConfiguracionPage";
 import BandejaPage from "@/pages/BandejaPage";
+import CuadroContactoPage from "@/pages/CuadroContactoPage";
 import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer, Terminal360Drawer, ResolucionAcumulativaPanel } from "@/components/drawers/Drawers";
 import NewRecordForm from "@/components/forms/NewRecordForm";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,6 +24,7 @@ function AppContent() {
         {paginaActiva === "registros"      && <RegistrosPage />}
         {paginaActiva === "evidencias"     && <EvidenciasPage />}
         {paginaActiva === "ia"             && <IAPage />}
+        {paginaActiva === "cuadro_contacto" && <CuadroContactoPage />}
         {paginaActiva === "configuracion"  && <ConfiguracionPage />}
       </div>
 

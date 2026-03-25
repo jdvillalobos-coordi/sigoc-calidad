@@ -11,6 +11,8 @@ import type {
   InsumoRCE,
   InsumoFaltante,
   SolicitudCCTV,
+  ActividadLesiva,
+  CategoriaLesiva,
 } from "@/types";
 
 // ============================================================
@@ -2283,3 +2285,126 @@ export const insumosFaltantes: InsumoFaltante[] = [
   { id: "FAL-014", guia: "20000001001", codigoNovedad: "300", estadoRevision: "con_novedad", fechaNovedad: "2026-03-02", terminal: "Bogotá", ciudad: "Bogotá", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-03", eventoGenerado: "UNI-004" },
   { id: "FAL-015", guia: "20000001015", codigoNovedad: "400", estadoRevision: "con_novedad", fechaNovedad: "2026-03-11", terminal: "Medellín", ciudad: "Medellín", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-12", eventoGenerado: "UNI-007" },
 ];
+
+// ============================================================
+// ACTIVIDADES LESIVAS — categorías y subcategorías
+// ============================================================
+export const CATEGORIAS_LESIVAS: Record<CategoriaLesiva, { label: string; subcategorias: string[] }> = {
+  antecedentes: {
+    label: "Antecedentes",
+    subcategorias: [
+      "Hurto simple", "Hurto agravado", "Hurto calificado",
+      "Estafa", "Falsedad de documentos", "Homicidio",
+      "Porte de armas o elementos cortantes", "Proceso contra patrimonio público",
+      "Violencia intrafamiliar", "Inasistencia alimentaria",
+      "Violencia contra servidor público", "Tráfico de estupefacientes",
+      "Proceso laboral", "Infracción de tránsito",
+    ],
+  },
+  suplantacion: {
+    label: "Suplantación",
+    subcategorias: [
+      "Falsificación de documento privado o público",
+      "Falsificación de firma",
+      "Suplantación de identidad",
+      "Web Spoofing",
+    ],
+  },
+  hurto: {
+    label: "Hurto",
+    subcategorias: ["Hurto simple", "Hurto agravado", "Hurto calificado"],
+  },
+  hurto_dinero: {
+    label: "Hurto de Dinero",
+    subcategorias: ["Hurto simple", "Hurto agravado"],
+  },
+  hurto_vehiculos: {
+    label: "Hurto Vehículos",
+    subcategorias: ["Gemeleo", "Piratería terrestre", "Autorobo", "Falso servicio", "Falsa denuncia"],
+  },
+  entrega: {
+    label: "Entrega",
+    subcategorias: ["No recibe constantemente pedidos", "Retención de empleado para revisión de mercancía"],
+  },
+  infraccion_transito: {
+    label: "Infracción de tránsito",
+    subcategorias: ["Comparendo", "Suspensión de licencia", "Retención de licencia"],
+  },
+  siplaft: {
+    label: "SIPLAFT",
+    subcategorias: ["Lavado de activos", "Financiación del terrorismo", "Proliferación de armas de destrucción masiva"],
+  },
+  fuga_informacion: {
+    label: "Fuga de información",
+    subcategorias: ["Ocultar información para favorecer a un líder"],
+  },
+  delincuencia_comun: {
+    label: "Delincuencia común",
+    subcategorias: ["Estafa", "Abuso de confianza", "Suplantación", "Hurto de anticipo", "Autorobo"],
+  },
+};
+
+export const actividadesLesivas: ActividadLesiva[] = [
+  {
+    id: "AL-001",
+    tipoImplicado: "empleado",
+    identificacion: "1020345678",
+    nombre: "Luisa Fernanda Torres Cano",
+    categoria: "hurto",
+    subcategoria: "Hurto calificado",
+    observaciones: "Se comprobó responsabilidad directa en faltante de 3 unidades en terminal Cali. Evidencia de cámaras CCTV confirma manipulación de paquetes en zona de cargue. Guías 20000001004, 20000001005.",
+    terminalReporta: "Cali",
+    fechaRegistro: "2026-02-15",
+    registradoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    personaId: "1020345678",
+  },
+  {
+    id: "AL-002",
+    tipoImplicado: "aliado_droop",
+    identificacion: "39876543",
+    nombre: "Claudia Marcela Patiño Soto",
+    categoria: "delincuencia_comun",
+    subcategoria: "Abuso de confianza",
+    observaciones: "Entrega de paquetes a terceros no autorizados en 4 ocasiones documentadas. RCE no recaudado por valor de $8.200.000. Se radica denuncia penal.",
+    terminalReporta: "Bogotá",
+    archivoAdjunto: "denuncia_penal_39876543.pdf",
+    fechaRegistro: "2026-01-28",
+    registradoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    personaId: "39876543",
+  },
+  {
+    id: "AL-003",
+    tipoImplicado: "empleado",
+    identificacion: "1067891234",
+    nombre: "Javier Ernesto Castillo Nieto",
+    categoria: "hurto_dinero",
+    subcategoria: "Hurto agravado",
+    observaciones: "Retención de dinero RCE por valor de $4.500.000. Confesión grabada. Se procede a desvinculación y denuncia.",
+    terminalReporta: "Bucaramanga",
+    fechaRegistro: "2026-02-20",
+    registradoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    personaId: "1067891234",
+  },
+  {
+    id: "AL-004",
+    tipoImplicado: "vehiculo",
+    identificacion: "BCD-321",
+    nombre: "Furgón BCD-321",
+    placa: "BCD-321",
+    categoria: "hurto_vehiculos",
+    subcategoria: "Piratería terrestre",
+    observaciones: "Vehículo involucrado en desvío de ruta no autorizado. Conductor entregó carga a terceros en zona rural de Santander.",
+    terminalReporta: "Bucaramanga",
+    fechaRegistro: "2026-03-01",
+    registradoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    vehiculoId: "BCD-321",
+  },
+];
+
+export function getActividadesLesivasPorPersona(personaId: string): ActividadLesiva[] {
+  return actividadesLesivas.filter((a) => a.personaId === personaId);
+}
+
+export function getActividadesLesivasPorVehiculo(vehiculoId: string): ActividadLesiva[] {
+  return actividadesLesivas.filter((a) => a.vehiculoId === vehiculoId);
+}
