@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
@@ -965,6 +965,7 @@ export function Persona360Drawer() {
   const [lesivaObs, setLesivaObs] = useState("");
   const [seguimientoOpen, setSeguimientoOpen] = useState(false);
   const [seguimientoMotivo, setSeguimientoMotivo] = useState("");
+  const [, forceUpdate] = useState(0);
 
   if (drawer.tipo !== "persona360" || !drawer.id) return null;
   const persona = personas.find((p) => p.id === drawer.id);
@@ -1192,6 +1193,7 @@ export function Persona360Drawer() {
                   disabled={!seguimientoMotivo.trim()}
                   onClick={() => {
                     persona.estado = "en_seguimiento";
+                    forceUpdate(k => k + 1);
                     toast({ title: "📋 Persona en seguimiento", description: `${persona.nombre} agregada al Cuadro de Contacto.` });
                     setSeguimientoOpen(false);
                     setSeguimientoMotivo("");
@@ -1253,6 +1255,7 @@ export function Persona360Drawer() {
                   disabled={!lesivaCat || !lesivaSub || !lesivaObs.trim()}
                   onClick={() => {
                     persona.estado = "bloqueado";
+                    forceUpdate(k => k + 1);
                     toast({ title: "🚫 Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueada. Categoría: ${CATEGORIAS_LESIVAS[lesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.label} — ${lesivaSub}` });
                     setLesivaOpen(false);
                     setLesivaCat("");
@@ -1345,6 +1348,7 @@ export function Vehiculo360Drawer() {
   const [vehLesivaCat, setVehLesivaCat] = useState("");
   const [vehLesivaSub, setVehLesivaSub] = useState("");
   const [vehLesivaObs, setVehLesivaObs] = useState("");
+  const [, forceUpdate] = useState(0);
   if (drawer.tipo !== "vehiculo360" || !drawer.id) return null;
   const vehiculo = vehiculos.find((v) => v.id === drawer.id);
   if (!vehiculo) return null;
@@ -1442,6 +1446,7 @@ export function Vehiculo360Drawer() {
                       disabled={!vehLesivaCat || !vehLesivaSub || !vehLesivaObs.trim()}
                       onClick={() => {
                         vehiculo.estado = "bloqueado";
+                        forceUpdate(k => k + 1);
                         toast({ title: "🚫 Vehículo bloqueado", description: `${vehiculo.placa} registrado en actividades lesivas.` });
                         setVehLesivaOpen(false); setVehLesivaCat(""); setVehLesivaSub(""); setVehLesivaObs("");
                       }}
@@ -1545,7 +1550,42 @@ export function Guia360Drawer() {
                   <div className="text-xs text-green-600/70 mt-0.5">Esta guía requiere seguimiento preventivo de seguridad por su alto valor de recaudo ({formatCurrency(guia.valorDeclarado)})</div>
                 </div>
                 <button
-                  onClick={() => toast({ title: "✅ Evento RCE creado", description: "Se registró seguimiento preventivo para esta guía" })}
+                  onClick={() => {
+                    const nuevoId = `EVT-${Date.now().toString().slice(-6)}`;
+                    const nuevoEvento: Evento = {
+                      id: nuevoId,
+                      estado: "abierto",
+                      estadoFlujo: "abierto",
+                      categoria: "dineros",
+                      tipoEvento: "Seguimiento preventivo RCE",
+                      tipoEntidad: "tercero",
+                      fecha: new Date().toISOString().split("T")[0],
+                      fechaRegistro: new Date().toISOString().split("T")[0],
+                      terminal: guia.terminalOrigen,
+                      ciudad: guia.ciudadOrigen,
+                      guias: [guia.numero],
+                      personasResponsables: [],
+                      personasParticipantes: [],
+                      vehiculosVinculados: [],
+                      descripcionHechos: `Seguimiento preventivo por alto valor de recaudo (${formatCurrency(guia.valorDeclarado)}). Guía: ${guia.numero} · ${guia.nombreCliente}`,
+                      asignadoA: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo },
+                      usuarioRegistro: usuarioLogueado.nombre,
+                      perfilUsuario: usuarioLogueado.cargo,
+                      terminalUsuario: usuarioLogueado.terminal,
+                      anotaciones: [],
+                      historial: [{
+                        id: `h-${Date.now()}`,
+                        fecha: new Date().toISOString(),
+                        usuarioNombre: usuarioLogueado.nombre,
+                        accion: "Evento creado — Seguimiento preventivo RCE",
+                      }],
+                      diasAbierto: 0,
+                    };
+                    eventos.unshift(nuevoEvento);
+                    guia.estadoGeneral = "con_novedad";
+                    toast({ title: "✅ Evento RCE creado", description: `${nuevoId} registrado para guía ${guia.numero}` });
+                    abrirRegistro(nuevoId);
+                  }}
                   className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0"
                 >
                   Registrar seguimiento RCE
@@ -1817,13 +1857,14 @@ export function ResolucionAcumulativaPanel() {
 
   let persona: typeof personas[0] | undefined;
 
+  let alertaRef: AlertaIA | undefined;
   if (drawer.id.startsWith("persona:")) {
     const personaId = drawer.id.replace("persona:", "");
     persona = personas.find(p => p.id === personaId);
   } else {
-    const alerta = alertasIA.find(a => a.id === drawer.id);
-    if (!alerta || alerta.tipo !== "reincidencia_persona") return null;
-    const personaEntidad = alerta.entidadesInvolucradas.find(e => e.tipo === "persona");
+    alertaRef = alertasIA.find(a => a.id === drawer.id);
+    if (!alertaRef || alertaRef.tipo !== "reincidencia_persona") return null;
+    const personaEntidad = alertaRef.entidadesInvolucradas.find(e => e.tipo === "persona");
     persona = personaEntidad ? personas.find(p => p.id === personaEntidad.id) : undefined;
   }
   if (!persona) return null;
@@ -1848,7 +1889,35 @@ export function ResolucionAcumulativaPanel() {
     if (!puedeConfirmar || confirmado) return;
     setConfirmado(true);
     const decisionLabel = DECISION_OPTIONS.find(o => o.value === decision)?.label ?? decision;
-    toast({ title: "Decisión registrada", description: `Se aplicó "${decisionLabel}" a ${evPersona.length} eventos de ${persona!.nombre}` });
+
+    const abiertosAntes = evPersona.filter(e => e.estado === "abierto").length;
+    evPersona.forEach(e => {
+      if (e.estado === "abierto") {
+        e.estado = "cerrado";
+        e.estadoFlujo = "cerrado";
+        e.resolucionFinal = decision as ResolucionFinal;
+        e.observacionResolucion = observaciones || undefined;
+        e.fechaResolucion = new Date().toISOString().split("T")[0];
+        e.historial.push({
+          id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          fecha: new Date().toISOString(),
+          usuarioNombre: "Sandra Herrera",
+          accion: `Cerrado por resolución acumulativa — ${decisionLabel}`,
+        });
+      }
+    });
+
+    const desvinculaciones: ResolucionFinal[] = ["desvinculacion"];
+    const disciplinarios: ResolucionFinal[] = ["proceso_disciplinario", "suspension_temporal"];
+    if (desvinculaciones.includes(decision as ResolucionFinal)) {
+      persona!.estado = "bloqueado";
+    } else if (disciplinarios.includes(decision as ResolucionFinal)) {
+      persona!.estado = "en_seguimiento";
+    }
+
+    if (alertaRef) alertaRef.estado = "revisada";
+
+    toast({ title: "✅ Decisión registrada", description: `Se aplicó "${decisionLabel}" a ${abiertosAntes} evento${abiertosAntes !== 1 ? "s" : ""} de ${persona!.nombre}` });
     setTimeout(() => {
       cerrarDrawer();
       setConfirmado(false);
@@ -1869,7 +1938,7 @@ export function ResolucionAcumulativaPanel() {
             </div>
             <div>
               <h2 className="font-bold text-base">Resolución acumulativa</h2>
-              <p className="text-xs text-muted-foreground">Alerta {alerta.id} · {alerta.titulo}</p>
+              <p className="text-xs text-muted-foreground">{alertaRef ? `Alerta ${alertaRef.id} · ${alertaRef.titulo}` : `Persona · ${persona?.nombre}`}</p>
             </div>
           </div>
           <button onClick={cerrarDrawer} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
