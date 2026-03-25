@@ -10,6 +10,7 @@ import type {
   Evidencia,
   InsumoRCE,
   InsumoFaltante,
+  SolicitudCCTV,
 } from "@/types";
 
 // ============================================================
@@ -1606,6 +1607,57 @@ export const estudiosSeguridad: EstudioSeguridad[] = [
     observaciones: "Sin hallazgos en bases de datos públicas, SIMIT, listas restrictivas OFAC, ONU. Perfil apto.",
   },
 ];
+
+// ============================================================
+// SOLICITUDES CCTV
+// ============================================================
+export const solicitudesCCTV: SolicitudCCTV[] = [
+  {
+    id: "CCTV-001",
+    eventoId: "DIN-001",
+    terminalSolicitante: "Bogotá",
+    terminalInvestigar: "Medellín",
+    tipoNovedad: "Faltante de dinero",
+    guia: "7501234567",
+    descripcionSolicitud: "Revisar cámaras del área de recaudo entre las 14:00 y 16:00 del 5 de marzo. Verificar quién manipuló el sobre de recaudo de la guía 7501234567 después de su ingreso a la terminal.",
+    fechaSolicitud: "2026-03-06T09:30:00",
+    solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    estado: "completada",
+    conclusionCCTV: "Se identificó al colaborador Carlos Pérez manipulando el sobre de recaudo a las 15:22. Se observa que abre el sobre, retira contenido y lo vuelve a sellar. Se adjuntan capturas de pantalla al evento.",
+    hallazgosCCTV: "Manipulación confirmada por video. Colaborador identificado plenamente. Hora exacta: 15:22-15:25.",
+    personaIdentificada: { cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya" },
+    fechaCierre: "2026-03-07T11:15:00",
+    investigadoPor: { id: "u-cctv-01", nombre: "Diego Ramírez" },
+  },
+  {
+    id: "CCTV-002",
+    eventoId: "UNI-001",
+    terminalSolicitante: "Medellín",
+    terminalInvestigar: "Medellín",
+    tipoNovedad: "Faltante novedad 100",
+    guia: "7501234567",
+    descripcionSolicitud: "Revisar cámaras de plataforma de despacho del 4 de marzo entre 08:00 y 12:00. Se reporta faltante de unidad — necesitamos verificar si la carga fue subida al vehículo o si nunca llegó a plataforma.",
+    fechaSolicitud: "2026-03-08T10:00:00",
+    solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    estado: "pendiente",
+  },
+  {
+    id: "CCTV-003",
+    eventoId: "DIN-001",
+    terminalSolicitante: "Bogotá",
+    terminalInvestigar: "Bogotá",
+    tipoNovedad: "Faltante de dinero",
+    descripcionSolicitud: "Revisar cámaras del área de clasificación de Bogotá el día 5 de marzo entre 06:00 y 10:00. Verificar si el sobre de recaudo fue recibido correctamente en clasificación y quién lo procesó.",
+    fechaSolicitud: "2026-03-09T14:00:00",
+    solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    estado: "en_revision",
+    investigadoPor: { id: "u-cctv-02", nombre: "Ana Lucía Torres" },
+  },
+];
+
+export function getSolicitudesCCTVPorEvento(eventoId: string): SolicitudCCTV[] {
+  return solicitudesCCTV.filter((s) => s.eventoId === eventoId);
+}
 
 // ============================================================
 // ALERTAS IA

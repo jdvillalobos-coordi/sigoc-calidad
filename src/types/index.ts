@@ -25,6 +25,8 @@ export type ResolucionFinal =
 
 export type SeveridadIA = "critica" | "alta" | "media" | "baja";
 
+export type TipoEscalamiento = "persona" | "cctv";
+
 export type EstadoPersona = "sin_novedad" | "en_seguimiento" | "bloqueado";
 
 export type TipoPersona = "empleado" | "aliado" | "cliente";
@@ -170,6 +172,7 @@ export interface Evento {
   // === FLUJO DE TRABAJO ===
   estadoFlujo: EstadoFlujo;
   asignadoA: { id: string; nombre: string; cargo: string };
+  tipoEscalamiento?: TipoEscalamiento;
   escaladoA?: { id: string; nombre: string; cargo: string };
   escaladoPor?: { id: string; nombre: string };
   fechaEscalamiento?: string;
@@ -196,6 +199,25 @@ export interface ResolucionAcumulativa {
   observaciones: string;
   fecha: string;
   creadoPor: { id: string; nombre: string };
+}
+
+// ---- Solicitud CCTV ----
+export interface SolicitudCCTV {
+  id: string;
+  eventoId: string;
+  terminalSolicitante: string;
+  terminalInvestigar: string;
+  tipoNovedad: string;
+  guia?: string;
+  descripcionSolicitud: string;
+  fechaSolicitud: string;
+  solicitadoPor: { id: string; nombre: string };
+  estado: "pendiente" | "en_revision" | "completada";
+  conclusionCCTV?: string;
+  hallazgosCCTV?: string;
+  personaIdentificada?: { cedula: string; nombre: string };
+  fechaCierre?: string;
+  investigadoPor?: { id: string; nombre: string };
 }
 
 // ---- Estudio de Seguridad ----

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, getSolicitudesCCTVPorEvento, solicitudesCCTV, terminales } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale } from "lucide-react";
-import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA } from "@/types";
+import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video } from "lucide-react";
+import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
 // ---- Flujo de trabajo ----
@@ -91,6 +91,10 @@ export function RecordDetailDrawer() {
   const [escalandoAbierto, setEscalandoAbierto] = useState(false);
   const [escaladoPersonaId, setEscaladoPersonaId] = useState("");
   const [escaladoMotivo, setEscaladoMotivo] = useState("");
+  const [cctvAbierto, setCctvAbierto] = useState(false);
+  const [cctvTerminal, setCctvTerminal] = useState("");
+  const [cctvDescripcion, setCctvDescripcion] = useState("");
+  const [localCCTV, setLocalCCTV] = useState<SolicitudCCTV[]>(solicitudesCCTV);
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
@@ -179,6 +183,36 @@ export function RecordDetailDrawer() {
     toast({ title: "✅ Anotación agregada" });
   }
 
+  const solicitudesEvento = localCCTV.filter(s => s.eventoId === ev.id);
+
+  function enviarSolicitudCCTV() {
+    if (!cctvTerminal || !cctvDescripcion.trim()) return;
+    const nuevaSolicitud: SolicitudCCTV = {
+      id: `CCTV-${Date.now()}`,
+      eventoId: ev!.id,
+      terminalSolicitante: ev!.terminal,
+      terminalInvestigar: cctvTerminal,
+      tipoNovedad: ev!.tipoEvento,
+      guia: ev!.guias?.[0],
+      descripcionSolicitud: cctvDescripcion,
+      fechaSolicitud: new Date().toISOString(),
+      solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+      estado: "pendiente",
+    };
+    setLocalCCTV(prev => [...prev, nuevaSolicitud]);
+    setLocalEventos(lst =>
+      lst.map(e => e.id === ev!.id ? {
+        ...e,
+        anotaciones: [...e.anotaciones, { id: `a${Date.now()}`, autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Sistema", fecha: new Date().toISOString(), texto: `Se solicitó revisión CCTV a Terminal ${cctvTerminal}`, tipo: "seguimiento" as any }],
+        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Solicitud CCTV enviada a Terminal ${cctvTerminal}` }],
+      } : e)
+    );
+    setCctvAbierto(false);
+    setCctvTerminal("");
+    setCctvDescripcion("");
+    toast({ title: `Solicitud CCTV enviada a Terminal ${cctvTerminal}` });
+  }
+
   function guardarComplemento() {
     if (!complementoTexto.trim()) return;
     setLocalEventos((lst) =>
@@ -260,6 +294,10 @@ export function RecordDetailDrawer() {
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors">
                   <AlertTriangle className="w-3.5 h-3.5" /> Escalar
                 </button>
+                <button onClick={() => setCctvAbierto(!cctvAbierto)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 text-xs font-medium transition-colors">
+                  <Video className="w-3.5 h-3.5" /> Solicitar CCTV
+                </button>
                 <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
                   <Check className="w-3.5 h-3.5" /> Resolver
@@ -317,6 +355,54 @@ export function RecordDetailDrawer() {
                 </button>
                 <button
                   onClick={() => { setEscalandoAbierto(false); setEscaladoPersonaId(""); setEscaladoMotivo(""); }}
+                  className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mini-form CCTV */}
+          {cctvAbierto && ev.estadoFlujo === "en_investigacion" && (
+            <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3">
+              <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
+                <Video className="w-3.5 h-3.5" /> Solicitar revisión CCTV
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">Terminal a investigar</label>
+                <select
+                  value={cctvTerminal}
+                  onChange={(e) => setCctvTerminal(e.target.value)}
+                  className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Seleccionar terminal...</option>
+                  {terminales.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Puede ser diferente a la terminal del evento</p>
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground mb-1 block">¿Qué necesitas que revisen?</label>
+                <textarea
+                  value={cctvDescripcion}
+                  onChange={(e) => setCctvDescripcion(e.target.value)}
+                  className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  rows={3}
+                  placeholder="Describe qué necesitas que el equipo CCTV revise: área, horario, qué buscar..."
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={enviarSolicitudCCTV}
+                  disabled={!cctvTerminal || !cctvDescripcion.trim()}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                >
+                  Enviar solicitud
+                </button>
+                <button
+                  onClick={() => { setCctvAbierto(false); setCctvTerminal(""); setCctvDescripcion(""); }}
                   className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Cancelar
@@ -428,6 +514,90 @@ export function RecordDetailDrawer() {
                     <div className="font-medium">{ev.motivoEscalamiento}</div>
                   </div>
                 )}
+              </div>
+            </section>
+          )}
+
+          {/* Soportes CCTV */}
+          {solicitudesEvento.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-blue-600" /> Soportes CCTV ({solicitudesEvento.length})
+              </h3>
+              <div className="space-y-2">
+                {solicitudesEvento.map(sol => {
+                  const estadoCfg: Record<string, { label: string; cls: string }> = {
+                    pendiente: { label: "Pendiente", cls: "bg-amber-100 text-amber-700 border-amber-200" },
+                    en_revision: { label: "En revisión", cls: "bg-blue-100 text-blue-700 border-blue-200" },
+                    completada: { label: "Completada", cls: "bg-green-100 text-green-700 border-green-200" },
+                  };
+                  const cfg = estadoCfg[sol.estado];
+                  return (
+                    <div key={sol.id} className={`rounded-xl border p-4 space-y-2 ${
+                      sol.estado === "completada" ? "bg-green-50/50 border-green-200" :
+                      sol.estado === "en_revision" ? "bg-blue-50/50 border-blue-200" :
+                      "bg-muted/30 border-border"
+                    }`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-mono font-bold">{sol.id}</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${cfg.cls}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{formatDate(sol.fechaSolicitud)}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Terminal investigada: </span>
+                          <span className="font-medium">{sol.terminalInvestigar}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Solicitado por: </span>
+                          <span className="font-medium">{sol.solicitadoPor.nombre}</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{sol.descripcionSolicitud}</p>
+                      {sol.estado === "completada" && (
+                        <div className="border-t border-green-200 pt-2 mt-2 space-y-1.5">
+                          {sol.conclusionCCTV && (
+                            <div>
+                              <span className="text-[11px] text-green-700 font-medium">Conclusión: </span>
+                              <span className="text-xs text-green-900">{sol.conclusionCCTV}</span>
+                            </div>
+                          )}
+                          {sol.hallazgosCCTV && (
+                            <div>
+                              <span className="text-[11px] text-green-700 font-medium">Hallazgos: </span>
+                              <span className="text-xs text-green-900">{sol.hallazgosCCTV}</span>
+                            </div>
+                          )}
+                          {sol.personaIdentificada && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] text-green-700 font-medium">Persona identificada: </span>
+                              <button
+                                onClick={() => abrirPersona(sol.personaIdentificada!.cedula)}
+                                className="text-xs font-medium text-primary underline hover:no-underline"
+                              >
+                                {sol.personaIdentificada.nombre} (CC {sol.personaIdentificada.cedula})
+                              </button>
+                            </div>
+                          )}
+                          {sol.investigadoPor && (
+                            <div className="text-[11px] text-muted-foreground">
+                              Investigado por: {sol.investigadoPor.nombre} · Cerrado: {sol.fechaCierre ? formatDate(sol.fechaCierre) : "—"}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {sol.estado === "en_revision" && sol.investigadoPor && (
+                        <div className="text-[11px] text-blue-700 font-medium">
+                          En revisión por: {sol.investigadoPor.nombre}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </section>
           )}
