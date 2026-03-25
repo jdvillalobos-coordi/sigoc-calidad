@@ -6,6 +6,7 @@ import RegistrosPage from "@/pages/RegistrosPage";
 import IAPage from "@/pages/IAPage";
 import ConfiguracionPage from "@/pages/ConfiguracionPage";
 import BandejaPage from "@/pages/BandejaPage";
+import CuadroContactoPage from "@/pages/CuadroContactoPage";
 import { RecordDetailDrawer, Persona360Drawer, Vehiculo360Drawer, Guia360Drawer, Terminal360Drawer, ResolucionAcumulativaPanel } from "@/components/drawers/Drawers";
 import NewRecordForm from "@/components/forms/NewRecordForm";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,9 +20,10 @@ function AppContent() {
       <div className="h-full overflow-hidden">
         {paginaActiva === "bandeja"        && <BandejaPage />}
         {paginaActiva === "inicio"         && <InicioPage />}
-        {paginaActiva === "registros"      && <RegistrosPage />}
-        {paginaActiva === "ia"             && <IAPage />}
-        {paginaActiva === "configuracion"  && <ConfiguracionPage />}
+        {paginaActiva === "registros"        && <RegistrosPage />}
+        {paginaActiva === "cuadro_contacto" && <CuadroContactoPage />}
+        {paginaActiva === "ia"              && <IAPage />}
+        {paginaActiva === "configuracion"   && <ConfiguracionPage />}
       </div>
 
       {drawer.tipo === "registro"    && <RecordDetailDrawer />}

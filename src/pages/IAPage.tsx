@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { alertasIA } from "@/data/mockData";
+import { alertasIA, eventos } from "@/data/mockData";
 import { SeveridadBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import type { AlertaIA } from "@/types";
@@ -75,7 +75,7 @@ function EntityChip({ entity, onClick }: { entity: ChatEntity; onClick: () => vo
 }
 
 export default function IAPage() {
-  const { abrirPersona, abrirVehiculo, abrirRegistro, abrirGuia, abrirTerminal } = useApp();
+  const { abrirPersona, abrirVehiculo, abrirRegistro, abrirGuia, abrirTerminal, abrirResolucionAcumulativa } = useApp();
   const [filtroSeveridad, setFiltroSeveridad] = useState("todos");
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [alertas, setAlertas] = useState<AlertaIA[]>(alertasIA);
@@ -207,7 +207,24 @@ export default function IAPage() {
 
           {/* Lista de alertas */}
           <div className="space-y-4">
-            {filtradas.map((a) => (
+            {filtradas.map((a) => {
+              let recomendacionIA: string | null = null;
+              let eventosCount = 0;
+              if (a.tipo === "reincidencia_persona") {
+                const evRel = a.fuentesCruzadas.map(id => eventos.find(e => e.id === id)).filter(Boolean);
+                eventosCount = evRel.length;
+                const tieneGravisima = evRel.some(e => e?.gravedadFalta === "gravisima");
+                const categorias = new Set(evRel.map(e => e?.categoria));
+                if (tieneGravisima) {
+                  recomendacionIA = "Considerar desvinculación (sugerencia — la decisión es del operador)";
+                } else if (eventosCount >= 5 || categorias.size > 1) {
+                  recomendacionIA = "Considerar proceso disciplinario (sugerencia — la decisión es del operador)";
+                } else if (eventosCount >= 3) {
+                  recomendacionIA = "Considerar llamado de atención escrito (sugerencia — la decisión es del operador)";
+                }
+              }
+
+              return (
               <div
                 key={a.id}
                 className={`border rounded-xl p-5 ${
@@ -220,6 +237,11 @@ export default function IAPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <SeveridadBadge severidad={a.severidad} />
+                      {a.tipo === "reincidencia_persona" && eventosCount > 0 && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex-shrink-0">
+                          {eventosCount}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">Detectado: {a.fechaDeteccion}</span>
                       <select
                         value={a.estado}
@@ -234,6 +256,11 @@ export default function IAPage() {
                     </div>
                     <h3 className="font-semibold text-sm mb-2">{a.titulo}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed mb-3">{a.descripcion}</p>
+                    {recomendacionIA && (
+                      <div className="mb-3 p-2.5 bg-amber-100/60 border border-amber-200 rounded-lg">
+                        <p className="text-xs text-amber-900 font-medium">🤖 {recomendacionIA}</p>
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-2 mb-3">
                       <span className="text-xs text-muted-foreground font-medium">Entidades:</span>
                       {a.entidadesInvolucradas.map((e) => (
@@ -263,9 +290,18 @@ export default function IAPage() {
                       ))}
                     </div>
                   </div>
+                  {a.tipo === "reincidencia_persona" && a.estado === "nueva" && (
+                    <div className="flex-shrink-0">
+                      <button onClick={() => abrirResolucionAcumulativa(a.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 font-medium transition-colors shadow-sm whitespace-nowrap">
+                        Iniciar resolución
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {filtradas.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
