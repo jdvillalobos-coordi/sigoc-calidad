@@ -201,7 +201,7 @@ export default function BandejaPage() {
       <div className="max-w-7xl mx-auto p-6 space-y-4">
         {/* Header */}
         <div>
-          <h1 className="text-xl font-bold text-foreground">Bandeja de trabajo</h1>
+          <h1 className="text-xl font-bold text-foreground">Carga de Trabajo</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Guías pendientes de revisión — tu insumo diario de trabajo
           </p>
