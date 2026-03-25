@@ -2,7 +2,7 @@ import React from "react";
 import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado, actividadesLesivas, estudiosSeguridad } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Check, Lock, Search } from "lucide-react";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Check, Search } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
@@ -28,11 +28,10 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
 ];
 
 const RANKING_TABS = [
-  { id: "regionales",       label: "Regionales",        icon: MapPin },
-  { id: "terminales",       label: "Terminales",        icon: Building2 },
-  { id: "personas",         label: "Personas",          icon: Users },
-  { id: "vehiculos",        label: "Vehículos",         icon: Car },
-  { id: "cuadro_contacto",  label: "Cuadro de Contacto",icon: Lock },
+  { id: "regionales",       label: "Regionales",         icon: MapPin },
+  { id: "terminales",       label: "Terminales",         icon: Building2 },
+  { id: "cuadro_contacto",  label: "Cuadro de Contacto", icon: Users },
+  { id: "vehiculos",        label: "Vehículos",          icon: Car },
 ] as const;
 
 type RankingTab = typeof RANKING_TABS[number]["id"];
@@ -114,17 +113,6 @@ export default function InicioPage() {
     const c: Record<string, number> = {};
     filtrados.forEach((e) => { c[e.terminal] = (c[e.terminal] ?? 0) + 1; });
     return Object.entries(c).map(([k, v]) => ({ label: k, count: v })).sort((a, b) => b.count - a.count).slice(0, 8);
-  }, [filtrados]);
-
-  const rankPersonas = React.useMemo(() => {
-    const c: Record<string, { persona: typeof personas[0]; count: number }> = {};
-    filtrados.forEach((ev) => {
-      [...ev.personasResponsables, ...ev.personasParticipantes].forEach((p) => {
-        if (!c[p.personaId]) { const x = personas.find((y) => y.id === p.personaId); if (x) c[p.personaId] = { persona: x, count: 0 }; }
-        if (c[p.personaId]) c[p.personaId].count++;
-      });
-    });
-    return Object.values(c).sort((a, b) => b.count - a.count).slice(0, 8);
   }, [filtrados]);
 
   const rankVehiculos = React.useMemo(() => {
@@ -349,35 +337,6 @@ export default function InicioPage() {
                     <button onClick={() => abrirTerminal(label)} className="text-xs font-medium text-foreground hover:text-primary hover:underline flex-1 text-left">{label}</button>
                     <Bar value={count} max={rankTerminales[0]?.count ?? 1} />
                     <span className="text-xs font-bold text-foreground w-6 text-right">{count}</span>
-                  </div>
-                ))}
-            </div>
-          )}
-
-          {/* Personas */}
-          {tab === "personas" && (
-            <div className="divide-y divide-border">
-              {rankPersonas.length === 0
-                ? <p className="text-center py-8 text-muted-foreground text-xs">Sin datos en el período</p>
-                : rankPersonas.map(({ persona, count }, i) => (
-                  <div key={persona.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="text-xs font-bold text-muted-foreground w-5 text-right flex-shrink-0">{i + 1}</span>
-                    <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-                      {persona.nombre.split(" ").slice(0, 2).map((n) => n[0]).join("")}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <button onClick={() => abrirPersona(persona.id)} className="text-xs font-semibold text-foreground hover:text-primary hover:underline truncate block text-left max-w-full">
-                        {persona.nombre}
-                      </button>
-                      <p className="text-[10px] text-muted-foreground truncate">{persona.cargo} · {persona.terminal}</p>
-                    </div>
-                    <Bar value={count} max={rankPersonas[0]?.count ?? 1} />
-                    <span className="text-xs font-bold text-foreground w-4 text-right flex-shrink-0">{count}</span>
-                    {persona.estado !== "sin_novedad" && (
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${persona.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200" : "bg-amber-100 text-amber-700 border border-amber-200"}`}>
-                        {persona.estado === "bloqueado" ? "Bloqueado" : "Seguimiento"}
-                      </span>
-                    )}
                   </div>
                 ))}
             </div>
