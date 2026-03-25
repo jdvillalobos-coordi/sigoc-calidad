@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, getSolicitudesCCTVPorEvento, solicitudesCCTV, terminales } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getPersonaPorCedula, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, getSolicitudesCCTVPorEvento, solicitudesCCTV, terminales } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video } from "lucide-react";
@@ -95,6 +95,11 @@ export function RecordDetailDrawer() {
   const [cctvTerminal, setCctvTerminal] = useState("");
   const [cctvDescripcion, setCctvDescripcion] = useState("");
   const [localCCTV, setLocalCCTV] = useState<SolicitudCCTV[]>(solicitudesCCTV);
+  const [cctvRespondiendo, setCctvRespondiendo] = useState<string | null>(null);
+  const [cctvConclusion, setCctvConclusion] = useState("");
+  const [cctvHallazgos, setCctvHallazgos] = useState("");
+  const [cctvPersonaCedula, setCctvPersonaCedula] = useState("");
+  const [cctvPersonaNombre, setCctvPersonaNombre] = useState("");
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
@@ -211,6 +216,62 @@ export function RecordDetailDrawer() {
     setCctvTerminal("");
     setCctvDescripcion("");
     toast({ title: `Solicitud CCTV enviada a Terminal ${cctvTerminal}` });
+  }
+
+  function tomarSolicitudCCTV(solId: string) {
+    setLocalCCTV(prev => prev.map(s => s.id === solId ? {
+      ...s,
+      estado: "en_revision" as const,
+      investigadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    } : s));
+    toast({ title: "Solicitud CCTV tomada — ahora en revisión" });
+  }
+
+  function completarSolicitudCCTV() {
+    if (!cctvRespondiendo || !cctvConclusion.trim()) return;
+    const personaId = cctvPersonaCedula.trim() ? { cedula: cctvPersonaCedula.trim(), nombre: cctvPersonaNombre || cctvPersonaCedula.trim() } : undefined;
+    setLocalCCTV(prev => prev.map(s => s.id === cctvRespondiendo ? {
+      ...s,
+      estado: "completada" as const,
+      conclusionCCTV: cctvConclusion,
+      hallazgosCCTV: cctvHallazgos || undefined,
+      personaIdentificada: personaId,
+      fechaCierre: new Date().toISOString(),
+      investigadoPor: s.investigadoPor ?? { id: "u-sandra", nombre: "Sandra Herrera" },
+    } : s));
+    const sol = localCCTV.find(s => s.id === cctvRespondiendo);
+    setLocalEventos(lst =>
+      lst.map(e => e.id === ev!.id ? {
+        ...e,
+        anotaciones: [...e.anotaciones, {
+          id: `a${Date.now()}`,
+          autorId: "u-sandra",
+          autorNombre: "Sandra Herrera",
+          autorRol: "Operador CCTV",
+          fecha: new Date().toISOString(),
+          texto: `Revisión CCTV completada (${sol?.terminalInvestigar ?? ""}): ${cctvConclusion}${personaId ? ` — Persona identificada: ${personaId.nombre}` : ""}`,
+          tipo: "hallazgo" as any,
+        }],
+        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Revisión CCTV ${cctvRespondiendo} completada` }],
+      } : e)
+    );
+    agregarNotificacion(
+      "caso_asignado",
+      `📹 Revisión CCTV completada para evento ${ev!.id} — Terminal ${sol?.terminalInvestigar ?? ""}`,
+      ev!.id,
+    );
+    setCctvRespondiendo(null);
+    setCctvConclusion("");
+    setCctvHallazgos("");
+    setCctvPersonaCedula("");
+    setCctvPersonaNombre("");
+    toast({ title: "Revisión CCTV completada y registrada en el evento" });
+  }
+
+  function buscarPersonaCCTV(cedula: string) {
+    const p = getPersonaPorCedula(cedula);
+    if (p) setCctvPersonaNombre(p.nombre);
+    else setCctvPersonaNombre("");
   }
 
   function guardarComplemento() {
@@ -532,6 +593,7 @@ export function RecordDetailDrawer() {
                     completada: { label: "Completada", cls: "bg-green-100 text-green-700 border-green-200" },
                   };
                   const cfg = estadoCfg[sol.estado];
+                  const isRespondiendo = cctvRespondiendo === sol.id;
                   return (
                     <div key={sol.id} className={`rounded-xl border p-4 space-y-2 ${
                       sol.estado === "completada" ? "bg-green-50/50 border-green-200" :
@@ -545,7 +607,25 @@ export function RecordDetailDrawer() {
                             {cfg.label}
                           </span>
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{formatDate(sol.fechaSolicitud)}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-muted-foreground">{formatDate(sol.fechaSolicitud)}</span>
+                          {sol.estado === "pendiente" && (
+                            <button
+                              onClick={() => tomarSolicitudCCTV(sol.id)}
+                              className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors"
+                            >
+                              Tomar solicitud
+                            </button>
+                          )}
+                          {sol.estado === "en_revision" && !isRespondiendo && (
+                            <button
+                              onClick={() => setCctvRespondiendo(sol.id)}
+                              className="text-[11px] px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 font-medium transition-colors"
+                            >
+                              Registrar resultado
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
@@ -558,6 +638,68 @@ export function RecordDetailDrawer() {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{sol.descripcionSolicitud}</p>
+
+                      {/* Form de respuesta CCTV inline */}
+                      {isRespondiendo && (
+                        <div className="border-t border-blue-200 pt-3 mt-2 space-y-3">
+                          <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
+                            <Video className="w-3.5 h-3.5" /> Registrar resultado de revisión
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-muted-foreground mb-1 block">Conclusión *</label>
+                            <textarea
+                              value={cctvConclusion}
+                              onChange={(e) => setCctvConclusion(e.target.value)}
+                              className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                              rows={3}
+                              placeholder="Describe lo que se observó en las cámaras: qué pasó, quién intervino, en qué horario, si se confirma o descarta la novedad..."
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-muted-foreground mb-1 block">Hallazgos adicionales (opcional)</label>
+                            <textarea
+                              value={cctvHallazgos}
+                              onChange={(e) => setCctvHallazgos(e.target.value)}
+                              className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                              rows={2}
+                              placeholder="Detalles complementarios, observaciones de contexto, comportamientos sospechosos adicionales..."
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] text-muted-foreground mb-1 block">Persona identificada en cámaras (opcional)</label>
+                            <div className="flex gap-2">
+                              <input
+                                className="flex-1 text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                                placeholder="Cédula"
+                                value={cctvPersonaCedula}
+                                onChange={(e) => setCctvPersonaCedula(e.target.value)}
+                                onBlur={() => cctvPersonaCedula && buscarPersonaCCTV(cctvPersonaCedula)}
+                              />
+                              {cctvPersonaNombre && (
+                                <span className="inline-flex items-center text-xs text-green-700 font-medium bg-green-50 border border-green-200 rounded-lg px-2.5 py-1">
+                                  {cctvPersonaNombre}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={completarSolicitudCCTV}
+                              disabled={!cctvConclusion.trim()}
+                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-40 transition-colors"
+                            >
+                              Completar revisión
+                            </button>
+                            <button
+                              onClick={() => { setCctvRespondiendo(null); setCctvConclusion(""); setCctvHallazgos(""); setCctvPersonaCedula(""); setCctvPersonaNombre(""); }}
+                              className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {sol.estado === "completada" && (
                         <div className="border-t border-green-200 pt-2 mt-2 space-y-1.5">
                           {sol.conclusionCCTV && (
@@ -590,7 +732,7 @@ export function RecordDetailDrawer() {
                           )}
                         </div>
                       )}
-                      {sol.estado === "en_revision" && sol.investigadoPor && (
+                      {sol.estado === "en_revision" && !isRespondiendo && sol.investigadoPor && (
                         <div className="text-[11px] text-blue-700 font-medium">
                           En revisión por: {sol.investigadoPor.nombre}
                         </div>
