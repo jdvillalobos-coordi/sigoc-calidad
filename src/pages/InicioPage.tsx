@@ -28,10 +28,10 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
 ];
 
 const RANKING_TABS = [
-  { id: "regionales",       label: "Regionales",         icon: MapPin },
-  { id: "terminales",       label: "Terminales",         icon: Building2 },
-  { id: "cuadro_contacto",  label: "Cuadro de Contacto", icon: Users },
-  { id: "vehiculos",        label: "Vehículos",          icon: Car },
+  { id: "regionales",       label: "Regionales",  icon: MapPin },
+  { id: "terminales",       label: "Terminales",  icon: Building2 },
+  { id: "personas",         label: "Personas",    icon: Users },
+  { id: "vehiculos",        label: "Vehículos",   icon: Car },
 ] as const;
 
 type RankingTab = typeof RANKING_TABS[number]["id"];
@@ -303,9 +303,12 @@ export default function InicioPage() {
           })}
         </div>
 
-        {/* Ranking con tabs */}
+        {/* Cuadro de Contacto */}
+        <div>
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+            <Users className="w-4 h-4 text-primary" /> Cuadro de Contacto
+          </h2>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {/* Tabs */}
           <div className="flex border-b border-border">
             {RANKING_TABS.map(({ id, label, icon: Icon }) => (
               <button key={id} onClick={() => setTab(id)}
@@ -373,8 +376,8 @@ export default function InicioPage() {
             </div>
           )}
 
-          {/* Cuadro de Contacto */}
-          {tab === "cuadro_contacto" && (
+          {/* Personas */}
+          {tab === "personas" && (
             <div>
               {/* Mini KPIs + búsqueda */}
               <div className="px-4 py-3 border-b border-border flex items-center gap-3">
@@ -443,6 +446,7 @@ export default function InicioPage() {
               </div>
             </div>
           )}
+        </div>
         </div>
 
         {/* Alertas IA */}
