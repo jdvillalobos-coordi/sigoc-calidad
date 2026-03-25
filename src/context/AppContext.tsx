@@ -5,10 +5,11 @@ import { notificaciones as notificacionesIniciales } from "@/data/mockData";
 export interface RegistrosNavFiltro {
   estadoFlujo?: string;
   soloAbiertos?: boolean;
+  soloCerrados?: boolean;
   soloVencidos?: boolean;
   soloMios?: boolean;
   soloEscaladosAMi?: boolean;
-  etiqueta?: string; // texto que se muestra como pill activo
+  etiqueta?: string;
 }
 
 interface AppContextType {

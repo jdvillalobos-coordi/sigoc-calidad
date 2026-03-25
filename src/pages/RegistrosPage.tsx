@@ -97,6 +97,7 @@ export default function RegistrosPage() {
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [estadoFlujoFiltro, setEstadoFlujoFiltro] = useState<string>("todos");
   const [soloMios, setSoloMios]               = useState(false);
+  const [soloCerrados, setSoloCerrados]       = useState(false);
   const [soloEscaladosAMi, setSoloEscaladosAMi] = useState(false);
   const [soloVencidos, setSoloVencidos]       = useState(false);
   const [navEtiqueta, setNavEtiqueta]         = useState<string | null>(null);
@@ -114,8 +115,10 @@ export default function RegistrosPage() {
     if (!registrosNavFiltro) return;
     const f = registrosNavFiltro;
     if (f.soloAbiertos)       setEstadoFiltro("abierto");
+    if (f.soloCerrados)       setEstadoFiltro("cerrado");
     if (f.estadoFlujo)        setEstadoFlujoFiltro(f.estadoFlujo);
     if (f.soloMios)           setSoloMios(true);
+    if (f.soloCerrados)       setSoloCerrados(true);
     if (f.soloEscaladosAMi)   setSoloEscaladosAMi(true);
     if (f.soloVencidos)       setSoloVencidos(true);
     if (f.etiqueta)           setNavEtiqueta(f.etiqueta);
@@ -147,6 +150,7 @@ export default function RegistrosPage() {
     .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
     .filter((e) => estadoFlujoFiltro === "todos" || e.estadoFlujo === estadoFlujoFiltro)
     .filter((e) => !soloMios || e.asignadoA.id === usuarioLogueado.id)
+    .filter((e) => !soloCerrados || e.estadoFlujo === "cerrado")
     .filter((e) => !soloEscaladosAMi || (e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado"))
     .filter((e) => !soloVencidos || (e.diasAbierto > 30 && e.estado === "abierto"))
     .filter((e) => {
@@ -183,7 +187,7 @@ export default function RegistrosPage() {
       else                                  cmp = a.id.localeCompare(b.id);
       return sortDir === "asc" ? cmp : -cmp;
     })
-  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloEscaladosAMi, soloVencidos, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
+  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
 
   const pages = Math.ceil(filtered.length / PER_PAGE);
   const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -198,14 +202,14 @@ export default function RegistrosPage() {
     return sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
   }
 
-  const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloEscaladosAMi || soloVencidos || estadoFiltro !== "todos";
+  const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloCerrados || soloEscaladosAMi || soloVencidos || estadoFiltro !== "todos";
   const hayFiltrosActivos = hayFiltrosNav || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || !!dateRange?.from || !!q;
   const totalVisible = filtered.length;
 
   function limpiarFiltros() {
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos");
     setDateRange(undefined); setBusquedaQuery(""); setEstadoFiltro("todos");
-    setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloEscaladosAMi(false);
+    setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false); setSoloEscaladosAMi(false);
     setSoloVencidos(false); setNavEtiqueta(null); setPage(1);
   }
 
@@ -279,7 +283,7 @@ export default function RegistrosPage() {
             <span className="text-xs text-muted-foreground">Filtrando por:</span>
             {navEtiqueta && (
               <FilterPill label={navEtiqueta} onRemove={() => {
-                setNavEtiqueta(null); setEstadoFlujoFiltro("todos"); setSoloMios(false);
+                setNavEtiqueta(null); setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false);
                 setSoloEscaladosAMi(false); setSoloVencidos(false); setEstadoFiltro("todos"); setPage(1);
               }} />
             )}
