@@ -487,150 +487,6 @@ export function RecordDetailDrawer() {
             </section>
           )}
 
-          {/* Soporte CCTV */}
-          <section>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold flex items-center gap-1.5">
-                <Video className="w-4 h-4 text-blue-600" /> Soporte CCTV
-                {soportesCCTV.length > 0 && <span className="text-xs text-muted-foreground font-normal">({soportesCCTV.length})</span>}
-              </h3>
-              {ev.estadoFlujo !== "cerrado" && !cctvFormAbierto && (
-                <button
-                  onClick={() => setCctvFormAbierto(true)}
-                  className="text-[11px] px-2.5 py-1 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 font-medium transition-colors"
-                >
-                  + Registrar soporte CCTV
-                </button>
-              )}
-            </div>
-
-            {cctvFormAbierto && (
-              <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3 mb-3">
-                <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
-                  <Video className="w-3.5 h-3.5" /> Registrar soporte CCTV
-                </div>
-                <div>
-                  <label className="text-[11px] text-muted-foreground mb-1 block">Descripción de lo observado *</label>
-                  <textarea
-                    value={cctvDescripcion}
-                    onChange={(e) => setCctvDescripcion(e.target.value)}
-                    className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                    rows={3}
-                    placeholder="Describe lo observado en cámaras: qué pasó, quién intervino, horario, si se confirma o descarta la novedad..."
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-muted-foreground mb-1 block">Fotos o videos (opcional)</label>
-                  <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-blue-200 rounded-xl cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 transition-colors">
-                    <div className="flex items-center gap-2 text-blue-600">
-                      <Upload className="w-4 h-4" />
-                      <span className="text-xs font-medium">Subir fotos o videos</span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG, MP4, MOV — máx. 50MB por archivo</p>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*,video/*"
-                      className="hidden"
-                      onChange={(e) => handleCctvFiles(e.target.files)}
-                    />
-                  </label>
-                  {cctvArchivos.length > 0 && (
-                    <div className="mt-2 space-y-1.5">
-                      {cctvArchivos.map((file, idx) => {
-                        const isVideo = file.type.startsWith("video/");
-                        return (
-                          <div key={idx} className="flex items-center justify-between gap-2 bg-background border border-border rounded-lg px-3 py-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              {isVideo
-                                ? <FileVideo className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                : <ImageIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                              }
-                              <span className="text-xs truncate">{file.name}</span>
-                              <span className="text-[10px] text-muted-foreground flex-shrink-0">
-                                {(file.size / 1024 / 1024).toFixed(1)} MB
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => setCctvArchivos(prev => prev.filter((_, i) => i !== idx))}
-                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={registrarSoporteCCTV}
-                    disabled={!cctvDescripcion.trim()}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
-                  >
-                    Registrar soporte
-                  </button>
-                  <button
-                    onClick={() => { setCctvFormAbierto(false); setCctvDescripcion(""); setCctvArchivos([]); }}
-                    className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {soportesCCTV.length > 0 && (
-              <div className="space-y-2">
-                {soportesCCTV.map(sol => (
-                  <div key={sol.id} className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold">{sol.id}</span>
-                        <span className="text-[10px] text-muted-foreground">{formatDate(sol.fechaSolicitud)}</span>
-                      </div>
-                      {sol.investigadoPor && (
-                        <span className="text-[10px] text-muted-foreground">Por: {sol.investigadoPor.nombre}</span>
-                      )}
-                    </div>
-                    {sol.conclusionCCTV && (
-                      <p className="text-xs leading-relaxed">{sol.conclusionCCTV}</p>
-                    )}
-                    {sol.evidenciasUrls && sol.evidenciasUrls.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {sol.evidenciasUrls.map((url, idx) => {
-                          const isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mov");
-                          return (
-                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-800 hover:bg-green-200 transition-colors font-medium">
-                              {isVideo ? "🎬" : "📷"} {isVideo ? "Video" : "Foto"} {idx + 1}
-                            </a>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {sol.personaIdentificada && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-green-700 font-medium">Persona identificada: </span>
-                        <button
-                          onClick={() => abrirPersona(sol.personaIdentificada!.cedula)}
-                          className="text-xs font-medium text-primary underline hover:no-underline"
-                        >
-                          {sol.personaIdentificada.nombre} (CC {sol.personaIdentificada.cedula})
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {soportesCCTV.length === 0 && !cctvFormAbierto && (
-              <p className="text-xs text-muted-foreground">Sin soportes CCTV registrados.</p>
-            )}
-          </section>
-
           {/* Resolución */}
           {(ev.estadoFlujo === "resuelto" || ev.estadoFlujo === "cerrado") && ev.resolucionFinal && (
             <section className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -909,6 +765,146 @@ export function RecordDetailDrawer() {
                 </button>
               </div>
             </div>
+          </section>
+
+          {/* Soporte CCTV */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-blue-600" /> Soporte CCTV
+                {soportesCCTV.length > 0 && <span className="text-xs text-muted-foreground font-normal">({soportesCCTV.length})</span>}
+              </h3>
+              {ev.estadoFlujo !== "cerrado" && !cctvFormAbierto && (
+                <button
+                  onClick={() => setCctvFormAbierto(true)}
+                  className="text-[11px] px-2.5 py-1 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 font-medium transition-colors"
+                >
+                  + Registrar soporte CCTV
+                </button>
+              )}
+            </div>
+
+            {cctvFormAbierto && (
+              <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3 mb-3">
+                <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5" /> Registrar soporte CCTV
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">Descripción de lo observado *</label>
+                  <textarea
+                    value={cctvDescripcion}
+                    onChange={(e) => setCctvDescripcion(e.target.value)}
+                    className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                    rows={3}
+                    placeholder="Describe lo observado en cámaras: qué pasó, quién intervino, horario, si se confirma o descarta la novedad..."
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">Fotos o videos (opcional)</label>
+                  <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-blue-200 rounded-xl cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-xs font-medium">Subir fotos o videos</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG, MP4, MOV</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*"
+                      className="hidden"
+                      onChange={(e) => handleCctvFiles(e.target.files)}
+                    />
+                  </label>
+                  {cctvArchivos.length > 0 && (
+                    <div className="mt-2 space-y-1.5">
+                      {cctvArchivos.map((file, idx) => {
+                        const isVideo = file.type.startsWith("video/");
+                        return (
+                          <div key={idx} className="flex items-center justify-between gap-2 bg-background border border-border rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isVideo
+                                ? <FileVideo className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                : <ImageIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                              }
+                              <span className="text-xs truncate">{file.name}</span>
+                              <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                {(file.size / 1024 / 1024).toFixed(1)} MB
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => setCctvArchivos(prev => prev.filter((_, i) => i !== idx))}
+                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={registrarSoporteCCTV}
+                    disabled={!cctvDescripcion.trim()}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  >
+                    Registrar soporte
+                  </button>
+                  <button
+                    onClick={() => { setCctvFormAbierto(false); setCctvDescripcion(""); setCctvArchivos([]); }}
+                    className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {soportesCCTV.length > 0 && (
+              <div className="space-y-2">
+                {soportesCCTV.map(sol => (
+                  <div key={sol.id} className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold">{sol.id}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatDate(sol.fechaSolicitud)}</span>
+                      </div>
+                      {sol.investigadoPor && (
+                        <span className="text-[10px] text-muted-foreground">Por: {sol.investigadoPor.nombre}</span>
+                      )}
+                    </div>
+                    {sol.conclusionCCTV && (
+                      <p className="text-xs leading-relaxed">{sol.conclusionCCTV}</p>
+                    )}
+                    {sol.evidenciasUrls && sol.evidenciasUrls.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {sol.evidenciasUrls.map((url, idx) => {
+                          const isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mov");
+                          return (
+                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-800 hover:bg-green-200 transition-colors font-medium">
+                              {isVideo ? "🎬" : "📷"} {isVideo ? "Video" : "Foto"} {idx + 1}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {sol.personaIdentificada && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-green-700 font-medium">Persona identificada: </span>
+                        <button
+                          onClick={() => abrirPersona(sol.personaIdentificada!.cedula)}
+                          className="text-xs font-medium text-primary underline hover:no-underline"
+                        >
+                          {sol.personaIdentificada.nombre} (CC {sol.personaIdentificada.cedula})
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Historial */}
