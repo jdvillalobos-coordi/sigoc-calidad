@@ -963,8 +963,6 @@ export function Persona360Drawer() {
   const [lesivaCat, setLesivaCat] = useState("");
   const [lesivaSub, setLesivaSub] = useState("");
   const [lesivaObs, setLesivaObs] = useState("");
-  const [seguimientoOpen, setSeguimientoOpen] = useState(false);
-  const [seguimientoMotivo, setSeguimientoMotivo] = useState("");
   const [, forceUpdate] = useState(0);
 
   if (drawer.tipo !== "persona360" || !drawer.id) return null;
@@ -1146,66 +1144,18 @@ export function Persona360Drawer() {
             );
           })()}
 
-          {/* Acciones: Cuadro de Contacto + Actividad Lesiva */}
-          <div className="flex gap-2">
-            {persona.estado !== "en_seguimiento" && persona.estado !== "bloqueado" && (
-              <button
-                onClick={() => setSeguimientoOpen(!seguimientoOpen)}
-                className="flex-1 text-left px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-xl hover:bg-amber-100 transition-colors"
-              >
-                <div className="text-xs font-semibold text-amber-700">📋 Agregar al Cuadro de Contacto</div>
-              </button>
-            )}
-            {persona.estado === "en_seguimiento" && (
-              <div className="flex-1 px-3 py-2.5 border border-amber-200 bg-amber-50 rounded-xl">
-                <div className="text-xs font-semibold text-amber-700">📋 En Cuadro de Contacto</div>
-              </div>
-            )}
-            {persona.estado !== "bloqueado" && (
-              <button
-                onClick={() => setLesivaOpen(!lesivaOpen)}
-                className="flex-1 text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
-              >
-                <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva</div>
-              </button>
-            )}
-            {persona.estado === "bloqueado" && (
-              <div className="flex-1 px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl">
-                <div className="text-xs font-semibold text-red-700">🚫 Persona Bloqueada</div>
-              </div>
-            )}
-          </div>
-
-          {/* Mini-form: Cuadro de Contacto */}
-          {seguimientoOpen && (
-            <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 space-y-3">
-              <h4 className="text-sm font-semibold text-amber-800">Agregar al Cuadro de Contacto</h4>
-              <p className="text-xs text-amber-700/70">Registrar por qué esta persona requiere seguimiento.</p>
-              <textarea
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
-                rows={3}
-                placeholder="Motivo del seguimiento: guías involucradas, hechos, montos..."
-                value={seguimientoMotivo}
-                onChange={(e) => setSeguimientoMotivo(e.target.value)}
-              />
-              <div className="flex gap-2">
-                <button
-                  disabled={!seguimientoMotivo.trim()}
-                  onClick={() => {
-                    persona.estado = "en_seguimiento";
-                    forceUpdate(k => k + 1);
-                    toast({ title: "📋 Persona en seguimiento", description: `${persona.nombre} agregada al Cuadro de Contacto.` });
-                    setSeguimientoOpen(false);
-                    setSeguimientoMotivo("");
-                  }}
-                  className="px-4 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Confirmar seguimiento
-                </button>
-                <button onClick={() => { setSeguimientoOpen(false); setSeguimientoMotivo(""); }} className="px-4 py-2 border border-border rounded-lg text-xs hover:bg-muted transition-colors">
-                  Cancelar
-                </button>
-              </div>
+          {/* Acción: Actividad Lesiva */}
+          {persona.estado !== "bloqueado" ? (
+            <button
+              onClick={() => setLesivaOpen(!lesivaOpen)}
+              className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+            >
+              <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva</div>
+              <div className="text-[10px] text-red-600/70 mt-0.5">Bloquear persona por responsabilidad directa en eventos</div>
+            </button>
+          ) : (
+            <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl">
+              <div className="text-xs font-semibold text-red-700">🚫 Persona Bloqueada</div>
             </div>
           )}
 
