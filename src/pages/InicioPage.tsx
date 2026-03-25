@@ -131,22 +131,28 @@ export default function InicioPage() {
   const [ccFiltro, setCcFiltro] = React.useState<"todos" | "en_seguimiento" | "bloqueado">("todos");
 
   const cuadroContacto = React.useMemo(() => {
+    const tieneEvento = (p: typeof personas[0], lista: typeof filtrados) =>
+      lista.some((e) => e.personasResponsables.some((pv) => pv.personaId === p.id) || e.personasParticipantes.some((pv) => pv.personaId === p.id));
+
     return personas.map((p) => {
-      const evs = eventos.filter((e) =>
+      const evsPeriodo = filtrados.filter((e) =>
         e.personasResponsables.some((pv) => pv.personaId === p.id) ||
         e.personasParticipantes.some((pv) => pv.personaId === p.id)
       );
-      if (evs.length === 0 && p.estado === "sin_novedad") return null;
-      const evAbiertos = evs.filter((e) => e.estado === "abierto").length;
-      const evCerradosConHallazgo = evs.filter((e) => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
+      const tieneEventosEnPeriodo = evsPeriodo.length > 0;
+      const esRelevante = tieneEventosEnPeriodo || p.estado !== "sin_novedad";
+      if (!esRelevante) return null;
+
+      const evAbiertos = evsPeriodo.filter((e) => e.estado === "abierto").length;
+      const evCerradosConHallazgo = evsPeriodo.filter((e) => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
       const estudios = estudiosSeguridad.filter((e) => e.personaId === p.id);
       const estudiosConHallazgo = estudios.filter((e) => e.resultado === "hallazgos_encontrados").length;
       const riesgo = (evAbiertos * 2) + (evCerradosConHallazgo * 1) + (estudiosConHallazgo * 3);
       let dinero = 0;
-      evs.forEach((e) => { if (e.valorAfectacion) dinero += e.valorAfectacion; if (e.valorDinero) dinero += e.valorDinero; });
-      return { ...p, totalEventos: evs.length, riesgo, dinero, lesivas: actividadesLesivas.filter((a) => a.personaId === p.id).length };
+      evsPeriodo.forEach((e) => { if (e.valorAfectacion) dinero += e.valorAfectacion; if (e.valorDinero) dinero += e.valorDinero; });
+      return { ...p, totalEventos: evsPeriodo.length, riesgo, dinero, lesivas: actividadesLesivas.filter((a) => a.personaId === p.id).length };
     }).filter(Boolean).sort((a, b) => (b?.riesgo ?? 0) - (a?.riesgo ?? 0));
-  }, []);
+  }, [filtrados]);
 
   const cuadroFiltrado = React.useMemo(() => {
     let result = cuadroContacto;
