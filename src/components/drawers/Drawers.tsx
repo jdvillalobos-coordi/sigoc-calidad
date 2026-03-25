@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video } from "lucide-react";
+import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -94,7 +94,7 @@ export function RecordDetailDrawer() {
   const [localCCTV, setLocalCCTV] = useState<SolicitudCCTV[]>(solicitudesCCTV);
   const [cctvFormAbierto, setCctvFormAbierto] = useState(false);
   const [cctvDescripcion, setCctvDescripcion] = useState("");
-  const [cctvEvidencias, setCctvEvidencias] = useState("");
+  const [cctvArchivos, setCctvArchivos] = useState<File[]>([]);
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
@@ -185,9 +185,16 @@ export function RecordDetailDrawer() {
 
   const soportesCCTV = localCCTV.filter(s => s.eventoId === ev.id);
 
+  function handleCctvFiles(fileList: FileList | null) {
+    if (!fileList) return;
+    const nuevos = Array.from(fileList).filter(f => f.type.startsWith("image/") || f.type.startsWith("video/"));
+    setCctvArchivos(prev => [...prev, ...nuevos]);
+  }
+
   function registrarSoporteCCTV() {
     if (!cctvDescripcion.trim()) return;
-    const urls = cctvEvidencias.trim() ? cctvEvidencias.split("\n").map(u => u.trim()).filter(Boolean) : undefined;
+    const archivosNombres = cctvArchivos.map(f => f.name);
+    const urls = archivosNombres.length > 0 ? archivosNombres.map(n => `https://storage.coordinadora.com/cctv/${n}`) : undefined;
     const nuevo: SolicitudCCTV = {
       id: `CCTV-${Date.now()}`,
       eventoId: ev!.id,
@@ -205,6 +212,7 @@ export function RecordDetailDrawer() {
       investigadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
     };
     setLocalCCTV(prev => [...prev, nuevo]);
+    const numArchivos = cctvArchivos.length;
     setLocalEventos(lst =>
       lst.map(e => e.id === ev!.id ? {
         ...e,
@@ -214,7 +222,7 @@ export function RecordDetailDrawer() {
           autorNombre: "Sandra Herrera",
           autorRol: "Coordinadora Nacional de Calidad",
           fecha: new Date().toISOString(),
-          texto: `Soporte CCTV registrado: ${cctvDescripcion}${urls ? ` — ${urls.length} evidencia(s) adjunta(s)` : ""}`,
+          texto: `Soporte CCTV registrado: ${cctvDescripcion}${numArchivos > 0 ? ` — ${numArchivos} archivo(s) adjunto(s)` : ""}`,
           tipo: "hallazgo" as any,
         }],
         historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: "Soporte CCTV registrado" }],
@@ -222,7 +230,7 @@ export function RecordDetailDrawer() {
     );
     setCctvFormAbierto(false);
     setCctvDescripcion("");
-    setCctvEvidencias("");
+    setCctvArchivos([]);
     toast({ title: "Soporte CCTV registrado en el evento" });
   }
 
@@ -512,15 +520,48 @@ export function RecordDetailDrawer() {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-muted-foreground mb-1 block">Evidencias — fotos o videos (opcional)</label>
-                  <textarea
-                    value={cctvEvidencias}
-                    onChange={(e) => setCctvEvidencias(e.target.value)}
-                    className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none font-mono"
-                    rows={2}
-                    placeholder={"Una URL por línea, ej:\nhttps://storage.coordinadora.com/cctv/captura1.jpg"}
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Opcional — la descripción es suficiente.</p>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">Fotos o videos (opcional)</label>
+                  <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-blue-200 rounded-xl cursor-pointer hover:bg-blue-50/50 hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-xs font-medium">Subir fotos o videos</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG, MP4, MOV — máx. 50MB por archivo</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*"
+                      className="hidden"
+                      onChange={(e) => handleCctvFiles(e.target.files)}
+                    />
+                  </label>
+                  {cctvArchivos.length > 0 && (
+                    <div className="mt-2 space-y-1.5">
+                      {cctvArchivos.map((file, idx) => {
+                        const isVideo = file.type.startsWith("video/");
+                        return (
+                          <div key={idx} className="flex items-center justify-between gap-2 bg-background border border-border rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {isVideo
+                                ? <FileVideo className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                : <ImageIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                              }
+                              <span className="text-xs truncate">{file.name}</span>
+                              <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                                {(file.size / 1024 / 1024).toFixed(1)} MB
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => setCctvArchivos(prev => prev.filter((_, i) => i !== idx))}
+                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -531,7 +572,7 @@ export function RecordDetailDrawer() {
                     Registrar soporte
                   </button>
                   <button
-                    onClick={() => { setCctvFormAbierto(false); setCctvDescripcion(""); setCctvEvidencias(""); }}
+                    onClick={() => { setCctvFormAbierto(false); setCctvDescripcion(""); setCctvArchivos([]); }}
                     className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
                   >
                     Cancelar
