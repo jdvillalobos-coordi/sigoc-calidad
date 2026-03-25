@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getPersonaPorCedula, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, getSolicitudesCCTVPorEvento, solicitudesCCTV, terminales, OPERADORES_CCTV } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, ArrowRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video } from "lucide-react";
@@ -91,17 +91,10 @@ export function RecordDetailDrawer() {
   const [escalandoAbierto, setEscalandoAbierto] = useState(false);
   const [escaladoPersonaId, setEscaladoPersonaId] = useState("");
   const [escaladoMotivo, setEscaladoMotivo] = useState("");
-  const [cctvAbierto, setCctvAbierto] = useState(false);
-  const [cctvTerminal, setCctvTerminal] = useState("");
-  const [cctvDescripcion, setCctvDescripcion] = useState("");
-  const [cctvOperadorId, setCctvOperadorId] = useState("");
   const [localCCTV, setLocalCCTV] = useState<SolicitudCCTV[]>(solicitudesCCTV);
-  const [cctvRespondiendo, setCctvRespondiendo] = useState<string | null>(null);
-  const [cctvConclusion, setCctvConclusion] = useState("");
-  const [cctvHallazgos, setCctvHallazgos] = useState("");
+  const [cctvFormAbierto, setCctvFormAbierto] = useState(false);
+  const [cctvDescripcion, setCctvDescripcion] = useState("");
   const [cctvEvidencias, setCctvEvidencias] = useState("");
-  const [cctvPersonaCedula, setCctvPersonaCedula] = useState("");
-  const [cctvPersonaNombre, setCctvPersonaNombre] = useState("");
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
@@ -190,102 +183,47 @@ export function RecordDetailDrawer() {
     toast({ title: "✅ Anotación agregada" });
   }
 
-  const solicitudesEvento = localCCTV.filter(s => s.eventoId === ev.id);
+  const soportesCCTV = localCCTV.filter(s => s.eventoId === ev.id);
 
-  function enviarSolicitudCCTV() {
-    if (!cctvTerminal || !cctvDescripcion.trim() || !cctvOperadorId) return;
-    const operador = OPERADORES_CCTV.find(o => o.id === cctvOperadorId)!;
-    const nuevaSolicitud: SolicitudCCTV = {
+  function registrarSoporteCCTV() {
+    if (!cctvDescripcion.trim()) return;
+    const urls = cctvEvidencias.trim() ? cctvEvidencias.split("\n").map(u => u.trim()).filter(Boolean) : undefined;
+    const nuevo: SolicitudCCTV = {
       id: `CCTV-${Date.now()}`,
       eventoId: ev!.id,
       terminalSolicitante: ev!.terminal,
-      terminalInvestigar: cctvTerminal,
+      terminalInvestigar: ev!.terminal,
       tipoNovedad: ev!.tipoEvento,
-      guia: ev!.guias?.[0],
       descripcionSolicitud: cctvDescripcion,
       fechaSolicitud: new Date().toISOString(),
       solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
-      asignadoA: operador,
-      estado: "pendiente",
-    };
-    setLocalCCTV(prev => [...prev, nuevaSolicitud]);
-    setLocalEventos(lst =>
-      lst.map(e => e.id === ev!.id ? {
-        ...e,
-        anotaciones: [...e.anotaciones, { id: `a${Date.now()}`, autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Sistema", fecha: new Date().toISOString(), texto: `Se solicitó revisión CCTV a ${operador.nombre} — Terminal ${cctvTerminal}`, tipo: "seguimiento" as any }],
-        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Solicitud CCTV asignada a ${operador.nombre} — Terminal ${cctvTerminal}` }],
-      } : e)
-    );
-    agregarNotificacion(
-      "caso_escalado",
-      `📹 Sandra Herrera te asignó revisión CCTV del evento ${ev!.id} — Terminal ${cctvTerminal}`,
-      ev!.id,
-    );
-    setCctvAbierto(false);
-    setCctvTerminal("");
-    setCctvDescripcion("");
-    setCctvOperadorId("");
-    toast({ title: `Solicitud CCTV asignada a ${operador.nombre}` });
-  }
-
-  function tomarSolicitudCCTV(solId: string) {
-    setLocalCCTV(prev => prev.map(s => s.id === solId ? {
-      ...s,
-      estado: "en_revision" as const,
-      investigadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
-    } : s));
-    toast({ title: "Solicitud CCTV tomada — ahora en revisión" });
-  }
-
-  function completarSolicitudCCTV() {
-    if (!cctvRespondiendo || !cctvConclusion.trim()) return;
-    const personaId = cctvPersonaCedula.trim() ? { cedula: cctvPersonaCedula.trim(), nombre: cctvPersonaNombre || cctvPersonaCedula.trim() } : undefined;
-    const urls = cctvEvidencias.trim() ? cctvEvidencias.split("\n").map(u => u.trim()).filter(Boolean) : undefined;
-    const sol = localCCTV.find(s => s.id === cctvRespondiendo);
-    const operadorNombre = sol?.investigadoPor?.nombre ?? sol?.asignadoA?.nombre ?? "Operador CCTV";
-    setLocalCCTV(prev => prev.map(s => s.id === cctvRespondiendo ? {
-      ...s,
-      estado: "completada" as const,
-      conclusionCCTV: cctvConclusion,
-      hallazgosCCTV: cctvHallazgos || undefined,
+      asignadoA: { id: "u-sandra", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
+      estado: "completada",
+      conclusionCCTV: cctvDescripcion,
       evidenciasUrls: urls,
-      personaIdentificada: personaId,
       fechaCierre: new Date().toISOString(),
-      investigadoPor: s.investigadoPor ?? s.asignadoA ?? { id: "u-sandra", nombre: "Sandra Herrera" },
-    } : s));
+      investigadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    };
+    setLocalCCTV(prev => [...prev, nuevo]);
     setLocalEventos(lst =>
       lst.map(e => e.id === ev!.id ? {
         ...e,
         anotaciones: [...e.anotaciones, {
           id: `a${Date.now()}`,
-          autorId: sol?.asignadoA?.id ?? "u-cctv",
-          autorNombre: operadorNombre,
-          autorRol: "Operador CCTV",
+          autorId: "u-sandra",
+          autorNombre: "Sandra Herrera",
+          autorRol: "Coordinadora Nacional de Calidad",
           fecha: new Date().toISOString(),
-          texto: `Revisión CCTV completada (${sol?.terminalInvestigar ?? ""}): ${cctvConclusion}${personaId ? ` — Persona identificada: ${personaId.nombre}` : ""}${urls ? ` — ${urls.length} evidencia(s) adjunta(s)` : ""}`,
+          texto: `Soporte CCTV registrado: ${cctvDescripcion}${urls ? ` — ${urls.length} evidencia(s) adjunta(s)` : ""}`,
           tipo: "hallazgo" as any,
         }],
-        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: operadorNombre, accion: `Revisión CCTV ${cctvRespondiendo} completada` }],
+        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: "Soporte CCTV registrado" }],
       } : e)
     );
-    agregarNotificacion(
-      "caso_asignado",
-      `📹 ${operadorNombre} completó revisión CCTV del evento ${ev!.id} — Terminal ${sol?.terminalInvestigar ?? ""}`,
-      ev!.id,
-    );
-    setCctvRespondiendo(null);
-    setCctvConclusion("");
-    setCctvHallazgos("");
+    setCctvFormAbierto(false);
+    setCctvDescripcion("");
     setCctvEvidencias("");
-    setCctvPersonaCedula("");
-    setCctvPersonaNombre("");
-    toast({ title: "Revisión CCTV completada y registrada en el evento" });
-  }
-
-  function buscarPersonaCCTV(cedula: string) {
-    const p = getPersonaPorCedula(cedula);
-    if (p) setCctvPersonaNombre(p.nombre);
-    else setCctvPersonaNombre("");
+    toast({ title: "Soporte CCTV registrado en el evento" });
   }
 
   function guardarComplemento() {
@@ -369,10 +307,6 @@ export function RecordDetailDrawer() {
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors">
                   <AlertTriangle className="w-3.5 h-3.5" /> Escalar
                 </button>
-                <button onClick={() => setCctvAbierto(!cctvAbierto)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-blue-300 text-blue-700 hover:bg-blue-50 text-xs font-medium transition-colors">
-                  <Video className="w-3.5 h-3.5" /> Solicitar CCTV
-                </button>
                 <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
                   <Check className="w-3.5 h-3.5" /> Resolver
@@ -430,67 +364,6 @@ export function RecordDetailDrawer() {
                 </button>
                 <button
                   onClick={() => { setEscalandoAbierto(false); setEscaladoPersonaId(""); setEscaladoMotivo(""); }}
-                  className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Mini-form CCTV */}
-          {cctvAbierto && ev.estadoFlujo === "en_investigacion" && (
-            <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3">
-              <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
-                <Video className="w-3.5 h-3.5" /> Escalar a operador CCTV
-              </div>
-              <div>
-                <label className="text-[11px] text-muted-foreground mb-1 block">Asignar a operador CCTV *</label>
-                <select
-                  value={cctvOperadorId}
-                  onChange={(e) => setCctvOperadorId(e.target.value)}
-                  className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Seleccionar operador...</option>
-                  {OPERADORES_CCTV.map(o => (
-                    <option key={o.id} value={o.id}>{o.nombre} — {o.cargo}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[11px] text-muted-foreground mb-1 block">Terminal a investigar *</label>
-                <select
-                  value={cctvTerminal}
-                  onChange={(e) => setCctvTerminal(e.target.value)}
-                  className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Seleccionar terminal...</option>
-                  {terminales.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Puede ser diferente a la terminal del evento</p>
-              </div>
-              <div>
-                <label className="text-[11px] text-muted-foreground mb-1 block">¿Qué necesitas que revisen? *</label>
-                <textarea
-                  value={cctvDescripcion}
-                  onChange={(e) => setCctvDescripcion(e.target.value)}
-                  className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                  rows={3}
-                  placeholder="Describe qué necesitas que revisen: área, horario, qué buscar..."
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={enviarSolicitudCCTV}
-                  disabled={!cctvTerminal || !cctvDescripcion.trim() || !cctvOperadorId}
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
-                >
-                  Enviar solicitud
-                </button>
-                <button
-                  onClick={() => { setCctvAbierto(false); setCctvTerminal(""); setCctvDescripcion(""); setCctvOperadorId(""); }}
                   className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Cancelar
@@ -606,201 +479,116 @@ export function RecordDetailDrawer() {
             </section>
           )}
 
-          {/* Soportes CCTV */}
-          {solicitudesEvento.length > 0 && (
-            <section>
-              <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                <Video className="w-4 h-4 text-blue-600" /> Soportes CCTV ({solicitudesEvento.length})
+          {/* Soporte CCTV */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                <Video className="w-4 h-4 text-blue-600" /> Soporte CCTV
+                {soportesCCTV.length > 0 && <span className="text-xs text-muted-foreground font-normal">({soportesCCTV.length})</span>}
               </h3>
+              {ev.estadoFlujo !== "cerrado" && !cctvFormAbierto && (
+                <button
+                  onClick={() => setCctvFormAbierto(true)}
+                  className="text-[11px] px-2.5 py-1 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 font-medium transition-colors"
+                >
+                  + Registrar soporte CCTV
+                </button>
+              )}
+            </div>
+
+            {cctvFormAbierto && (
+              <div className="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3 mb-3">
+                <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
+                  <Video className="w-3.5 h-3.5" /> Registrar soporte CCTV
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">Descripción de lo observado *</label>
+                  <textarea
+                    value={cctvDescripcion}
+                    onChange={(e) => setCctvDescripcion(e.target.value)}
+                    className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                    rows={3}
+                    placeholder="Describe lo observado en cámaras: qué pasó, quién intervino, horario, si se confirma o descarta la novedad..."
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted-foreground mb-1 block">Evidencias — fotos o videos (opcional)</label>
+                  <textarea
+                    value={cctvEvidencias}
+                    onChange={(e) => setCctvEvidencias(e.target.value)}
+                    className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none font-mono"
+                    rows={2}
+                    placeholder={"Una URL por línea, ej:\nhttps://storage.coordinadora.com/cctv/captura1.jpg"}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Opcional — la descripción es suficiente.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={registrarSoporteCCTV}
+                    disabled={!cctvDescripcion.trim()}
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  >
+                    Registrar soporte
+                  </button>
+                  <button
+                    onClick={() => { setCctvFormAbierto(false); setCctvDescripcion(""); setCctvEvidencias(""); }}
+                    className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {soportesCCTV.length > 0 && (
               <div className="space-y-2">
-                {solicitudesEvento.map(sol => {
-                  const estadoCfg: Record<string, { label: string; cls: string }> = {
-                    pendiente: { label: "Pendiente", cls: "bg-amber-100 text-amber-700 border-amber-200" },
-                    en_revision: { label: "En revisión", cls: "bg-blue-100 text-blue-700 border-blue-200" },
-                    completada: { label: "Completada", cls: "bg-green-100 text-green-700 border-green-200" },
-                  };
-                  const cfg = estadoCfg[sol.estado];
-                  const isRespondiendo = cctvRespondiendo === sol.id;
-                  return (
-                    <div key={sol.id} className={`rounded-xl border p-4 space-y-2 ${
-                      sol.estado === "completada" ? "bg-green-50/50 border-green-200" :
-                      sol.estado === "en_revision" ? "bg-blue-50/50 border-blue-200" :
-                      "bg-muted/30 border-border"
-                    }`}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-mono font-bold">{sol.id}</span>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${cfg.cls}`}>
-                            {cfg.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-muted-foreground">{formatDate(sol.fechaSolicitud)}</span>
-                          {sol.estado === "pendiente" && (
-                            <button
-                              onClick={() => tomarSolicitudCCTV(sol.id)}
-                              className="text-[11px] px-2.5 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors"
-                            >
-                              Tomar solicitud
-                            </button>
-                          )}
-                          {sol.estado === "en_revision" && !isRespondiendo && (
-                            <button
-                              onClick={() => setCctvRespondiendo(sol.id)}
-                              className="text-[11px] px-2.5 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700 font-medium transition-colors"
-                            >
-                              Registrar resultado
-                            </button>
-                          )}
-                        </div>
+                {soportesCCTV.map(sol => (
+                  <div key={sol.id} className="rounded-xl border border-green-200 bg-green-50/50 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold">{sol.id}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatDate(sol.fechaSolicitud)}</span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Terminal: </span>
-                          <span className="font-medium">{sol.terminalInvestigar}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Solicitado por: </span>
-                          <span className="font-medium">{sol.solicitadoPor.nombre}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Asignado a: </span>
-                          <span className="font-medium">{sol.asignadoA.nombre}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{sol.descripcionSolicitud}</p>
-
-                      {/* Form de respuesta CCTV inline */}
-                      {isRespondiendo && (
-                        <div className="border-t border-blue-200 pt-3 mt-2 space-y-3">
-                          <div className="text-xs font-semibold text-blue-800 flex items-center gap-1.5">
-                            <Video className="w-3.5 h-3.5" /> Registrar resultado de revisión
-                          </div>
-                          <div>
-                            <label className="text-[11px] text-muted-foreground mb-1 block">Descripción de lo observado *</label>
-                            <textarea
-                              value={cctvConclusion}
-                              onChange={(e) => setCctvConclusion(e.target.value)}
-                              className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                              rows={3}
-                              placeholder="Describe lo que se observó en las cámaras: qué pasó, quién intervino, en qué horario, si se confirma o descarta la novedad..."
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] text-muted-foreground mb-1 block">Hallazgos adicionales (opcional)</label>
-                            <textarea
-                              value={cctvHallazgos}
-                              onChange={(e) => setCctvHallazgos(e.target.value)}
-                              className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                              rows={2}
-                              placeholder="Detalles complementarios, observaciones de contexto..."
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[11px] text-muted-foreground mb-1 block">Evidencias — fotos o videos (opcional)</label>
-                            <textarea
-                              value={cctvEvidencias}
-                              onChange={(e) => setCctvEvidencias(e.target.value)}
-                              className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none font-mono"
-                              rows={2}
-                              placeholder={"Una URL por línea, ej:\nhttps://storage.coordinadora.com/cctv/captura1.jpg"}
-                            />
-                            <p className="text-[10px] text-muted-foreground mt-0.5">URLs de capturas de pantalla, clips de video o fotos. Opcional — la descripción es suficiente.</p>
-                          </div>
-                          <div>
-                            <label className="text-[11px] text-muted-foreground mb-1 block">Persona identificada en cámaras (opcional)</label>
-                            <div className="flex gap-2">
-                              <input
-                                className="flex-1 text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                                placeholder="Cédula"
-                                value={cctvPersonaCedula}
-                                onChange={(e) => setCctvPersonaCedula(e.target.value)}
-                                onBlur={() => cctvPersonaCedula && buscarPersonaCCTV(cctvPersonaCedula)}
-                              />
-                              {cctvPersonaNombre && (
-                                <span className="inline-flex items-center text-xs text-green-700 font-medium bg-green-50 border border-green-200 rounded-lg px-2.5 py-1">
-                                  {cctvPersonaNombre}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={completarSolicitudCCTV}
-                              disabled={!cctvConclusion.trim()}
-                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 disabled:opacity-40 transition-colors"
-                            >
-                              Completar revisión
-                            </button>
-                            <button
-                              onClick={() => { setCctvRespondiendo(null); setCctvConclusion(""); setCctvHallazgos(""); setCctvEvidencias(""); setCctvPersonaCedula(""); setCctvPersonaNombre(""); }}
-                              className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {sol.estado === "completada" && (
-                        <div className="border-t border-green-200 pt-2 mt-2 space-y-1.5">
-                          {sol.conclusionCCTV && (
-                            <div>
-                              <span className="text-[11px] text-green-700 font-medium">Conclusión: </span>
-                              <span className="text-xs text-green-900">{sol.conclusionCCTV}</span>
-                            </div>
-                          )}
-                          {sol.hallazgosCCTV && (
-                            <div>
-                              <span className="text-[11px] text-green-700 font-medium">Hallazgos: </span>
-                              <span className="text-xs text-green-900">{sol.hallazgosCCTV}</span>
-                            </div>
-                          )}
-                          {sol.evidenciasUrls && sol.evidenciasUrls.length > 0 && (
-                            <div>
-                              <span className="text-[11px] text-green-700 font-medium">Evidencias ({sol.evidenciasUrls.length}): </span>
-                              <div className="flex flex-wrap gap-1.5 mt-1">
-                                {sol.evidenciasUrls.map((url, idx) => {
-                                  const isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mov");
-                                  return (
-                                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-800 hover:bg-green-200 transition-colors font-medium">
-                                      {isVideo ? "🎬" : "📷"} {isVideo ? "Video" : "Foto"} {idx + 1}
-                                    </a>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                          {sol.personaIdentificada && (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] text-green-700 font-medium">Persona identificada: </span>
-                              <button
-                                onClick={() => abrirPersona(sol.personaIdentificada!.cedula)}
-                                className="text-xs font-medium text-primary underline hover:no-underline"
-                              >
-                                {sol.personaIdentificada.nombre} (CC {sol.personaIdentificada.cedula})
-                              </button>
-                            </div>
-                          )}
-                          {sol.investigadoPor && (
-                            <div className="text-[11px] text-muted-foreground">
-                              Revisado por: {sol.investigadoPor.nombre} · Cerrado: {sol.fechaCierre ? formatDate(sol.fechaCierre) : "—"}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {sol.estado === "en_revision" && !isRespondiendo && (
-                        <div className="text-[11px] text-blue-700 font-medium">
-                          En revisión por: {sol.investigadoPor?.nombre ?? sol.asignadoA.nombre}
-                        </div>
+                      {sol.investigadoPor && (
+                        <span className="text-[10px] text-muted-foreground">Por: {sol.investigadoPor.nombre}</span>
                       )}
                     </div>
-                  );
-                })}
+                    {sol.conclusionCCTV && (
+                      <p className="text-xs leading-relaxed">{sol.conclusionCCTV}</p>
+                    )}
+                    {sol.evidenciasUrls && sol.evidenciasUrls.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {sol.evidenciasUrls.map((url, idx) => {
+                          const isVideo = url.endsWith(".mp4") || url.endsWith(".webm") || url.endsWith(".mov");
+                          return (
+                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg bg-green-100 border border-green-200 text-green-800 hover:bg-green-200 transition-colors font-medium">
+                              {isVideo ? "🎬" : "📷"} {isVideo ? "Video" : "Foto"} {idx + 1}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {sol.personaIdentificada && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-green-700 font-medium">Persona identificada: </span>
+                        <button
+                          onClick={() => abrirPersona(sol.personaIdentificada!.cedula)}
+                          className="text-xs font-medium text-primary underline hover:no-underline"
+                        >
+                          {sol.personaIdentificada.nombre} (CC {sol.personaIdentificada.cedula})
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            </section>
-          )}
+            )}
+
+            {soportesCCTV.length === 0 && !cctvFormAbierto && (
+              <p className="text-xs text-muted-foreground">Sin soportes CCTV registrados.</p>
+            )}
+          </section>
 
           {/* Resolución */}
           {(ev.estadoFlujo === "resuelto" || ev.estadoFlujo === "cerrado") && ev.resolucionFinal && (
