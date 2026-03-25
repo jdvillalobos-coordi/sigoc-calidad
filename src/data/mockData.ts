@@ -1611,6 +1611,13 @@ export const estudiosSeguridad: EstudioSeguridad[] = [
 // ============================================================
 // SOLICITUDES CCTV
 // ============================================================
+export const OPERADORES_CCTV = [
+  { id: "u-cctv-01", nombre: "Diego Ramírez", cargo: "Operador CCTV Nacional" },
+  { id: "u-cctv-02", nombre: "Ana Lucía Torres", cargo: "Operadora CCTV Bogotá" },
+  { id: "u-cctv-03", nombre: "Fernando Castillo", cargo: "Operador CCTV Medellín" },
+  { id: "u-cctv-04", nombre: "Laura Gómez", cargo: "Operadora CCTV Cali" },
+];
+
 export const solicitudesCCTV: SolicitudCCTV[] = [
   {
     id: "CCTV-001",
@@ -1622,9 +1629,14 @@ export const solicitudesCCTV: SolicitudCCTV[] = [
     descripcionSolicitud: "Revisar cámaras del área de recaudo entre las 14:00 y 16:00 del 5 de marzo. Verificar quién manipuló el sobre de recaudo de la guía 7501234567 después de su ingreso a la terminal.",
     fechaSolicitud: "2026-03-06T09:30:00",
     solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    asignadoA: { id: "u-cctv-01", nombre: "Diego Ramírez", cargo: "Operador CCTV Nacional" },
     estado: "completada",
-    conclusionCCTV: "Se identificó al colaborador Carlos Pérez manipulando el sobre de recaudo a las 15:22. Se observa que abre el sobre, retira contenido y lo vuelve a sellar. Se adjuntan capturas de pantalla al evento.",
+    conclusionCCTV: "Se identificó al colaborador Carlos Pérez manipulando el sobre de recaudo a las 15:22. Se observa que abre el sobre, retira contenido y lo vuelve a sellar.",
     hallazgosCCTV: "Manipulación confirmada por video. Colaborador identificado plenamente. Hora exacta: 15:22-15:25.",
+    evidenciasUrls: [
+      "https://storage.coordinadora.com/cctv/MDE-recaudo-20260305-152200.mp4",
+      "https://storage.coordinadora.com/cctv/MDE-recaudo-20260305-captura1.jpg",
+    ],
     personaIdentificada: { cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya" },
     fechaCierre: "2026-03-07T11:15:00",
     investigadoPor: { id: "u-cctv-01", nombre: "Diego Ramírez" },
@@ -1639,6 +1651,7 @@ export const solicitudesCCTV: SolicitudCCTV[] = [
     descripcionSolicitud: "Revisar cámaras de plataforma de despacho del 4 de marzo entre 08:00 y 12:00. Se reporta faltante de unidad — necesitamos verificar si la carga fue subida al vehículo o si nunca llegó a plataforma.",
     fechaSolicitud: "2026-03-08T10:00:00",
     solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    asignadoA: { id: "u-cctv-03", nombre: "Fernando Castillo", cargo: "Operador CCTV Medellín" },
     estado: "pendiente",
   },
   {
@@ -1650,8 +1663,30 @@ export const solicitudesCCTV: SolicitudCCTV[] = [
     descripcionSolicitud: "Revisar cámaras del área de clasificación de Bogotá el día 5 de marzo entre 06:00 y 10:00. Verificar si el sobre de recaudo fue recibido correctamente en clasificación y quién lo procesó.",
     fechaSolicitud: "2026-03-09T14:00:00",
     solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    asignadoA: { id: "u-cctv-02", nombre: "Ana Lucía Torres", cargo: "Operadora CCTV Bogotá" },
     estado: "en_revision",
     investigadoPor: { id: "u-cctv-02", nombre: "Ana Lucía Torres" },
+  },
+  {
+    id: "CCTV-004",
+    eventoId: "UNI-007",
+    terminalSolicitante: "Medellín",
+    terminalInvestigar: "Medellín",
+    tipoNovedad: "Faltante novedad 100",
+    guia: "7501234571",
+    descripcionSolicitud: "Revisar cámaras de zona de descargue y bodega 3 el 10 de marzo entre 20:00 y 23:00. Se reportó faltante de mercancía después del descargue del vehículo TKJ-412. Necesitamos confirmar si la carga bajó completa.",
+    fechaSolicitud: "2026-03-11T08:00:00",
+    solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+    asignadoA: { id: "u-cctv-03", nombre: "Fernando Castillo", cargo: "Operador CCTV Medellín" },
+    estado: "completada",
+    conclusionCCTV: "Se revisó la grabación de la zona de descargue. Se observa que el vehículo TKJ-412 llega a las 20:45 y se inicia descargue a las 20:52. Se identifica a un auxiliar retirando una caja del lote y llevándola hacia el costado norte de la bodega, fuera de la zona habitual de almacenamiento. La caja no aparece en el inventario posterior.",
+    hallazgosCCTV: "Auxiliar identificado: turno nocturno, camiseta roja. Manipulación irregular entre 21:10 y 21:15. La caja fue llevada al costado norte y no regresó a la zona de clasificación. Se recomienda cruzar con registro de personal del turno.",
+    evidenciasUrls: [
+      "https://storage.coordinadora.com/cctv/MDE-bodega3-20260310-211000.mp4",
+    ],
+    personaIdentificada: { cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya" },
+    fechaCierre: "2026-03-12T10:30:00",
+    investigadoPor: { id: "u-cctv-03", nombre: "Fernando Castillo" },
   },
 ];
 

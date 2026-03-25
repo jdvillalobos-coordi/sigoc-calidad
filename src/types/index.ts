@@ -212,9 +212,11 @@ export interface SolicitudCCTV {
   descripcionSolicitud: string;
   fechaSolicitud: string;
   solicitadoPor: { id: string; nombre: string };
+  asignadoA: { id: string; nombre: string; cargo: string };
   estado: "pendiente" | "en_revision" | "completada";
   conclusionCCTV?: string;
   hallazgosCCTV?: string;
+  evidenciasUrls?: string[];
   personaIdentificada?: { cedula: string; nombre: string };
   fechaCierre?: string;
   investigadoPor?: { id: string; nombre: string };

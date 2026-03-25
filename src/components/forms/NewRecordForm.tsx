@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado } from "@/data/mockData";
+import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos } from "@/data/mockData";
 import { formatCurrency, EstadoPersonaBadge } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import type { CategoriaEvento, FormPrefill, Persona } from "@/types";
+import type { CategoriaEvento, FormPrefill, Persona, Evento } from "@/types";
 
 const CATEGORIAS = [
   { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
@@ -128,8 +128,78 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   function crear() {
     const prefix = categoria!.slice(0, 3).toUpperCase();
     const id = `${prefix}-${String(Math.floor(Math.random() * 900) + 100)}`;
+    const hoy = new Date().toISOString().split("T")[0];
+
+    const tipoEntidadMap: Record<string, Evento["tipoEntidad"]> = {
+      "Empleado CM":              "empleado",
+      "Aliado Goo":               "aliado_goo",
+      "Aliado Droop":             "aliado_droop",
+      "Contratista":              "contratista",
+      "Tercero (persona jurídica)": "tercero",
+      "Vehículo":                 "vehiculo",
+    };
+
+    const guiaPrincipal = guiaInputs[0] ? getGuia(guiaInputs[0]) : null;
+    const ciudad = guiaPrincipal?.ciudadOrigen ?? terminal;
+
+    const personasResponsables = Object.values(cedulasPersona).map((p) => ({
+      personaId: p.id,
+      cedula: p.cedula,
+      nombre: p.nombre,
+      rol: "responsable" as const,
+    }));
+
+    const nuevoEvento: Evento = {
+      id,
+      estado: "abierto",
+      categoria: categoria!,
+      tipoEvento,
+      tipoEntidad: tipoEntidadMap[tipoEntidad] ?? "empleado",
+      fecha,
+      terminal,
+      ciudad,
+      guias: guiaInputs.filter(Boolean),
+      personasResponsables,
+      personasParticipantes: [],
+      vehiculosVinculados: placaData
+        ? [{ vehiculoId: placaData.placa }]
+        : [],
+      descripcionHechos: descripcion,
+      valorAfectacion: valorAfectacion ? Number(valorAfectacion) : undefined,
+      valorDinero: categoria === "dineros" && valorAfectacion ? Number(valorAfectacion) : undefined,
+      codigoNovedad: categoria === "unidades" ? codigoNovedad || undefined : undefined,
+      nitCliente: nitCliente || undefined,
+      nombreCliente: nombreCliente || undefined,
+      rolSolicitante: rolSolicitante as Evento["rolSolicitante"] || undefined,
+      gravedadFalta: gravedadFalta as Evento["gravedadFalta"] || undefined,
+      decisionGH: decisionGH || undefined,
+      estadoFlujo: "nuevo",
+      asignadoA: {
+        id: usuarioLogueado.id,
+        nombre: usuarioLogueado.nombre,
+        cargo: usuarioLogueado.cargo,
+      },
+      usuarioRegistro: usuarioLogueado.id,
+      perfilUsuario: usuarioLogueado.cargo,
+      terminalUsuario: usuarioLogueado.terminal,
+      fechaRegistro: hoy,
+      anotaciones: [],
+      historial: [
+        {
+          id: `H-${Date.now()}`,
+          fecha: hoy,
+          usuarioNombre: usuarioLogueado.nombre,
+          accion: "Evento creado",
+        },
+      ],
+      diasAbierto: 0,
+    };
+
+    // Insertar al inicio del array para que aparezca primero en la lista
+    eventos.unshift(nuevoEvento);
+
     setEventoCreado(id);
-    toast({ title: `Evento ${id} creado exitosamente` });
+    toast({ title: `✅ Evento ${id} creado exitosamente` });
   }
 
   return (
