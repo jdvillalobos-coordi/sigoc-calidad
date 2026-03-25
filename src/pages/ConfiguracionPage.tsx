@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Toggle } from "@/components/ui/toggle";
 
 export default function ConfiguracionPage() {
   const [notifIA, setNotifIA] = useState(true);

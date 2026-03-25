@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, FileText, Bot, ChevronRight, ChevronLeft, Camera, Inbox } from "lucide-react";
+import { Home, FileText, Bot, ChevronRight, ChevronLeft, Camera, Inbox, Settings } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useSidebarState } from "@/context/SidebarContext";
 import type { PaginaActiva } from "@/types";
@@ -10,6 +10,10 @@ const items: { id: PaginaActiva; icon: React.ElementType; label: string }[] = [
   { id: "registros", icon: FileText, label: "Eventos" },
   { id: "evidencias", icon: Camera, label: "Evidencias" },
   { id: "ia", icon: Bot, label: "Asistente IA" },
+];
+
+const bottomItems: { id: PaginaActiva; icon: React.ElementType; label: string }[] = [
+  { id: "configuracion", icon: Settings, label: "Configuración" },
 ];
 
 export function Sidebar() {
@@ -60,6 +64,37 @@ export function Sidebar() {
               )}
             </button>
             {/* Tooltip solo cuando está colapsado */}
+            {!expanded && (
+              <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-foreground text-background text-xs font-medium px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                {label}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom nav items (Configuración) */}
+      <div className="flex flex-col gap-0.5 w-full px-2 pb-1">
+        {bottomItems.map(({ id, icon: Icon, label }) => (
+          <div key={id} className="relative group">
+            <button
+              onClick={() => setPaginaActiva(id)}
+              className={`
+                flex items-center gap-3 w-full rounded-md px-2 py-2 transition-colors text-left
+                ${paginaActiva === id
+                  ? "bg-white/20 text-white"
+                  : "text-white/70 hover:bg-white/10 hover:text-white"
+                }
+              `}
+              title={!expanded ? label : undefined}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {expanded && (
+                <span className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+                  {label}
+                </span>
+              )}
+            </button>
             {!expanded && (
               <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-foreground text-background text-xs font-medium px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                 {label}

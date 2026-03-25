@@ -3,12 +3,12 @@ import { useApp } from "@/context/AppContext";
 import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, Eye, X, Filter } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter } from "lucide-react";
 import type { InsumoRCE, InsumoFaltante } from "@/types";
 
 type TabId = "rce" | "faltantes";
 type FiltroEstadoRCE = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
-type FiltroEstadoFalt = "todas" | "pendiente" | "en_investigacion" | "revisada_sin_novedad" | "con_novedad";
+type FiltroEstadoFalt = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
 
 function diasDesde(fecha: string): number {
   const diff = Date.now() - new Date(fecha).getTime();
@@ -139,14 +139,18 @@ export default function BandejaPage() {
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
-      if (filtroEstadoFalt !== "todas" && i.estadoRevision !== filtroEstadoFalt) return false;
+      if (filtroEstadoFalt !== "todas") {
+        // tratar en_investigacion como pendiente (estado legacy del mock)
+        const estadoNorm = i.estadoRevision === "en_investigacion" ? "pendiente" : i.estadoRevision;
+        if (estadoNorm !== filtroEstadoFalt) return false;
+      }
       if (!matchTerminal(i.terminal)) return false;
       return true;
     });
   }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal]);
 
   const pendientesRCE = rceData.filter((i) => i.estadoRevision === "pendiente").length;
-  const pendientesFalt = faltData.filter((i) => i.estadoRevision === "pendiente" || i.estadoRevision === "en_investigacion").length;
+  const pendientesFalt = faltData.filter((i) => i.estadoRevision === "pendiente").length;
 
   function marcarRCESinNovedad(id: string) {
     setRceData((prev) =>
@@ -176,16 +180,6 @@ export default function BandejaPage() {
     );
     const item = faltData.find((i) => i.id === id);
     toast({ title: `Guía ${item?.guia ?? id} marcada sin novedad` });
-  }
-
-  function marcarFaltEnInvestigacion(id: string) {
-    setFaltData((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, estadoRevision: "en_investigacion" as const, revisadoPor: "Sandra Herrera", fechaRevision: new Date().toISOString().split("T")[0] } : i
-      )
-    );
-    const item = faltData.find((i) => i.id === id);
-    toast({ title: `Guía ${item?.guia ?? id} marcada en investigación` });
   }
 
   function registrarEventoFalt(item: InsumoFaltante) {
@@ -274,7 +268,7 @@ export default function BandejaPage() {
           )}
           {tab === "faltantes" && (
             <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-              {([["todas", "Todas"], ["pendiente", "Pendientes"], ["en_investigacion", "En invest."], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoFalt, string][]).map(([val, label]) => (
+              {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoFalt, string][]).map(([val, label]) => (
                 <button key={val} onClick={() => setFiltroEstadoFalt(val)}
                   className={`px-3 py-1.5 transition-colors ${filtroEstadoFalt === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
                   {label}
@@ -450,16 +444,8 @@ export default function BandejaPage() {
                           <td className="px-3 py-2.5 text-center"><DiasBadge dias={dias} /></td>
                           <td className="px-3 py-2.5 text-center"><EstadoRevisionBadge estado={item.estadoRevision} /></td>
                           <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                            {(item.estadoRevision === "pendiente" || item.estadoRevision === "en_investigacion") && (
+                            {item.estadoRevision === "pendiente" && (
                               <div className="flex items-center justify-end gap-1">
-                                {item.estadoRevision === "pendiente" && (
-                                  <button
-                                    onClick={() => marcarFaltEnInvestigacion(item.id)}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors text-[10px] font-medium"
-                                  >
-                                    <Eye className="w-3 h-3" /> Investigar
-                                  </button>
-                                )}
                                 <button
                                   onClick={() => marcarFaltSinNovedad(item.id)}
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors text-[10px] font-medium"
@@ -474,7 +460,7 @@ export default function BandejaPage() {
                                 </button>
                               </div>
                             )}
-                            {item.estadoRevision !== "pendiente" && item.estadoRevision !== "en_investigacion" && item.revisadoPor && (
+                            {item.estadoRevision !== "pendiente" && item.revisadoPor && (
                               <span className="text-[10px] text-muted-foreground">{item.revisadoPor}</span>
                             )}
                           </td>

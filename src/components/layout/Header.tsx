@@ -264,6 +264,60 @@ function NotificacionesPopover() {
   );
 }
 
+// ---- Menú de usuario ----
+function UserMenu() {
+  const { setPaginaActiva } = useApp();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 pl-2 border-l border-border hover:bg-muted rounded-lg px-2 py-1 transition-colors"
+      >
+        <AvatarInicial nombre="Sandra Herrera" size="sm" />
+        <div className="hidden md:block text-right">
+          <div className="text-xs font-semibold">Sandra Herrera</div>
+          <div className="text-[10px] text-muted-foreground">Coordinadora Nacional</div>
+        </div>
+        <ChevronDown className={`w-3 h-3 text-muted-foreground hidden md:block transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-52 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden fade-in">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold">Sandra Herrera</p>
+            <p className="text-xs text-muted-foreground">sandra.herrera@coordinadora.com</p>
+          </div>
+          <div className="py-1">
+            <button
+              className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2"
+              onClick={() => { setPaginaActiva("configuracion"); setOpen(false); }}
+            >
+              <span className="text-base">⚙️</span> Configuración
+            </button>
+            <button
+              className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors flex items-center gap-2 text-destructive"
+              onClick={() => { toast({ title: "Sesión cerrada", description: "Has cerrado sesión exitosamente." }); setTimeout(() => window.location.reload(), 800); setOpen(false); }}
+            >
+              <span className="text-base">🚪</span> Cerrar sesión
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- Header principal ----
 export function Header() {
   return (
@@ -289,14 +343,7 @@ export function Header() {
       {/* Acciones */}
       <div className="flex items-center gap-2 flex-shrink-0">
         <NotificacionesPopover />
-        <div className="flex items-center gap-2 pl-2 border-l border-border cursor-pointer hover:bg-muted rounded-lg px-2 py-1 transition-colors">
-          <AvatarInicial nombre="Sandra Herrera" size="sm" />
-          <div className="hidden md:block text-right">
-            <div className="text-xs font-semibold">Sandra Herrera</div>
-            <div className="text-[10px] text-muted-foreground">Coordinadora Nacional</div>
-          </div>
-          <ChevronDown className="w-3 h-3 text-muted-foreground hidden md:block" />
-        </div>
+        <UserMenu />
       </div>
     </header>
   );

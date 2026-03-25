@@ -92,7 +92,7 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery } = useApp();
+  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery, setBusquedaQuery } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [paisFiltro, setPaisFiltro]           = useState("todos");
@@ -179,7 +179,7 @@ export default function RegistrosPage() {
   const totalVisible = filtered.length;
 
   function limpiarFiltros() {
-    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setPage(1);
+    setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setDateRange(undefined); setBusquedaQuery(""); setPage(1);
   }
 
   return (
@@ -250,7 +250,7 @@ export default function RegistrosPage() {
         {hayFiltrosActivos && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground">Filtrando por:</span>
-            {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => {}} />}
+            {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => { setBusquedaQuery(""); setPage(1); }} />}
             {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}

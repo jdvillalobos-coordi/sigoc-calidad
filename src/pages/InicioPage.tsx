@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes } from "@/data/mockData";
+import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
-import { EstadoPersonaBadge, formatCurrency } from "@/lib/utils-app";
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox } from "lucide-react";
+
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Search } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
@@ -69,8 +69,13 @@ export default function InicioPage() {
     });
   }, [periodo, cat, dateRange]);
 
+  /* ── Mi trabajo ── */
+  const misEventos   = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
+  const escaladosAMi = eventos.filter((e) => e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado");
+
   /* ── KPIs ── */
-  const abiertos   = filtrados.filter((e) => e.estado === "abierto");
+  const enInvestigacion = filtrados.filter((e) => e.estadoFlujo === "en_investigacion");
+  const pendientesRes   = filtrados.filter((e) => e.estadoFlujo === "resuelto");
   const vencidos   = filtrados.filter((e) => e.diasAbierto > 30 && e.estado === "abierto");
   const nuevasIA   = alertas.filter((a) => a.estado === "nueva");
   const criticas   = nuevasIA.filter((a) => a.severidad === "critica");
@@ -204,13 +209,54 @@ export default function InicioPage() {
           </div>
         </div>
 
-        {/* KPIs — fila 1: estado de eventos */}
+        {/* Mi trabajo */}
+        <div>
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+            <Briefcase className="w-4 h-4 text-primary" /> Mi trabajo — {usuarioLogueado.nombre}
+          </h2>
+          <div className="grid grid-cols-3 gap-3">
+            <button onClick={() => setPaginaActiva("registros")}
+              className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-left w-full hover:shadow-md hover:border-primary/30 transition-all">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                <FolderOpen className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-2xl font-bold text-foreground">{misEventos.length}</div>
+                <div className="text-[11px] text-muted-foreground leading-tight">Mis eventos activos</div>
+              </div>
+            </button>
+            <button onClick={() => setPaginaActiva("registros")}
+              className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-left w-full hover:shadow-md hover:border-primary/30 transition-all">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+                <ArrowUpRight className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className={`text-2xl font-bold ${escaladosAMi.length > 0 ? "text-amber-600" : "text-foreground"}`}>{escaladosAMi.length}</div>
+                <div className="text-[11px] text-muted-foreground leading-tight">Escalados a mí</div>
+              </div>
+            </button>
+            <button onClick={() => setPaginaActiva("registros")}
+              className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-left w-full hover:shadow-md hover:border-primary/30 transition-all">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                <Search className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-2xl font-bold text-foreground">{enInvestigacion.length}</div>
+                <div className="text-[11px] text-muted-foreground leading-tight">En investigación</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* KPIs — estado general de la operación */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: "Insumos pendientes",       value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente" || i.estadoRevision === "en_investigacion").length, sub: "guías por revisar hoy", icon: Inbox, color: "amber", onClick: () => setPaginaActiva("bandeja") },
-            { label: "Eventos abiertos",          value: abiertos.length,  sub: `de ${filtrados.length} en período`,      icon: FolderOpen, color: "default", onClick: () => setPaginaActiva("registros") },
+            { label: "En investigación",          value: enInvestigacion.length, sub: `de ${filtrados.length} en período`, icon: FolderOpen, color: "default", onClick: () => setPaginaActiva("registros") },
+            { label: "Pendientes resolución",     value: pendientesRes.length,  sub: pendientesRes.length > 0 ? "resueltos sin cerrar" : "al día", icon: Clock, color: pendientesRes.length > 0 ? "amber" : "default", onClick: () => setPaginaActiva("registros") },
             { label: "Alertas IA activas",       value: nuevasIA.length,  sub: criticas.length > 0 ? `${criticas.length} críticas` : "sin críticas", icon: Bot, color: criticas.length > 0 ? "red" : "blue", onClick: () => setPaginaActiva("ia") },
             { label: "Vencidos >30d",            value: vencidos.length,  sub: vencidos.length > 0 ? "urgente" : "ok",  icon: Clock,      color: vencidos.length > 0 ? "red" : "default", onClick: () => setPaginaActiva("registros") },
+            { label: "Personas seguimiento",     value: enSeguim.length,  sub: `${personas.filter(p => p.estado === "bloqueado").length} bloqueados`, icon: Users, color: enSeguim.length > 0 ? "amber" : "default", onClick: () => {} },
           ].map(({ label, value, sub, icon: Icon, color, onClick }) => {
             const iconCls = { default: "bg-primary/10 text-primary", red: "bg-destructive/10 text-destructive", amber: "bg-amber-100 text-amber-600", blue: "bg-blue-100 text-blue-600" }[color as string];
             const valCls  = { default: "text-foreground", red: "text-destructive", amber: "text-amber-600", blue: "text-blue-600" }[color as string];
@@ -292,7 +338,11 @@ export default function InicioPage() {
                     </div>
                     <Bar value={count} max={rankPersonas[0]?.count ?? 1} />
                     <span className="text-xs font-bold text-foreground w-4 text-right flex-shrink-0">{count}</span>
-                    <EstadoPersonaBadge estado={persona.estado} />
+                    {persona.estado !== "sin_novedad" && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${persona.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200" : "bg-amber-100 text-amber-700 border border-amber-200"}`}>
+                        {persona.estado === "bloqueado" ? "Bloqueado" : "Seguimiento"}
+                      </span>
+                    )}
                   </div>
                 ))}
             </div>
@@ -342,13 +392,42 @@ export default function InicioPage() {
             ) : topAlertas.map((a) => {
               const dot = { critica: "bg-destructive", alta: "bg-orange-500", media: "bg-amber-400", baja: "bg-green-500" }[a.severidad];
               const bg  = { critica: "border-destructive/20 bg-destructive/5", alta: "border-orange-200 bg-orange-50", media: "border-amber-200 bg-amber-50", baja: "border-green-200 bg-green-50" }[a.severidad];
+
+              let recomendacionIA: string | null = null;
+              let eventosCount = 0;
+              if (a.tipo === "reincidencia_persona") {
+                const evRel = a.fuentesCruzadas.map(id => eventos.find(e => e.id === id)).filter(Boolean);
+                eventosCount = evRel.length;
+                const tieneGravisima = evRel.some(e => e?.gravedadFalta === "gravisima");
+                const categorias = new Set(evRel.map(e => e?.categoria));
+                if (tieneGravisima) {
+                  recomendacionIA = "Considerar desvinculación (sugerencia — la decisión es del operador)";
+                } else if (eventosCount >= 5 || categorias.size > 1) {
+                  recomendacionIA = "Considerar proceso disciplinario (sugerencia — la decisión es del operador)";
+                } else if (eventosCount >= 3) {
+                  recomendacionIA = "Considerar llamado de atención escrito (sugerencia — la decisión es del operador)";
+                }
+              }
+
               return (
                 <div key={a.id} className={`rounded-xl border p-3.5 ${bg}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ${dot}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-foreground">{a.titulo}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-semibold text-foreground">{a.titulo}</p>
+                        {a.tipo === "reincidencia_persona" && eventosCount > 0 && (
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex-shrink-0">
+                            {eventosCount}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{a.descripcion}</p>
+                      {recomendacionIA && (
+                        <div className="mt-1.5 p-2 bg-amber-100/60 border border-amber-200 rounded-lg">
+                          <p className="text-[11px] text-amber-900 font-medium">🤖 {recomendacionIA}</p>
+                        </div>
+                      )}
                       {a.entidadesInvolucradas.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {a.entidadesInvolucradas.map((e) => (
@@ -362,7 +441,7 @@ export default function InicioPage() {
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       {a.tipo === "reincidencia_persona" && a.estado === "nueva" && (
                         <button onClick={() => abrirResolucionAcumulativa(a.id)}
-                          className="text-[11px] px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors shadow-sm whitespace-nowrap">
+                          className="text-[11px] px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 font-medium transition-colors shadow-sm whitespace-nowrap">
                           Iniciar resolución
                         </button>
                       )}
