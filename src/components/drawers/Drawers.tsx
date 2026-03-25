@@ -1091,14 +1091,16 @@ export function Persona360Drawer() {
             </div>
           )}
 
-          {/* CTA resolución acumulativa */}
-          {totalEv >= 3 && (
+          {/* CTA resolución sobre persona */}
+          {totalEv >= 1 && (
             <div className="border border-amber-300 bg-amber-50 rounded-xl p-4 flex items-center justify-between gap-3">
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-900">
-                  Esta persona tiene {totalEv} eventos registrados.
+                  {totalEv === 1
+                    ? "Esta persona tiene 1 evento registrado."
+                    : `Esta persona tiene ${totalEv} eventos registrados.`}
                 </p>
-                <p className="text-xs text-amber-700/70 mt-0.5">Puedes aplicar una resolución que cubra todos los eventos vinculados.</p>
+                <p className="text-xs text-amber-700/70 mt-0.5">Tomar una decisión de gestión humana sobre esta persona.</p>
               </div>
               <button
                 onClick={() => {
@@ -1110,7 +1112,7 @@ export function Persona360Drawer() {
                 }}
                 className="flex-shrink-0 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm"
               >
-                Iniciar resolución acumulativa
+                Tomar decisión
               </button>
             </div>
           )}
@@ -1887,7 +1889,7 @@ export function ResolucionAcumulativaPanel() {
               <Scale className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-base">Resolución acumulativa</h2>
+              <h2 className="font-bold text-base">Decisión sobre persona</h2>
               <p className="text-xs text-muted-foreground">{alertaRef ? `Alerta ${alertaRef.id} · ${alertaRef.titulo}` : `Persona · ${persona?.nombre}`}</p>
             </div>
           </div>
