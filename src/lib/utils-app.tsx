@@ -7,7 +7,8 @@ export const categoriaConfig: Record<CategoriaEvento, { label: string; color: st
   unidades:            { label: "Unidades",           color: "badge-unidades",   dot: "bg-blue-600",   icon: "📦", bgColor: "bg-blue-600" },
   listas_vinculantes:  { label: "Listas Vinculantes", color: "badge-listas",     dot: "bg-gray-500",   icon: "📋", bgColor: "bg-gray-500" },
   pqr:                 { label: "PQR",                color: "badge-pqr",        dot: "bg-purple-600", icon: "📞", bgColor: "bg-purple-600" },
-  disciplinarios:      { label: "Disciplinarios",     color: "badge-disciplinarios", dot: "bg-red-600", icon: "⚖️", bgColor: "bg-red-600" },
+  disciplinarios:      { label: "Disciplinarios",     color: "badge-disciplinarios", dot: "bg-red-600",    icon: "⚖️", bgColor: "bg-red-600" },
+  evidencias:          { label: "Evidencias",         color: "badge-evidencias",     dot: "bg-orange-500", icon: "📸", bgColor: "bg-orange-500" },
 };
 
 export const estadoConfig: Record<EstadoEvento, { label: string; color: string }> = {
@@ -67,6 +68,7 @@ export function CategoriaBadge({ categoria, className = "" }: { categoria: Categ
     listas_vinculantes: "bg-gray-100 text-gray-700 border border-gray-200",
     pqr:                "bg-purple-100 text-purple-800 border border-purple-200",
     disciplinarios:     "bg-red-100 text-red-800 border border-red-200",
+    evidencias:          "bg-orange-100 text-orange-800 border border-orange-200",
   };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[categoria]} ${className}`}>

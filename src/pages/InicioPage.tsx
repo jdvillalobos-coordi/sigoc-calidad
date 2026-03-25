@@ -25,6 +25,7 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
   { value: "listas_vinculantes",label: "📋 Listas" },
   { value: "pqr",               label: "📞 PQR" },
   { value: "disciplinarios",    label: "⚖️ Disciplinarios" },
+  { value: "evidencias",        label: "📸 Evidencias" },
 ];
 
 const RANKING_TABS = [

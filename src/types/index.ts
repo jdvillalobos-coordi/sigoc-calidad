@@ -7,7 +7,8 @@ export type CategoriaEvento =
   | "unidades"
   | "listas_vinculantes"
   | "pqr"
-  | "disciplinarios";
+  | "disciplinarios"
+  | "evidencias";
 
 export type EstadoEvento = "abierto" | "cerrado";
 

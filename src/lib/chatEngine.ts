@@ -116,7 +116,7 @@ function intentBuscarEvento(text: string): QueryResult | null {
 
 function intentBuscarPersona(text: string): QueryResult | null {
   const n = normalize(text);
-  if (!matchesAny(n, ["persona", "empleado", "conductor", "auxiliar", "mensajero", "quien", "responsable", "carlos", "hernan", "luisa", "marta", "felipe", "gloria", "andres", "camilo", "edgar", "natalia", "roberto", "claudia", "javier"])) {
+  if (!matchesAny(n, ["persona", "empleado", "conductor", "auxiliar", "operador", "mensajero", "quien", "responsable", "carlos", "hernan", "luisa", "marta", "felipe", "gloria", "andres", "camilo", "edgar", "natalia", "roberto", "claudia", "javier"])) {
     const nums = extractNumbers(text);
     if (nums.length > 0) {
       const persona = personas.find((p) => nums.some((num) => p.cedula.includes(num)));

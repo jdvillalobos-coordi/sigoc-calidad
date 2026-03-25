@@ -20,6 +20,7 @@ const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
   { value: "listas_vinculantes", label: "📋 Listas Vinculantes" },
   { value: "pqr",                label: "📞 PQR" },
   { value: "disciplinarios",     label: "⚖️ Disciplinarios" },
+  { value: "evidencias",         label: "📸 Evidencias" },
 ];
 
 const PRESETS = [

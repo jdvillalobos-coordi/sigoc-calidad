@@ -953,7 +953,7 @@ export function RecordDetailDrawer() {
 
 // ---- Persona 360 ----
 const CAT_ICON: Record<string, string> = {
-  dineros: "💰", unidades: "📦", listas_vinculantes: "📋", pqr: "📞", disciplinarios: "⚖️",
+  dineros: "💰", unidades: "📦", listas_vinculantes: "📋", pqr: "📞", disciplinarios: "⚖️", evidencias: "📸",
 };
 
 export function Persona360Drawer() {

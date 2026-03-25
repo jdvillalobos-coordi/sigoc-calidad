@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { Camera, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, User } from "lucide-react";
-import { evidencias, terminales } from "@/data/mockData";
+import { Camera, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, User, FileText } from "lucide-react";
+import { evidencias, terminales, usuarioLogueado, eventos, getPersonaPorCedula } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import type { Evidencia } from "@/types";
+import type { Evidencia, Evento } from "@/types";
 
 type FiltroRevision = "todos" | "pendientes" | "revisados";
 type FiltroIA = "todos" | "cumple" | "no_cumple";
@@ -40,11 +40,12 @@ function VeredictoTag({ v }: { v: "confirma" | "falso_negativo" | "falso_positiv
 }
 
 function EvidenciaRow({ ev }: { ev: Evidencia }) {
-  const { abrirGuia, setNuevaRegistroAbierto } = useApp();
+  const { abrirGuia, abrirRegistro } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [veredicto, setVeredicto] = useState(ev.veredictoOperador ?? "");
   const [justificacion, setJustificacion] = useState(ev.justificacionOperador ?? "");
   const [guardado, setGuardado] = useState(!!ev.veredictoOperador);
+  const [eventoGeneradoId, setEventoGeneradoId] = useState<string | null>(null);
 
   const pendiente = !ev.veredictoOperador;
   const generaEvento =
@@ -54,7 +55,62 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   function guardar() {
     if (!veredicto) return;
     setGuardado(true);
-    toast({ title: "✅ Veredicto guardado", description: `Evidencia ${ev.id} revisada.` });
+
+    if (generaEvento) {
+      const id = `EV-EVI-${Date.now()}`;
+      const hoy = new Date().toISOString().split("T")[0];
+      const tipoEv = ev.tipoEvidencia === "entrega"
+        ? "Falsa evidencia de entrega"
+        : "Falsa evidencia de intento de entrega";
+
+      const personasResp: Evento["personasResponsables"] = [];
+      if (ev.operadorCedula) {
+        const persona = getPersonaPorCedula(ev.operadorCedula);
+        personasResp.push({
+          personaId: persona?.id ?? ev.operadorCedula,
+          nombre: ev.operadorNombre ?? "Desconocido",
+          cedula: ev.operadorCedula,
+          cargo: ev.operadorCargo ?? "",
+          rol: "responsable",
+        });
+      }
+
+      const nuevoEvento: Evento = {
+        id,
+        estado: "abierto",
+        categoria: "evidencias",
+        tipoEvento: tipoEv,
+        tipoEntidad: "empleado",
+        fecha: hoy,
+        terminal: ev.terminal,
+        ciudad: ev.terminal,
+        guias: [ev.guia],
+        personasResponsables: personasResp,
+        personasParticipantes: [],
+        vehiculosVinculados: [],
+        descripcionHechos: `Evento automático: ${tipoEv}. Guía ${ev.guia}, terminal ${ev.terminal}. ${veredicto === "falso_positivo" ? "La IA aprobó una evidencia inválida." : "La IA detectó evidencia no válida y fue confirmada."} ${justificacion ? `Justificación: ${justificacion}` : ""}`.trim(),
+        estadoFlujo: "abierto",
+        asignadoA: {
+          id: usuarioLogueado.id,
+          nombre: usuarioLogueado.nombre,
+          cargo: usuarioLogueado.cargo,
+        },
+        usuarioRegistro: usuarioLogueado.id,
+        perfilUsuario: usuarioLogueado.cargo,
+        terminalUsuario: usuarioLogueado.terminal,
+        fechaRegistro: hoy,
+        anotaciones: [],
+        historial: [{ id: `H-${Date.now()}`, fecha: hoy, usuarioNombre: usuarioLogueado.nombre, accion: "Evento creado automáticamente desde Evidencias" }],
+        diasAbierto: 0,
+      };
+
+      eventos.unshift(nuevoEvento);
+      setEventoGeneradoId(id);
+      toast({ title: `📸 Evento ${id} creado automáticamente`, description: `${tipoEv} — ${ev.operadorNombre ?? "Operador"}` });
+    } else {
+      toast({ title: "✅ Veredicto guardado", description: `Evidencia ${ev.id} revisada.` });
+    }
+
     setExpanded(false);
   }
 
@@ -183,7 +239,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
                   >
                     <div className="text-xs font-medium">🚫 Falso positivo — La IA aprobó una evidencia inválida</div>
                     <div className={`text-xs mt-0.5 ${veredicto === "falso_positivo" ? "text-white/80" : "text-muted-foreground"}`}>
-                      La foto <strong>no corresponde</strong> a la entrega: el mensajero tomó una foto incorrecta, de otro lugar o de otro paquete, y la IA la aprobó por error. Falla del operador y/o del modelo.
+                      La foto <strong>no corresponde</strong> a la entrega: el operador tomó una foto incorrecta, de otro lugar o de otro paquete, y la IA la aprobó por error. Falla del operador y/o del modelo.
                     </div>
                   </button>
 
@@ -207,21 +263,31 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
                 </div>
               )}
 
-              {/* Banner genera evento */}
-              {generaEvento && (
+              {/* Banner genera evento automático */}
+              {generaEvento && !guardado && (
                 <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <div className="flex items-start gap-2 mb-2">
+                  <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-700 font-medium">
-                      Esta evidencia no cumple. Se generará un evento automáticamente en la categoría correspondiente.
+                      Al guardar el veredicto se creará un evento automáticamente en la categoría Evidencias, vinculado al operador.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setNuevaRegistroAbierto(true)}
-                    className="w-full px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 transition-colors"
-                  >
-                    Generar evento
-                  </button>
+                </div>
+              )}
+              {eventoGeneradoId && (
+                <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <FileText className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs text-green-700 font-medium">Evento {eventoGeneradoId} creado automáticamente.</p>
+                      <button
+                        className="text-xs text-primary hover:underline mt-1"
+                        onClick={() => abrirRegistro(eventoGeneradoId)}
+                      >
+                        Abrir evento →
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

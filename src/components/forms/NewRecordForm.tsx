@@ -12,6 +12,7 @@ const CATEGORIAS = [
   { id: "listas_vinculantes" as CategoriaEvento, icon: "📋", label: "Listas Vinculantes", desc: "Antecedentes, denuncias, vínculos externos (Truora)" },
   { id: "pqr" as CategoriaEvento, icon: "📞", label: "PQR", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
   { id: "disciplinarios" as CategoriaEvento, icon: "⚖️", label: "Disciplinarios", desc: "Faltas laborales: llegadas tarde, desacatos, llamados de atención" },
+  { id: "evidencias" as CategoriaEvento, icon: "📸", label: "Evidencias", desc: "Falsa evidencia de entrega o intento de entrega" },
 ] as const;
 
 const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[] }[]> = {
@@ -46,6 +47,7 @@ const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[]
     "Validación de pago de RCE o FCE no realizado por link de recaudo",
   ] }],
   disciplinarios:     [{ opciones: ["Llegada tarde", "Llamado de atención verbal", "Llamado de atención escrito", "Desacato", "Falta leve", "Falta grave", "Falta gravísima"] }],
+  evidencias:         [{ opciones: ["Falsa evidencia de entrega", "Falsa evidencia de intento de entrega", "Reporte causal dirección incorrecta"] }],
 };
 
 const FUENTES: Record<CategoriaEvento, string> = {
@@ -54,6 +56,7 @@ const FUENTES: Record<CategoriaEvento, string> = {
   listas_vinculantes: "Truora / ClickCloud",
   pqr:                "Reporte cliente / Agente CAL",
   disciplinarios:     "SuccessFactors / Gestión Humana",
+  evidencias:         "Auditoría IA Evidencias",
 };
 
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
