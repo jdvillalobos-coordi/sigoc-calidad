@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado, solicitudesCCTV } from "@/data/mockData";
+import { eventos, alertasIA, personas, vehiculos, guias, PAISES_REGIONALES, insumosRCE, insumosFaltantes, usuarioLogueado } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
-import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Video } from "lucide-react";
+import { FolderOpen, Clock, Bot, ChevronRight, Users, Car, MapPin, Building2, CalendarDays, X, Inbox, Briefcase, ArrowUpRight, Check } from "lucide-react";
 import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { AlertaIA, CategoriaEvento } from "@/types";
@@ -72,6 +72,7 @@ export default function InicioPage() {
   /* ── Mi trabajo ── */
   const misEventos    = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
   const escaladosAMi  = eventos.filter((e) => e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado");
+  const misCerrados   = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo === "cerrado");
 
   /* ── KPIs ── */
   const abiertos        = filtrados.filter((e) => e.estadoFlujo === "abierto");
@@ -234,14 +235,14 @@ export default function InicioPage() {
                 <div className="text-[11px] text-muted-foreground leading-tight">Escalados a mí</div>
               </div>
             </button>
-            <button onClick={() => setPaginaActiva("registros")}
+            <button onClick={() => irARegistros({ soloMios: true, soloCerrados: true, etiqueta: "Mis eventos cerrados" })}
               className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 text-left w-full hover:shadow-md hover:border-primary/30 transition-all">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-                <Video className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-lg bg-green-100 text-green-600 flex items-center justify-center flex-shrink-0">
+                <Check className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-2xl font-bold text-foreground">{solicitudesCCTV.filter(s => s.estado === "pendiente").length}</div>
-                <div className="text-[11px] text-muted-foreground leading-tight">CCTV pendientes</div>
+                <div className="text-2xl font-bold text-foreground">{misCerrados.length}</div>
+                <div className="text-[11px] text-muted-foreground leading-tight">Mis eventos cerrados</div>
               </div>
             </button>
           </div>
