@@ -206,10 +206,11 @@ export default function RegistrosPage() {
   }
 
   const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloCerrados || soloEscaladosAMi || soloVencidos || estadoFiltro !== "todos";
-  const hayFiltrosActivos = hayFiltrosNav || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || !!dateRange?.from || !!q;
+  const hayFiltrosActivos = hayFiltrosNav || categoriaFiltro !== "todos" || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || !!dateRange?.from || !!q;
   const totalVisible = filtered.length;
 
   function limpiarFiltros() {
+    setCategoriaFiltro("todos");
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setAsignadoFiltro("todos");
     setDateRange(undefined); setBusquedaQuery(""); setEstadoFiltro("todos");
     setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false); setSoloEscaladosAMi(false);
@@ -227,7 +228,19 @@ export default function RegistrosPage() {
           <div className="flex items-center gap-1 flex-wrap">
             {CATEGORIAS.map((c) => (
               <button key={c.value}
-                onClick={() => { setCategoriaFiltro(c.value); setPage(1); }}
+                onClick={() => {
+                  setCategoriaFiltro(c.value);
+                  // Al cambiar categoría limpiamos los filtros de navegación para evitar
+                  // combinaciones confusas (ej: "Escalados activos" + PQR)
+                  setEstadoFlujoFiltro("todos");
+                  setSoloMios(false);
+                  setSoloCerrados(false);
+                  setSoloEscaladosAMi(false);
+                  setSoloVencidos(false);
+                  setNavEtiqueta(null);
+                  if (c.value !== "todos") setEstadoFiltro("todos");
+                  setPage(1);
+                }}
                 className={cn(
                   "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
                   categoriaFiltro === c.value
@@ -298,6 +311,12 @@ export default function RegistrosPage() {
                 setNavEtiqueta(null); setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false);
                 setSoloEscaladosAMi(false); setSoloVencidos(false); setEstadoFiltro("todos"); setPage(1);
               }} />
+            )}
+            {categoriaFiltro !== "todos" && (
+              <FilterPill
+                label={CATEGORIAS.find(c => c.value === categoriaFiltro)?.label ?? categoriaFiltro}
+                onRemove={() => { setCategoriaFiltro("todos"); setPage(1); }}
+              />
             )}
             {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => { setBusquedaQuery(""); setPage(1); }} />}
             {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
