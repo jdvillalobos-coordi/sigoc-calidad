@@ -150,8 +150,8 @@ export default function RegistrosPage() {
     .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
     .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
     .filter((e) => estadoFlujoFiltro === "todos" || e.estadoFlujo === estadoFlujoFiltro)
-    .filter((e) => !soloMios || e.asignadoA.id === usuarioLogueado.id)
-    .filter((e) => asignadoFiltro === "todos" || e.asignadoA.id === asignadoFiltro)
+    .filter((e) => !soloMios || e.asignadoA?.id === usuarioLogueado.id)
+    .filter((e) => asignadoFiltro === "todos" || (asignadoFiltro === "sin_asignar" ? !e.asignadoA : e.asignadoA?.id === asignadoFiltro))
     .filter((e) => !soloCerrados || e.estadoFlujo === "cerrado")
     .filter((e) => !soloEscaladosAMi || (e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado"))
     .filter((e) => !soloVencidos || (e.diasAbierto > 30 && e.estado === "abierto"))
@@ -270,6 +270,7 @@ export default function RegistrosPage() {
             value={asignadoFiltro}
             onChange={(e) => { setAsignadoFiltro(e.target.value); setPage(1); }}>
             <option value="todos">Todos los asignados</option>
+            <option value="sin_asignar">Sin asignar</option>
             {asignadosUnicos.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
 
@@ -322,7 +323,7 @@ export default function RegistrosPage() {
             {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
-            {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${asignadosUnicos.find(a => a.id === asignadoFiltro)?.nombre ?? asignadoFiltro}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
+            {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${asignadoFiltro === "sin_asignar" ? "Sin asignar" : asignadosUnicos.find(a => a.id === asignadoFiltro)?.nombre ?? asignadoFiltro}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
             {dateRange?.from && (
               <FilterPill
                 label={`Fechas: ${format(dateRange.from, "dd MMM", { locale: es })}${dateRange.to ? ` – ${format(dateRange.to, "dd MMM", { locale: es })}` : ""}`}
@@ -351,6 +352,7 @@ export default function RegistrosPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Tipo / Personas</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32 hidden lg:table-cell">Entidad</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-28">Terminal</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-28 hidden xl:table-cell">Asignado a</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-24">Estado</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-24"
                     onClick={() => toggleSort("fecha")}>
@@ -397,6 +399,12 @@ export default function RegistrosPage() {
                           className="text-xs text-primary hover:underline font-medium">
                           {e.terminal}
                         </button>
+                      </td>
+                      <td className="px-4 py-3 hidden xl:table-cell">
+                        {e.asignadoA
+                          ? <span className="text-xs text-foreground truncate block max-w-[120px]">{e.asignadoA.nombre}</span>
+                          : <span className="text-xs text-amber-600 font-medium">Sin asignar</span>
+                        }
                       </td>
                       <td className="px-4 py-3"><EstadoBadge estado={e.estado} /></td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">

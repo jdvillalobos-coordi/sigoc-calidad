@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
+import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
@@ -135,8 +135,9 @@ export function RecordDetailDrawer() {
     const persona = PERSONAS_ESCALAMIENTO.find(p => p.id === escaladoPersonaId);
     if (!persona || !escaladoMotivo.trim()) return;
     avanzarFlujo("escalado", {
+      asignadoA: persona,
       escaladoA: persona,
-      escaladoPor: { id: "u-coord-unidades", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
+      escaladoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo },
       fechaEscalamiento: new Date().toISOString(),
       motivoEscalamiento: escaladoMotivo,
     });
@@ -152,12 +153,17 @@ export function RecordDetailDrawer() {
 
   function devolverAlCreador() {
     avanzarFlujo("abierto", {
+      asignadoA: {
+        id: ev!.usuarioRegistro,
+        nombre: ev!.usuarioRegistro,
+        cargo: ev!.perfilUsuario,
+      },
       escaladoA: undefined,
       escaladoPor: undefined,
       fechaEscalamiento: undefined,
       motivoEscalamiento: undefined,
     });
-    toast({ title: "Evento devuelto al investigador original" });
+    toast({ title: `Evento devuelto a ${ev!.usuarioRegistro}` });
   }
 
   function reabrirEvento() {
@@ -279,10 +285,30 @@ export function RecordDetailDrawer() {
 
           {/* Bloque de asignación */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-medium">
-              <UserCheck className="w-3 h-3" />
-              {ev.asignadoA.nombre} · {ev.asignadoA.cargo}
-            </span>
+            {ev.asignadoA ? (
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-medium">
+                <UserCheck className="w-3 h-3" />
+                Asignado a: {ev.asignadoA.nombre} · {ev.asignadoA.cargo}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-medium">
+                <User className="w-3 h-3" />
+                Sin asignar
+              </span>
+            )}
+            {!ev.asignadoA && ev.estadoFlujo === "abierto" && (
+              <button
+                onClick={() => {
+                  avanzarFlujo(ev.estadoFlujo, {
+                    asignadoA: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo },
+                  });
+                  toast({ title: "Caso tomado", description: `Asignado a ${usuarioLogueado.nombre}` });
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm"
+              >
+                <UserCheck className="w-3.5 h-3.5" /> Tomar caso
+              </button>
+            )}
             {ev.estadoFlujo === "escalado" && ev.escaladoA && (
               <>
                 <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200 font-medium">

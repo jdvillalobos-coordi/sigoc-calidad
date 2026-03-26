@@ -40,9 +40,9 @@ export default function InicioPage() {
   }, [cat, dateRange]);
 
   /* Mi trabajo */
-  const misEventos    = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
+  const misEventos    = eventos.filter((e) => e.asignadoA?.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
   const escaladosAMi  = eventos.filter((e) => e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado");
-  const misCerrados   = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo === "cerrado");
+  const misCerrados   = eventos.filter((e) => e.asignadoA?.id === usuarioLogueado.id && e.estadoFlujo === "cerrado");
 
   /* KPIs */
   const abiertos        = filtrados.filter((e) => e.estadoFlujo === "abierto");
