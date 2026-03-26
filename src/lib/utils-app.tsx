@@ -1,5 +1,5 @@
 import React from "react";
-import type { CategoriaEvento, EstadoEvento, SeveridadIA, EstadoPersona, Evento } from "@/types";
+import type { CategoriaEvento, EstadoEvento, SeveridadIA, Evento } from "@/types";
 
 // ---- Colores por categoría ----
 export const categoriaConfig: Record<CategoriaEvento, { label: string; color: string; dot: string; icon: string; bgColor: string }> = {
@@ -23,11 +23,6 @@ export const severidadConfig: Record<SeveridadIA, { label: string; color: string
   baja:    { label: "Baja",    color: "text-green-600", icon: "🟢", bg: "bg-green-50 border-green-200" },
 };
 
-export const estadoPersonaConfig: Record<EstadoPersona, { label: string; color: string }> = {
-  sin_novedad:    { label: "Sin novedad",    color: "bg-green-100 text-green-700 border border-green-200" },
-  en_seguimiento: { label: "En seguimiento", color: "bg-amber-100 text-amber-700 border border-amber-200" },
-  bloqueado:      { label: "Bloqueado",      color: "bg-red-100 text-red-700 border border-red-200" },
-};
 
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("es-CO", {
@@ -100,14 +95,6 @@ export function SeveridadBadge({ severidad }: { severidad: SeveridadIA }) {
   );
 }
 
-export function EstadoPersonaBadge({ estado }: { estado: EstadoPersona }) {
-  const cfg = estadoPersonaConfig[estado];
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${cfg.color}`}>
-      {cfg.label}
-    </span>
-  );
-}
 
 // Avatar inicial
 export function AvatarInicial({ nombre, size = "sm" }: { nombre: string; size?: "sm" | "md" | "lg" }) {

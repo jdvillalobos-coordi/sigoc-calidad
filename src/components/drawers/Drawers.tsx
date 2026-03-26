@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado } from "@/data/mockData";
-import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, EstadoPersonaBadge } from "@/lib/utils-app";
+import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV } from "@/types";
@@ -603,7 +603,6 @@ export function RecordDetailDrawer() {
                         <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Responsable</span>
-                      <EstadoPersonaBadge estado={p.estado} />
                     </button>
                   );
                 })}
@@ -631,7 +630,6 @@ export function RecordDetailDrawer() {
                         <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Participante</span>
-                      <EstadoPersonaBadge estado={p.estado} />
                     </button>
                   );
                 })}
@@ -1039,15 +1037,6 @@ export function Persona360Drawer() {
                   {persona.terminal}
                 </button>
               </div>
-              <div className="mt-1">
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                  persona.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200"
-                  : persona.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200"
-                  : "bg-green-100 text-green-700 border border-green-200"
-                }`}>
-                  {persona.estado === "bloqueado" ? "🔴 Bloqueado" : persona.estado === "en_seguimiento" ? "🟡 En seguimiento" : "🟢 Sin novedad"}
-                </span>
-              </div>
             </div>
           </div>
           <button onClick={cerrarDrawer} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
@@ -1147,19 +1136,13 @@ export function Persona360Drawer() {
           })()}
 
           {/* Acción: Actividad Lesiva */}
-          {persona.estado !== "bloqueado" ? (
-            <button
-              onClick={() => setLesivaOpen(!lesivaOpen)}
-              className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
-            >
-              <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva</div>
-              <div className="text-[10px] text-red-600/70 mt-0.5">Bloquear persona por responsabilidad directa en eventos</div>
-            </button>
-          ) : (
-            <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl">
-              <div className="text-xs font-semibold text-red-700">🚫 Persona Bloqueada</div>
-            </div>
-          )}
+          <button
+            onClick={() => setLesivaOpen(!lesivaOpen)}
+            className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
+          >
+            <div className="text-xs font-semibold text-red-700">🚫 Registrar Actividad Lesiva</div>
+            <div className="text-[10px] text-red-600/70 mt-0.5">Registrar actividad lesiva asociada a esta persona</div>
+          </button>
 
           {/* Mini-form: Actividad Lesiva */}
           {lesivaOpen && (
@@ -1206,9 +1189,8 @@ export function Persona360Drawer() {
                 <button
                   disabled={!lesivaCat || !lesivaSub || !lesivaObs.trim()}
                   onClick={() => {
-                    persona.estado = "bloqueado";
                     forceUpdate(k => k + 1);
-                    toast({ title: "🚫 Actividad Lesiva registrada", description: `${persona.nombre} ha sido bloqueada. Categoría: ${CATEGORIAS_LESIVAS[lesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.label} — ${lesivaSub}` });
+                    toast({ title: "🚫 Actividad Lesiva registrada", description: `${persona.nombre}. Categoría: ${CATEGORIAS_LESIVAS[lesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.label} — ${lesivaSub}` });
                     setLesivaOpen(false);
                     setLesivaCat("");
                     setLesivaSub("");
@@ -1216,7 +1198,7 @@ export function Persona360Drawer() {
                   }}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Confirmar bloqueo
+                  Confirmar registro
                 </button>
                 <button onClick={() => { setLesivaOpen(false); setLesivaCat(""); setLesivaSub(""); setLesivaObs(""); }} className="px-4 py-2 border border-border rounded-lg text-xs hover:bg-muted transition-colors">
                   Cancelar
@@ -1752,9 +1734,6 @@ export function Terminal360Drawer() {
                           {count}×
                         </span>
                       </td>
-                      <td className="px-4 py-2.5">
-                        <EstadoPersonaBadge estado={persona!.estado} />
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1859,14 +1838,6 @@ export function ResolucionAcumulativaPanel() {
       }
     });
 
-    const desvinculaciones: ResolucionFinal[] = ["desvinculacion"];
-    const disciplinarios: ResolucionFinal[] = ["proceso_disciplinario", "suspension_temporal"];
-    if (desvinculaciones.includes(decision as ResolucionFinal)) {
-      persona!.estado = "bloqueado";
-    } else if (disciplinarios.includes(decision as ResolucionFinal)) {
-      persona!.estado = "en_seguimiento";
-    }
-
     if (alertaRef) alertaRef.estado = "revisada";
 
     toast({ title: "✅ Decisión registrada", description: `Se aplicó "${decisionLabel}" a ${abiertosAntes} evento${abiertosAntes !== 1 ? "s" : ""} de ${persona!.nombre}` });
@@ -1914,7 +1885,6 @@ export function ResolucionAcumulativaPanel() {
                   <div className="text-xs text-muted-foreground">{persona.terminal}</div>
                 </div>
               </div>
-              <EstadoPersonaBadge estado={persona.estado} />
             </div>
 
             {/* Total prominente */}

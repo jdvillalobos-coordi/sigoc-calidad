@@ -51,7 +51,6 @@ export default function CuadroContactoPage() {
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
   const [calOpen, setCalOpen]     = React.useState(false);
   const [ccBusqueda, setCcBusqueda] = React.useState("");
-  const [ccFiltro, setCcFiltro]     = React.useState<"todos" | "en_seguimiento" | "bloqueado">("todos");
 
   const filtrados = React.useMemo(() => {
     return eventos.filter((e) => {
@@ -106,8 +105,7 @@ export default function CuadroContactoPage() {
         e.personasParticipantes.some((pv) => pv.personaId === p.id)
       );
       const tieneEventosEnPeriodo = evsPeriodo.length > 0;
-      const esRelevante = tieneEventosEnPeriodo || p.estado !== "sin_novedad";
-      if (!esRelevante) return null;
+      if (!tieneEventosEnPeriodo) return null;
 
       const evAbiertos = evsPeriodo.filter((e) => e.estado === "abierto").length;
       const evCerradosConHallazgo = evsPeriodo.filter((e) => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
@@ -121,15 +119,10 @@ export default function CuadroContactoPage() {
   }, [filtrados]);
 
   const cuadroFiltrado = React.useMemo(() => {
-    let result = cuadroContacto;
-    if (ccFiltro === "en_seguimiento") result = result.filter((p) => p?.estado === "en_seguimiento");
-    if (ccFiltro === "bloqueado") result = result.filter((p) => p?.estado === "bloqueado");
-    if (ccBusqueda) {
-      const q = ccBusqueda.toLowerCase();
-      result = result.filter((p) => p?.nombre.toLowerCase().includes(q) || p?.cedula.toLowerCase().includes(q) || p?.terminal.toLowerCase().includes(q));
-    }
-    return result;
-  }, [cuadroContacto, ccFiltro, ccBusqueda]);
+    if (!ccBusqueda) return cuadroContacto;
+    const q = ccBusqueda.toLowerCase();
+    return cuadroContacto.filter((p) => p?.nombre.toLowerCase().includes(q) || p?.cedula.toLowerCase().includes(q) || p?.terminal.toLowerCase().includes(q));
+  }, [cuadroContacto, ccBusqueda]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -280,20 +273,7 @@ export default function CuadroContactoPage() {
                     onChange={(e) => setCcBusqueda(e.target.value)}
                   />
                 </div>
-                {(["todos", "en_seguimiento", "bloqueado"] as const).map((f) => {
-                  const labels = { todos: "Todos", en_seguimiento: "Seguimiento", bloqueado: "Bloqueados" };
-                  const counts = {
-                    todos: cuadroContacto.length,
-                    en_seguimiento: cuadroContacto.filter((p) => p?.estado === "en_seguimiento").length,
-                    bloqueado: cuadroContacto.filter((p) => p?.estado === "bloqueado").length,
-                  };
-                  return (
-                    <button key={f} onClick={() => setCcFiltro(f)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${ccFiltro === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
-                      {labels[f]} ({counts[f]})
-                    </button>
-                  );
-                })}
+                <span className="text-[11px] text-muted-foreground">{cuadroContacto.length} personas</span>
               </div>
 
               <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
@@ -311,13 +291,6 @@ export default function CuadroContactoPage() {
                         <span className="text-xs font-semibold text-foreground truncate block">{p.nombre}</span>
                         <span className="text-[10px] text-muted-foreground">{p.cargo} · {p.terminal}</span>
                       </div>
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 ${
-                        p.estado === "bloqueado" ? "bg-red-100 text-red-700 border border-red-200"
-                        : p.estado === "en_seguimiento" ? "bg-amber-100 text-amber-700 border border-amber-200"
-                        : "bg-green-100 text-green-700 border border-green-200"
-                      }`}>
-                        {p.estado === "bloqueado" ? "Bloqueado" : p.estado === "en_seguimiento" ? "Seguimiento" : "Normal"}
-                      </span>
                       {p.totalEventos > 0 && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold flex-shrink-0">
                           {p.totalEventos} evento{p.totalEventos !== 1 ? "s" : ""}

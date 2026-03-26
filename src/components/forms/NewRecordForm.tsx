@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos } from "@/data/mockData";
-import { formatCurrency, EstadoPersonaBadge } from "@/lib/utils-app";
+import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import type { CategoriaEvento, FormPrefill, Persona, Evento } from "@/types";
 
@@ -410,23 +410,12 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                         onBlur={() => validarCedula(i, ced)}
                       />
                       {cedulasPersona[i] && (
-                        <div className="mt-1.5 space-y-1.5">
+                        <div className="mt-1.5">
                           <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-semibold text-blue-900">{cedulasPersona[i].nombre}</span>
                             <span className="text-[11px] text-blue-700">· {cedulasPersona[i].cargo}</span>
                             <span className="text-[11px] text-blue-700">· {cedulasPersona[i].terminal}</span>
-                            <EstadoPersonaBadge estado={cedulasPersona[i].estado} />
                           </div>
-                          {cedulasPersona[i].estado === "en_seguimiento" && (
-                            <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                              ⚠️ Esta persona está en seguimiento — tiene eventos previos registrados
-                            </div>
-                          )}
-                          {cedulasPersona[i].estado === "bloqueado" && (
-                            <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
-                              🚫 Esta persona está bloqueada — verificar antes de continuar
-                            </div>
-                          )}
                         </div>
                       )}
                       {ced.length > 5 && !cedulasPersona[i] && (
@@ -596,8 +585,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                       <span className="text-muted-foreground">Persona responsable:</span>
                       <span className="font-medium">
                         {primerPersona.nombre} (ID {primerPersona.cedula})
-                        {primerPersona.estado === "en_seguimiento" && <span className="ml-1 text-amber-600">⚠️ En seguimiento</span>}
-                        {primerPersona.estado === "bloqueado" && <span className="ml-1 text-red-600">🚫 Bloqueado</span>}
                       </span>
                     </>)}
                     <span className="text-muted-foreground">Asignado a:</span>

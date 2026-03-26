@@ -59,7 +59,7 @@ function formatEventoResumen(e: Evento): string {
 function formatPersonaResumen(p: Persona): string {
   const eventosP = getEventosPorPersona(p.id);
   const abiertos = eventosP.filter((e) => e.estado === "abierto").length;
-  return `**${p.nombre}** (CC ${p.cedula}) | ${p.cargo} | ${p.terminal} | Estado: ${p.estado} | ${eventosP.length} eventos (${abiertos} abiertos)`;
+  return `**${p.nombre}** (CC ${p.cedula}) | ${p.cargo} | ${p.terminal} | ${eventosP.length} eventos (${abiertos} abiertos)`;
 }
 
 // --- Intent detection and response ---
@@ -159,21 +159,6 @@ function intentBuscarPersona(text: string): QueryResult | null {
     };
   }
 
-  if (matchesAny(n, ["bloqueado", "bloqueados", "bloqueada"])) {
-    const bloqueados = personas.filter((p) => p.estado === "bloqueado");
-    return {
-      content: `Hay **${bloqueados.length} personas bloqueadas**:\n\n${bloqueados.map((p) => `- ${formatPersonaResumen(p)}`).join("\n")}`,
-      entities: bloqueados.map((p) => ({ type: "persona", id: p.id, label: p.nombre })),
-    };
-  }
-
-  if (matchesAny(n, ["seguimiento"])) {
-    const seguimiento = personas.filter((p) => p.estado === "en_seguimiento");
-    return {
-      content: `Hay **${seguimiento.length} personas en seguimiento**:\n\n${seguimiento.map((p) => `- ${formatPersonaResumen(p)}`).join("\n")}`,
-      entities: seguimiento.map((p) => ({ type: "persona", id: p.id, label: p.nombre })),
-    };
-  }
 
   return null;
 }

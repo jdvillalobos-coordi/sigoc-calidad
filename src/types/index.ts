@@ -28,8 +28,6 @@ export type SeveridadIA = "critica" | "alta" | "media" | "baja";
 
 export type TipoEscalamiento = "persona" | "cctv";
 
-export type EstadoPersona = "sin_novedad" | "en_seguimiento" | "bloqueado";
-
 export type TipoPersona = "empleado" | "aliado" | "cliente";
 
 // ---- PersonaVinculada ----
@@ -48,7 +46,6 @@ export interface Persona {
   cargo: string;
   terminal: string;
   tipo: TipoPersona;
-  estado: EstadoPersona;
   foto?: string;
   nit?: string;
   razonSocial?: string;
