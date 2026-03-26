@@ -3,7 +3,7 @@ import { useApp } from "@/context/AppContext";
 import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter } from "lucide-react";
+import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter, CalendarDays } from "lucide-react";
 import { EvidenciasPanel, evidenciasPendientesCount } from "./EvidenciasPage";
 import type { InsumoRCE, InsumoFaltante } from "@/types";
 
@@ -100,6 +100,8 @@ export default function BandejaPage() {
   const [filtroTerminal, setFiltroTerminal] = useState("todos");
   const [filtroEstadoRCE, setFiltroEstadoRCE] = useState<FiltroEstadoRCE>("todas");
   const [filtroEstadoFalt, setFiltroEstadoFalt] = useState<FiltroEstadoFalt>("todas");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
 
   const [rceData, setRceData] = useState<InsumoRCE[]>(insumosRCE);
   const [faltData, setFaltData] = useState<InsumoFaltante[]>(insumosFaltantes);
@@ -125,10 +127,19 @@ export default function BandejaPage() {
   }
 
   function limpiarFiltrosGeo() { setFiltroRegional("todos"); setFiltroTerminal("todos"); }
+  function limpiarFechas() { setFechaDesde(""); setFechaHasta(""); }
+  const hayFiltrosFecha = fechaDesde !== "" || fechaHasta !== "";
+
+  function matchFecha(fecha: string): boolean {
+    if (fechaDesde && fecha < fechaDesde) return false;
+    if (fechaHasta && fecha > fechaHasta) return false;
+    return true;
+  }
 
   const rceFiltered = useMemo(() => {
     return rceData.filter((i) => {
       if (filtroEstadoRCE !== "todas" && i.estadoRevision !== filtroEstadoRCE) return false;
+      if (!matchFecha(i.fechaAsignacion)) return false;
       if (filtroRegional !== "todos" || filtroTerminal !== "todos") {
         const g = getGuia(i.guia);
         if (!g) return false;
@@ -136,19 +147,19 @@ export default function BandejaPage() {
       }
       return true;
     });
-  }, [rceData, filtroEstadoRCE, filtroRegional, filtroTerminal]);
+  }, [rceData, filtroEstadoRCE, filtroRegional, filtroTerminal, fechaDesde, fechaHasta]);
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
       if (filtroEstadoFalt !== "todas") {
-        // tratar en_investigacion como pendiente (estado legacy del mock)
         const estadoNorm = i.estadoRevision === "en_investigacion" ? "pendiente" : i.estadoRevision;
         if (estadoNorm !== filtroEstadoFalt) return false;
       }
+      if (!matchFecha(i.fechaNovedad)) return false;
       if (!matchTerminal(i.terminal)) return false;
       return true;
     });
-  }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal]);
+  }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal, fechaDesde, fechaHasta]);
 
   const pendientesRCE = rceData.filter((i) => i.estadoRevision === "pendiente").length;
   const pendientesFalt = faltData.filter((i) => i.estadoRevision === "pendiente").length;
@@ -229,66 +240,114 @@ export default function BandejaPage() {
         </div>
 
         {/* Filtros */}
-        {tab !== "evidencias" && (
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="flex items-center gap-1.5">
-              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-              <select
-                className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-                value={filtroRegional}
-                onChange={(e) => handleRegionalChange(e.target.value)}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Filtro de fechas — aplica a los 3 tabs */}
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="date"
+              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              title="Fecha desde"
+            />
+            <span className="text-xs text-muted-foreground">—</span>
+            <input
+              type="date"
+              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              title="Fecha hasta"
+            />
+            {hayFiltrosFecha && (
+              <button
+                onClick={limpiarFechas}
+                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Limpiar fechas"
               >
-                <option value="todos">Todas las regionales</option>
-                {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <select
-                className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-                value={filtroTerminal}
-                onChange={(e) => setFiltroTerminal(e.target.value)}
-              >
-                <option value="todos">Todas las terminales</option>
-                {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              {hayFiltrosGeo && (
-                <button
-                  onClick={limpiarFiltrosGeo}
-                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  title="Limpiar filtros geográficos"
-                >
-                  <X className="w-3 h-3" /> Limpiar
-                </button>
-              )}
-            </div>
-
-            <div className="w-px h-5 bg-border mx-0.5" />
-
-            {tab === "rce" && (
-              <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-                {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoRCE, string][]).map(([val, label]) => (
-                  <button key={val} onClick={() => setFiltroEstadoRCE(val)}
-                    className={`px-3 py-1.5 transition-colors ${filtroEstadoRCE === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {tab === "faltantes" && (
-              <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-                {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoFalt, string][]).map(([val, label]) => (
-                  <button key={val} onClick={() => setFiltroEstadoFalt(val)}
-                    className={`px-3 py-1.5 transition-colors ${filtroEstadoFalt === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
+                <X className="w-3 h-3" />
+              </button>
             )}
           </div>
-        )}
+
+          {tab !== "evidencias" && (
+            <>
+              <div className="w-px h-5 bg-border mx-0.5" />
+              <div className="flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                <select
+                  className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={filtroRegional}
+                  onChange={(e) => handleRegionalChange(e.target.value)}
+                >
+                  <option value="todos">Todas las regionales</option>
+                  {regionalesDisponibles.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <select
+                  className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={filtroTerminal}
+                  onChange={(e) => setFiltroTerminal(e.target.value)}
+                >
+                  <option value="todos">Todas las terminales</option>
+                  {terminalesDisponibles.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                {hayFiltrosGeo && (
+                  <button
+                    onClick={limpiarFiltrosGeo}
+                    className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    title="Limpiar filtros geográficos"
+                  >
+                    <X className="w-3 h-3" /> Limpiar
+                  </button>
+                )}
+              </div>
+
+              <div className="w-px h-5 bg-border mx-0.5" />
+
+              {tab === "rce" && (
+                <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
+                  {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoRCE, string][]).map(([val, label]) => (
+                    <button key={val} onClick={() => setFiltroEstadoRCE(val)}
+                      className={`px-3 py-1.5 transition-colors ${filtroEstadoRCE === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {tab === "faltantes" && (
+                <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
+                  {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoFalt, string][]).map(([val, label]) => (
+                    <button key={val} onClick={() => setFiltroEstadoFalt(val)}
+                      className={`px-3 py-1.5 transition-colors ${filtroEstadoFalt === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Pills de filtros activos */}
-        {hayFiltrosGeo && (
+        {(hayFiltrosGeo || hayFiltrosFecha) && (
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Filtros:</span>
+            {fechaDesde && (
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                Desde: {fechaDesde}
+                <button onClick={() => setFechaDesde("")} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {fechaHasta && (
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                Hasta: {fechaHasta}
+                <button onClick={() => setFechaHasta("")} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             {filtroRegional !== "todos" && (
               <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                 Regional: {filtroRegional}
@@ -405,7 +464,7 @@ export default function BandejaPage() {
 
         {/* Panel Evidencias */}
         {tab === "evidencias" && (
-          <EvidenciasPanel filtroTerminalExt={filtroTerminal} />
+          <EvidenciasPanel filtroTerminalExt={filtroTerminal} fechaDesde={fechaDesde} fechaHasta={fechaHasta} />
         )}
 
         {/* Tabla Faltantes */}

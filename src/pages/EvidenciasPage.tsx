@@ -298,7 +298,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   );
 }
 
-export function EvidenciasPanel({ filtroTerminalExt }: { filtroTerminalExt?: string }) {
+export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: { filtroTerminalExt?: string; fechaDesde?: string; fechaHasta?: string }) {
   const [filtroRevision, setFiltroRevision] = useState<FiltroRevision>("todos");
   const [filtroIA, setFiltroIA] = useState<FiltroIA>("todos");
 
@@ -308,6 +308,8 @@ export function EvidenciasPanel({ filtroTerminalExt }: { filtroTerminalExt?: str
     if (filtroIA === "cumple" && ev.resultadoIA !== "cumple") return false;
     if (filtroIA === "no_cumple" && ev.resultadoIA !== "no_cumple") return false;
     if (filtroTerminalExt && filtroTerminalExt !== "todos" && ev.terminal !== filtroTerminalExt) return false;
+    if (fechaDesde && ev.fecha < fechaDesde) return false;
+    if (fechaHasta && ev.fecha > fechaHasta) return false;
     return true;
   });
 
