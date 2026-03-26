@@ -1576,9 +1576,9 @@ export const eventos: Evento[] = [
     ],
     historial: [{ id: "h540", fecha: "2026-02-23T11:00:00", usuarioNombre: "Ana Martínez", accion: "Creó el evento" }],
   },
-  // ── Eventos de Evidencias (auto-generados) ──
+  // ── Eventos de Evidencias (auto-generados por módulo IA) ──
   {
-    id: "EVI-001",
+    id: "EDIA-001",
     estado: "abierto",
     categoria: "evidencias",
     tipoEvento: "Falsa evidencia de entrega",
@@ -1598,11 +1598,11 @@ export const eventos: Evento[] = [
     terminalUsuario: "Nacional",
     fechaRegistro: "2026-03-10",
     anotaciones: [],
-    historial: [{ id: "h-evi1", fecha: "2026-03-10", usuarioNombre: "Sandra Herrera", accion: "Evento creado automáticamente desde Evidencias" }],
+    historial: [{ id: "h-edia1", fecha: "2026-03-10", usuarioNombre: "Sandra Herrera", accion: "Evento creado automáticamente desde Evidencias" }],
     diasAbierto: 14,
   },
   {
-    id: "EVI-002",
+    id: "EDIA-002",
     estado: "cerrado",
     categoria: "evidencias",
     tipoEvento: "Falsa evidencia de intento de entrega",
@@ -1622,10 +1622,10 @@ export const eventos: Evento[] = [
     perfilUsuario: "Coordinadora Nacional",
     terminalUsuario: "Nacional",
     fechaRegistro: "2026-02-28",
-    anotaciones: [{ id: "a-evi2", autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Coordinadora Nacional", fecha: "2026-03-05T10:00:00", texto: "Se verificó con CCTV, operador no visitó la dirección. Llamado de atención escrito aplicado.", tipo: "hallazgo" }],
+    anotaciones: [{ id: "a-edia2", autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Coordinadora Nacional", fecha: "2026-03-05T10:00:00", texto: "Se verificó con CCTV, operador no visitó la dirección. Llamado de atención escrito aplicado.", tipo: "hallazgo" }],
     historial: [
-      { id: "h-evi2a", fecha: "2026-02-28", usuarioNombre: "Sandra Herrera", accion: "Evento creado automáticamente desde Evidencias" },
-      { id: "h-evi2b", fecha: "2026-03-05", usuarioNombre: "Sandra Herrera", accion: "Evento cerrado — llamado_atencion_escrito" },
+      { id: "h-edia2a", fecha: "2026-02-28", usuarioNombre: "Sandra Herrera", accion: "Evento creado automáticamente desde Evidencias" },
+      { id: "h-edia2b", fecha: "2026-03-05", usuarioNombre: "Sandra Herrera", accion: "Evento cerrado — llamado_atencion_escrito" },
     ],
     diasAbierto: 0,
   },
