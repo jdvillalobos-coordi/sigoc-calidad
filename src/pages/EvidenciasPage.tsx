@@ -30,7 +30,7 @@ function VeredictoTag({ v }: { v: "confirma" | "falso_negativo" | "falso_positiv
   const label = {
     confirma: "Confirmado",
     falso_negativo: "Falso negativo",
-    falso_positivo: "Falso positivo",
+    falso_positivo: "No cumple",
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${map[v]}`}>
@@ -55,6 +55,11 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   function guardar() {
     if (!veredicto) return;
     setGuardado(true);
+
+    ev.veredictoOperador = veredicto as Evidencia["veredictoOperador"];
+    ev.justificacionOperador = justificacion || undefined;
+    ev.revisadoPor = usuarioLogueado.nombre;
+    ev.fechaRevision = new Date().toISOString().split("T")[0];
 
     if (generaEvento) {
       const id = `EV-EVI-${Date.now()}`;
@@ -217,7 +222,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
                     onClick={() => setVeredicto("confirma")}
                     className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${veredicto === "confirma" ? "bg-green-600 text-white border-green-600" : "border-border hover:bg-green-50 hover:border-green-200"}`}
                   >
-                    <div className="text-xs font-medium">✅ Confirmo — La IA tiene razón</div>
+                    <div className="text-xs font-medium">✅ Confirmo — La IA clasificó bien la foto</div>
                     <div className={`text-xs mt-0.5 ${veredicto === "confirma" ? "text-white/70" : "text-muted-foreground"}`}>
                       {ev.resultadoIA === "cumple"
                         ? "La foto es válida y corresponde a una entrega real."
@@ -237,9 +242,9 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
                     onClick={() => setVeredicto("falso_positivo")}
                     className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${veredicto === "falso_positivo" ? "bg-red-600 text-white border-red-600" : "border-border hover:bg-red-50 hover:border-red-200"}`}
                   >
-                    <div className="text-xs font-medium">🚫 Falso positivo — La IA aprobó una evidencia inválida</div>
+                    <div className="text-xs font-medium">🚫 La foto no cumple — Error del operador</div>
                     <div className={`text-xs mt-0.5 ${veredicto === "falso_positivo" ? "text-white/80" : "text-muted-foreground"}`}>
-                      La foto <strong>no corresponde</strong> a la entrega: el operador tomó una foto incorrecta, de otro lugar o de otro paquete, y la IA la aprobó por error. Falla del operador y/o del modelo.
+                      La foto no corresponde a la evidencia, el operador tomó una foto incorrecta.
                     </div>
                   </button>
 
