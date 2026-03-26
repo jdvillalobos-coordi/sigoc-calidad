@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
@@ -106,15 +106,15 @@ export function RecordDetailDrawer() {
     const prevLabel = FLUJO_STEPS.find(s => s.key === ev!.estadoFlujo)?.label ?? ev!.estadoFlujo;
     const newLabel = FLUJO_STEPS.find(s => s.key === nuevoFlujo)?.label ?? nuevoFlujo;
     const nuevoEstado: EstadoEvento = nuevoFlujo === "cerrado" ? "cerrado" : "abierto";
-    setLocalEventos((lst) =>
-      lst.map((e) => e.id === ev!.id ? {
-        ...e,
-        ...extras,
+    const idx = eventos.findIndex((e) => e.id === ev!.id);
+    if (idx !== -1) {
+      Object.assign(eventos[idx], extras, {
         estado: nuevoEstado,
         estadoFlujo: nuevoFlujo,
-        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: `Cambió flujo de '${prevLabel}' a '${newLabel}'` }]
-      } : e)
-    );
+        historial: [...eventos[idx].historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: usuarioLogueado.nombre, accion: `Cambió flujo de '${prevLabel}' a '${newLabel}'` }],
+      });
+    }
+    setLocalEventos([...eventos]);
     toast({ title: `Estado actualizado a "${newLabel}"` });
   }
 
@@ -124,7 +124,7 @@ export function RecordDetailDrawer() {
       resolucionFinal: resolucionSeleccionada as ResolucionFinal,
       observacionResolucion: observacionResolucion || undefined,
       fechaResolucion: new Date().toISOString(),
-      resueltoPor: { id: "u-coord-unidades", nombre: "Sandra Herrera" },
+      resueltoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
     });
     setResolviendoAbierto(false);
     setResolucionSeleccionada("");
@@ -177,12 +177,14 @@ export function RecordDetailDrawer() {
 
   function agregarAnotacion() {
     if (!nuevaAnotacion.trim()) return;
-    setLocalEventos((lst) =>
-      lst.map((e) => e.id === ev!.id ? {
-        ...e,
-        anotaciones: [...e.anotaciones, { id: `a${Date.now()}`, autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Coordinadora Nacional de Calidad", fecha: new Date().toISOString(), texto: nuevaAnotacion, tipo: tipoAnotacion as any }]
-      } : e)
-    );
+    const idx = eventos.findIndex((e) => e.id === ev!.id);
+    if (idx !== -1) {
+      eventos[idx].anotaciones.push({
+        id: `a${Date.now()}`, autorId: usuarioLogueado.id, autorNombre: usuarioLogueado.nombre,
+        autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(), texto: nuevaAnotacion, tipo: tipoAnotacion as any,
+      });
+    }
+    setLocalEventos([...eventos]);
     setNuevaAnotacion("");
     toast({ title: "✅ Anotación agregada" });
   }
@@ -207,31 +209,28 @@ export function RecordDetailDrawer() {
       tipoNovedad: ev!.tipoEvento,
       descripcionSolicitud: cctvDescripcion,
       fechaSolicitud: new Date().toISOString(),
-      solicitadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
-      asignadoA: { id: "u-sandra", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
+      solicitadoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
+      asignadoA: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo },
       estado: "completada",
       conclusionCCTV: cctvDescripcion,
       evidenciasUrls: urls,
       fechaCierre: new Date().toISOString(),
-      investigadoPor: { id: "u-sandra", nombre: "Sandra Herrera" },
+      investigadoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
     };
-    setLocalCCTV(prev => [...prev, nuevo]);
+    solicitudesCCTV.push(nuevo);
+    setLocalCCTV([...solicitudesCCTV]);
     const numArchivos = cctvArchivos.length;
-    setLocalEventos(lst =>
-      lst.map(e => e.id === ev!.id ? {
-        ...e,
-        anotaciones: [...e.anotaciones, {
-          id: `a${Date.now()}`,
-          autorId: "u-sandra",
-          autorNombre: "Sandra Herrera",
-          autorRol: "Coordinadora Nacional de Calidad",
-          fecha: new Date().toISOString(),
-          texto: `Soporte CCTV registrado: ${cctvDescripcion}${numArchivos > 0 ? ` — ${numArchivos} archivo(s) adjunto(s)` : ""}`,
-          tipo: "hallazgo" as any,
-        }],
-        historial: [...e.historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: "Sandra Herrera", accion: "Soporte CCTV registrado" }],
-      } : e)
-    );
+    const idx = eventos.findIndex((e) => e.id === ev!.id);
+    if (idx !== -1) {
+      eventos[idx].anotaciones.push({
+        id: `a${Date.now()}`, autorId: usuarioLogueado.id, autorNombre: usuarioLogueado.nombre,
+        autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(),
+        texto: `Soporte CCTV registrado: ${cctvDescripcion}${numArchivos > 0 ? ` — ${numArchivos} archivo(s) adjunto(s)` : ""}`,
+        tipo: "hallazgo" as any,
+      });
+      eventos[idx].historial.push({ id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: usuarioLogueado.nombre, accion: "Soporte CCTV registrado" });
+    }
+    setLocalEventos([...eventos]);
     setCctvFormAbierto(false);
     setCctvDescripcion("");
     setCctvArchivos([]);
@@ -240,12 +239,14 @@ export function RecordDetailDrawer() {
 
   function guardarComplemento() {
     if (!complementoTexto.trim()) return;
-    setLocalEventos((lst) =>
-      lst.map((e) => e.id === ev!.id ? {
-        ...e,
-        anotaciones: [...e.anotaciones, { id: `a${Date.now()}`, autorId: "u-sandra", autorNombre: "Sandra Herrera", autorRol: "Coordinadora Nacional de Calidad", fecha: new Date().toISOString(), texto: complementoTexto, tipo: "hallazgo" as any }]
-      } : e)
-    );
+    const idx = eventos.findIndex((e) => e.id === ev!.id);
+    if (idx !== -1) {
+      eventos[idx].anotaciones.push({
+        id: `a${Date.now()}`, autorId: usuarioLogueado.id, autorNombre: usuarioLogueado.nombre,
+        autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(), texto: complementoTexto, tipo: "hallazgo" as any,
+      });
+    }
+    setLocalEventos([...eventos]);
     setComplementoTexto("");
     setComplementando(false);
     toast({ title: "✅ Hallazgo agregado a la investigación" });
@@ -1215,6 +1216,18 @@ export function Persona360Drawer() {
                 <button
                   disabled={!lesivaCat || !lesivaSub || !lesivaObs.trim()}
                   onClick={() => {
+                    actividadesLesivas.push({
+                      id: `AL-${Date.now()}`,
+                      tipoImplicado: persona.tipo === "empleado" ? "empleado" : "aliado",
+                      identificacion: persona.cedula,
+                      nombre: persona.nombre,
+                      personaId: persona.id,
+                      categoria: lesivaCat,
+                      subcategoria: lesivaSub,
+                      observaciones: lesivaObs,
+                      fecha: new Date().toISOString().split("T")[0],
+                      registradoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
+                    });
                     forceUpdate(k => k + 1);
                     toast({ title: "🚫 Actividad Lesiva registrada", description: `${persona.nombre}. Categoría: ${CATEGORIAS_LESIVAS[lesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.label} — ${lesivaSub}` });
                     setLesivaOpen(false);
@@ -1858,7 +1871,7 @@ export function ResolucionAcumulativaPanel() {
         e.historial.push({
           id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
           fecha: new Date().toISOString(),
-          usuarioNombre: "Sandra Herrera",
+          usuarioNombre: usuarioLogueado.nombre,
           accion: `Cerrado por resolución acumulativa — ${decisionLabel}`,
         });
       }

@@ -350,9 +350,9 @@ export default function RegistrosPage() {
                     <span className="flex items-center gap-1">ID <SortIcon field="id" /></span>
                   </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Tipo / Personas</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32 hidden lg:table-cell">Entidad</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32 hidden xl:table-cell">Entidad</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-28">Terminal</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-28 hidden xl:table-cell">Asignado a</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-36">Asignado a</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-24">Estado</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-24"
                     onClick={() => toggleSort("fecha")}>
@@ -391,7 +391,7 @@ export default function RegistrosPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground capitalize hidden lg:table-cell">
+                      <td className="px-4 py-3 text-xs text-muted-foreground capitalize hidden xl:table-cell">
                         {e.tipoEntidad.replace(/_/g, " ")}
                       </td>
                       <td className="px-4 py-3">
@@ -400,10 +400,17 @@ export default function RegistrosPage() {
                           {e.terminal}
                         </button>
                       </td>
-                      <td className="px-4 py-3 hidden xl:table-cell">
+                      <td className="px-4 py-3">
                         {e.asignadoA
-                          ? <span className="text-xs text-foreground truncate block max-w-[120px]">{e.asignadoA.nombre}</span>
-                          : <span className="text-xs text-amber-600 font-medium">Sin asignar</span>
+                          ? (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                                {e.asignadoA.nombre.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                              </div>
+                              <span className="text-xs text-foreground truncate max-w-[110px]">{e.asignadoA.nombre.split(" ").slice(0, 2).join(" ")}</span>
+                            </div>
+                          )
+                          : <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">⚠ Sin asignar</span>
                         }
                       </td>
                       <td className="px-4 py-3"><EstadoBadge estado={e.estado} /></td>

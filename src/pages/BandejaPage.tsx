@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useApp } from "@/context/AppContext";
-import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES } from "@/data/mockData";
+import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES, usuarioLogueado } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter, CalendarDays } from "lucide-react";
@@ -185,12 +185,14 @@ export default function BandejaPage() {
   const pendientesEvi = evidenciasPendientesCount();
 
   function marcarRCESinNovedad(id: string) {
-    setRceData((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, estadoRevision: "revisada_sin_novedad" as const, revisadoPor: "Sandra Herrera", fechaRevision: new Date().toISOString().split("T")[0] } : i
-      )
-    );
-    const item = rceData.find((i) => i.id === id);
+    const idx = insumosRCE.findIndex((i) => i.id === id);
+    if (idx !== -1) {
+      insumosRCE[idx].estadoRevision = "revisada_sin_novedad";
+      insumosRCE[idx].revisadoPor = usuarioLogueado.nombre;
+      insumosRCE[idx].fechaRevision = new Date().toISOString().split("T")[0];
+    }
+    setRceData([...insumosRCE]);
+    const item = insumosRCE.find((i) => i.id === id);
     toast({ title: `Guía ${item?.guia ?? id} marcada sin novedad` });
   }
 
@@ -205,12 +207,14 @@ export default function BandejaPage() {
   }
 
   function marcarFaltSinNovedad(id: string) {
-    setFaltData((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, estadoRevision: "revisada_sin_novedad" as const, revisadoPor: "Sandra Herrera", fechaRevision: new Date().toISOString().split("T")[0] } : i
-      )
-    );
-    const item = faltData.find((i) => i.id === id);
+    const idx = insumosFaltantes.findIndex((i) => i.id === id);
+    if (idx !== -1) {
+      insumosFaltantes[idx].estadoRevision = "revisada_sin_novedad";
+      insumosFaltantes[idx].revisadoPor = usuarioLogueado.nombre;
+      insumosFaltantes[idx].fechaRevision = new Date().toISOString().split("T")[0];
+    }
+    setFaltData([...insumosFaltantes]);
+    const item = insumosFaltantes.find((i) => i.id === id);
     toast({ title: `Guía ${item?.guia ?? id} marcada sin novedad` });
   }
 
