@@ -48,9 +48,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   const [eventoGeneradoId, setEventoGeneradoId] = useState<string | null>(null);
 
   const pendiente = !ev.veredictoOperador;
-  const generaEvento =
-    (veredicto === "confirma" && ev.resultadoIA === "no_cumple") ||
-    veredicto === "falso_positivo";
+  const generaEvento = veredicto === "falso_positivo";
 
   function guardar() {
     if (!veredicto) return;
@@ -80,7 +78,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
 
       const nuevoEvento: Evento = {
         id,
-        estado: "abierto",
+        estado: "cerrado",
         categoria: "evidencias",
         tipoEvento: tipoEv,
         tipoEntidad: "empleado",
@@ -91,8 +89,8 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
         personasResponsables: personasResp,
         personasParticipantes: [],
         vehiculosVinculados: [],
-        descripcionHechos: `Evento automático: ${tipoEv}. Guía ${ev.guia}, terminal ${ev.terminal}. ${veredicto === "falso_positivo" ? "La IA aprobó una evidencia inválida." : "La IA detectó evidencia no válida y fue confirmada."} ${justificacion ? `Justificación: ${justificacion}` : ""}`.trim(),
-        estadoFlujo: "abierto",
+        descripcionHechos: `El operador tomó una foto que no corresponde a la evidencia de entrega. Guía ${ev.guia}, terminal ${ev.terminal}.${justificacion ? ` Justificación del auditor: ${justificacion}` : ""}`.trim(),
+        estadoFlujo: "cerrado",
         asignadoA: {
           id: usuarioLogueado.id,
           nombre: usuarioLogueado.nombre,
@@ -103,7 +101,10 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
         terminalUsuario: usuarioLogueado.terminal,
         fechaRegistro: hoy,
         anotaciones: [],
-        historial: [{ id: `H-${Date.now()}`, fecha: hoy, usuarioNombre: usuarioLogueado.nombre, accion: "Evento creado automáticamente desde Evidencias" }],
+        historial: [
+          { id: `H-${Date.now()}`, fecha: hoy, usuarioNombre: usuarioLogueado.nombre, accion: "Evento creado automáticamente desde Evidencias" },
+          { id: `H-${Date.now() + 1}`, fecha: hoy, usuarioNombre: usuarioLogueado.nombre, accion: "Cerrado automáticamente — falla de evidencia clasificada por auditor" },
+        ],
         diasAbierto: 0,
       };
 
