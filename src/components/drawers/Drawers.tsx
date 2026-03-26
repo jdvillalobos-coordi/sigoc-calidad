@@ -1005,19 +1005,7 @@ export function Persona360Drawer() {
 
   const totalEv = evPersona.length;
   const evAbiertos = evPersona.filter(e => e.estado === "abierto").length;
-  const evCerradosConHallazgo = evPersona.filter(e => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
-  const estudiosConHallazgo = estudios.filter(e => e.resultado === "hallazgos_encontrados").length;
-  const riskScore = (evAbiertos * 2) + (evCerradosConHallazgo * 1) + (estudiosConHallazgo * 3);
-
-  const riskConfig = riskScore >= 13
-    ? { color: "bg-red-500", track: "bg-red-100", border: "border-red-200", bg: "bg-red-50", label: "Riesgo crítico", text: "text-red-800" }
-    : riskScore >= 8
-      ? { color: "bg-orange-500", track: "bg-orange-100", border: "border-orange-200", bg: "bg-orange-50", label: "Riesgo alto", text: "text-orange-800" }
-      : riskScore >= 4
-        ? { color: "bg-amber-400", track: "bg-amber-100", border: "border-amber-200", bg: "bg-amber-50", label: "Riesgo medio", text: "text-amber-800" }
-        : { color: "bg-green-500", track: "bg-green-100", border: "border-green-200", bg: "bg-green-50", label: "Bajo riesgo", text: "text-green-800" };
-
-  const barPct = Math.min(100, (riskScore / 20) * 100);
+  const evCerrados = evPersona.filter(e => e.estado === "cerrado").length;
 
   const decisiones = evPersona.filter(e => e.decisionGH).map(e => ({
     decision: e.decisionGH!,
@@ -1073,20 +1061,14 @@ export function Persona360Drawer() {
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
-          {/* Score de riesgo — termómetro */}
-          <div className={`${riskConfig.bg} border ${riskConfig.border} rounded-xl p-4`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold">Score de riesgo</span>
-              <span className={`text-sm font-black ${riskConfig.text}`}>{riskScore}</span>
-            </div>
-            <div className={`w-full h-3 ${riskConfig.track} rounded-full overflow-hidden mb-2`}>
-              <div className={`h-full rounded-full transition-all ${riskConfig.color}`} style={{ width: `${barPct}%` }} />
-            </div>
+          {/* Eventos asociados */}
+          <div className={`border rounded-xl p-4 ${totalEv >= 5 ? "bg-red-50 border-red-200" : totalEv >= 3 ? "bg-amber-50 border-amber-200" : "bg-muted/40 border-border"}`}>
             <div className="flex items-center justify-between">
-              <span className={`text-xs font-semibold ${riskConfig.text}`}>{riskConfig.label}</span>
-              <span className="text-[11px] text-muted-foreground">
-                {evAbiertos} abierto{evAbiertos !== 1 ? "s" : ""} · {evCerradosConHallazgo} con hallazgos · {estudiosConHallazgo} estudio{estudiosConHallazgo !== 1 ? "s" : ""}
-              </span>
+              <span className="text-sm font-semibold">{totalEv} evento{totalEv !== 1 ? "s" : ""} asociado{totalEv !== 1 ? "s" : ""}</span>
+              <div className="flex items-center gap-2 text-xs">
+                {evAbiertos > 0 && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 font-medium">{evAbiertos} abierto{evAbiertos !== 1 ? "s" : ""}</span>}
+                {evCerrados > 0 && <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200 font-medium">{evCerrados} cerrado{evCerrados !== 1 ? "s" : ""}</span>}
+              </div>
             </div>
           </div>
 
