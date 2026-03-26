@@ -2,12 +2,12 @@ import { useState, useMemo, useEffect } from "react";
 import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT, usuarioLogueado } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
-import { Plus, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
+import { Plus, ChevronUp, ChevronDown, CalendarDays, X } from "lucide-react";
 import type { CategoriaEvento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, isWithinInterval, parseISO, subDays } from "date-fns";
+import { format, isWithinInterval, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
@@ -23,11 +23,11 @@ const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
   { value: "evidencias",         label: "📸 Evidencias" },
 ];
 
-const PRESETS = [
-  { label: "Hoy",            days: 0  },
-  { label: "Últimos 7 días", days: 7  },
-  { label: "Últimos 30 días",days: 30 },
-  { label: "Últimos 90 días",days: 90 },
+type PageSizeOpt = 50 | 100 | "all";
+const PAGE_SIZES: { value: PageSizeOpt; label: string }[] = [
+  { value: 50,    label: "50" },
+  { value: 100,   label: "100" },
+  { value: "all", label: "Todo" },
 ];
 
 // ── Componentes pequeños ─────────────────────────────────────
@@ -47,21 +47,21 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
   const [open, setOpen] = useState(false);
   const label = range?.from
     ? range.to
-      ? `${format(range.from, "dd MMM", { locale: es })} – ${format(range.to, "dd MMM", { locale: es })}`
-      : format(range.from, "dd MMM yyyy", { locale: es })
-    : "Fechas";
+      ? `${format(range.from, "d MMM", { locale: es })} – ${format(range.to, "d MMM", { locale: es })}`
+      : format(range.from, "d MMM yyyy", { locale: es })
+    : "Rango de fechas";
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button className={cn(
           "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
           range?.from
-            ? "bg-primary text-primary-foreground border-primary"
+            ? "border-primary bg-primary/5 text-primary"
             : "bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground"
         )}>
-          <CalendarIcon className="w-3 h-3" />{label}
+          <CalendarDays className="w-3.5 h-3.5" />{label}
           {range?.from && (
-            <span className="ml-0.5 hover:bg-white/20 rounded-full p-0.5 transition-colors"
+            <span className="ml-0.5 hover:bg-primary/20 rounded-full p-0.5 transition-colors"
               onClick={(e) => { e.stopPropagation(); onChange(undefined); }}>
               <X className="w-3 h-3" />
             </span>
@@ -69,22 +69,15 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <div className="flex">
-          <div className="border-r border-border p-3 flex flex-col gap-1 min-w-[140px]">
-            {PRESETS.map((p) => (
-              <button key={p.label}
-                onClick={() => { onChange({ from: p.days === 0 ? new Date() : subDays(new Date(), p.days), to: new Date() }); setOpen(false); }}
-                className="text-left text-xs px-3 py-2 rounded-lg hover:bg-muted text-foreground transition-colors">
-                {p.label}
-              </button>
-            ))}
+        <Calendar mode="range" selected={range} onSelect={onChange} locale={es} numberOfMonths={2} className="p-3 pointer-events-auto" initialFocus />
+        {range?.from && (
+          <div className="flex justify-end px-3 pb-3">
             <button onClick={() => { onChange(undefined); setOpen(false); }}
-              className="text-left text-xs px-3 py-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors mt-1 border-t border-border pt-2">
-              Sin filtro
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <X className="w-3 h-3" /> Limpiar rango
             </button>
           </div>
-          <Calendar mode="range" selected={range} onSelect={onChange} numberOfMonths={1} className="p-3 pointer-events-auto" />
-        </div>
+        )}
       </PopoverContent>
     </Popover>
   );
@@ -110,7 +103,7 @@ export default function RegistrosPage() {
   const [sortField, setSortField]             = useState<"fecha" | "diasAbierto" | "id">("fecha");
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
-  const PER_PAGE = 20;
+  const [perPage, setPerPage]                 = useState<PageSizeOpt>(50);
 
   // Aplica el filtro de navegación al montar (viene del Panel de Control)
   useEffect(() => {
@@ -198,8 +191,9 @@ export default function RegistrosPage() {
     })
   , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
 
-  const pages = Math.ceil(filtered.length / PER_PAGE);
-  const paged = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const effectivePerPage = perPage === "all" ? filtered.length : perPage;
+  const pages = effectivePerPage > 0 ? Math.ceil(filtered.length / effectivePerPage) : 1;
+  const paged = perPage === "all" ? filtered : filtered.slice((page - 1) * effectivePerPage, page * effectivePerPage);
 
   function toggleSort(field: typeof sortField) {
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -287,6 +281,16 @@ export default function RegistrosPage() {
           </select>
 
           <DateRangeFilter range={dateRange} onChange={(r) => { setDateRange(r); setPage(1); }} />
+
+          <div className="w-px h-5 bg-border mx-0.5" />
+          <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
+            {PAGE_SIZES.map((s) => (
+              <button key={String(s.value)} onClick={() => { setPerPage(s.value); setPage(1); }}
+                className={`px-2.5 py-1.5 transition-colors ${perPage === s.value ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
 
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground font-medium">{totalVisible} evento{totalVisible !== 1 ? "s" : ""}</span>
@@ -415,7 +419,7 @@ export default function RegistrosPage() {
           {pages > 1 && (
             <div className="border-t border-border bg-card px-5 py-3 flex items-center justify-between flex-shrink-0">
               <span className="text-xs text-muted-foreground">
-                {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} de {filtered.length}
+                {(page - 1) * effectivePerPage + 1}–{Math.min(page * effectivePerPage, filtered.length)} de {filtered.length}
               </span>
               <div className="flex items-center gap-1">
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}

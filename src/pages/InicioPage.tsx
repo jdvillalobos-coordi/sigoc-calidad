@@ -3,19 +3,12 @@ import { eventos, alertasIA, guias, insumosRCE, insumosFaltantes, usuarioLoguead
 import { useApp } from "@/context/AppContext";
 
 import { FolderOpen, Clock, Bot, Inbox, Briefcase, ArrowUpRight, Check, CalendarDays, X } from "lucide-react";
-import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { CategoriaEvento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { DateRange } from "react-day-picker";
-
-const PERIODOS = [
-  { label: "7d",  days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-  { label: "Todo", days: 0 },
-] as const;
 
 const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
   { value: "todas",             label: "Todas" },
@@ -29,7 +22,6 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
 
 export default function InicioPage() {
   const { setPaginaActiva, irARegistros } = useApp();
-  const [periodo, setPeriodo]     = React.useState<number>(30);
   const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
   const [calOpen, setCalOpen]     = React.useState(false);
@@ -41,13 +33,11 @@ export default function InicioPage() {
       if (dateRange?.from || dateRange?.to) {
         if (dateRange.from) okFecha = okFecha && !isBefore(fecha, startOfDay(dateRange.from));
         if (dateRange.to)   okFecha = okFecha && !isAfter(fecha, endOfDay(dateRange.to));
-      } else if (periodo > 0) {
-        okFecha = isAfter(fecha, subDays(new Date(), periodo));
       }
       const okCat = cat === "todas" || e.categoria === cat;
       return okFecha && okCat;
     });
-  }, [periodo, cat, dateRange]);
+  }, [cat, dateRange]);
 
   /* Mi trabajo */
   const misEventos    = eventos.filter((e) => e.asignadoA.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
@@ -82,16 +72,6 @@ export default function InicioPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 items-center">
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-            {PERIODOS.map((p) => (
-              <button key={p.label}
-                onClick={() => { setPeriodo(p.days); setDateRange(undefined); }}
-                className={`px-3 py-1.5 transition-colors ${!dateRange && periodo === p.days ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                {p.label}
-              </button>
-            ))}
-          </div>
-
           <Popover open={calOpen} onOpenChange={setCalOpen}>
             <PopoverTrigger asChild>
               <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${dateRange?.from ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
@@ -100,21 +80,21 @@ export default function InicioPage() {
                   ? dateRange.to
                     ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
                     : format(dateRange.from, "d MMM yyyy", { locale: es })
-                  : "Rango personalizado"}
+                  : "Rango de fechas"}
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="range"
                 selected={dateRange}
-                onSelect={(range) => { setDateRange(range); if (range?.from) setPeriodo(0); }}
+                onSelect={setDateRange}
                 locale={es}
                 numberOfMonths={2}
                 initialFocus
               />
               {dateRange?.from && (
                 <div className="flex justify-end px-3 pb-3">
-                  <button onClick={() => { setDateRange(undefined); setPeriodo(30); setCalOpen(false); }}
+                  <button onClick={() => { setDateRange(undefined); setCalOpen(false); }}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                     <X className="w-3 h-3" /> Limpiar rango
                   </button>

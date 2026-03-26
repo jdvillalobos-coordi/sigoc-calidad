@@ -7,17 +7,17 @@ import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter, Cale
 import { EvidenciasPanel, evidenciasPendientesCount } from "./EvidenciasPage";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import type { InsumoRCE, InsumoFaltante } from "@/types";
 
-const PERIODOS = [
-  { label: "7d",  days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-  { label: "Todo", days: 0 },
-] as const;
+type PageSize = 50 | 100 | "all";
+const PAGE_SIZES: { value: PageSize; label: string }[] = [
+  { value: 50,    label: "50" },
+  { value: 100,   label: "100" },
+  { value: "all", label: "Todo" },
+];
 
 type TabId = "rce" | "faltantes" | "evidencias";
 type FiltroEstadoRCE = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
@@ -112,9 +112,9 @@ export default function BandejaPage() {
   const [filtroTerminal, setFiltroTerminal] = useState("todos");
   const [filtroEstadoRCE, setFiltroEstadoRCE] = useState<FiltroEstadoRCE>("todas");
   const [filtroEstadoFalt, setFiltroEstadoFalt] = useState<FiltroEstadoFalt>("todas");
-  const [periodo, setPeriodo] = useState<number>(30);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calOpen, setCalOpen] = useState(false);
+  const [pageSize, setPageSize] = useState<PageSize>(50);
 
   const [rceData, setRceData] = useState<InsumoRCE[]>(insumosRCE);
   const [faltData, setFaltData] = useState<InsumoFaltante[]>(insumosFaltantes);
@@ -142,17 +142,14 @@ export default function BandejaPage() {
   function limpiarFiltrosGeo() { setFiltroRegional("todos"); setFiltroTerminal("todos"); }
 
   function matchFecha(fechaStr: string): boolean {
+    if (!dateRange?.from && !dateRange?.to) return true;
     const fecha = new Date(fechaStr);
-    if (dateRange?.from || dateRange?.to) {
-      if (dateRange.from && isBefore(fecha, startOfDay(dateRange.from))) return false;
-      if (dateRange.to && isAfter(fecha, endOfDay(dateRange.to))) return false;
-      return true;
-    }
-    if (periodo > 0) return isAfter(fecha, subDays(new Date(), periodo));
+    if (dateRange?.from && isBefore(fecha, startOfDay(dateRange.from))) return false;
+    if (dateRange?.to && isAfter(fecha, endOfDay(dateRange.to))) return false;
     return true;
   }
 
-  const fechaDesdeStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : periodo > 0 ? format(subDays(new Date(), periodo), "yyyy-MM-dd") : "";
+  const fechaDesdeStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : "";
   const fechaHastaStr = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
 
   const rceFiltered = useMemo(() => {
@@ -166,7 +163,7 @@ export default function BandejaPage() {
       }
       return true;
     });
-  }, [rceData, filtroEstadoRCE, filtroRegional, filtroTerminal, periodo, dateRange]);
+  }, [rceData, filtroEstadoRCE, filtroRegional, filtroTerminal, dateRange]);
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
@@ -178,7 +175,10 @@ export default function BandejaPage() {
       if (!matchTerminal(i.terminal)) return false;
       return true;
     });
-  }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal, periodo, dateRange]);
+  }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal, dateRange]);
+
+  const rceVisible = pageSize === "all" ? rceFiltered : rceFiltered.slice(0, pageSize);
+  const faltVisible = pageSize === "all" ? faltFiltered : faltFiltered.slice(0, pageSize);
 
   const pendientesRCE = rceData.filter((i) => i.estadoRevision === "pendiente").length;
   const pendientesFalt = faltData.filter((i) => i.estadoRevision === "pendiente").length;
@@ -260,17 +260,6 @@ export default function BandejaPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 items-center">
-          {/* Periodos + Calendario — aplica a los 3 tabs */}
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-            {PERIODOS.map((p) => (
-              <button key={p.label}
-                onClick={() => { setPeriodo(p.days); setDateRange(undefined); }}
-                className={`px-3 py-1.5 transition-colors ${!dateRange && periodo === p.days ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                {p.label}
-              </button>
-            ))}
-          </div>
-
           <Popover open={calOpen} onOpenChange={setCalOpen}>
             <PopoverTrigger asChild>
               <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${dateRange?.from ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
@@ -279,21 +268,21 @@ export default function BandejaPage() {
                   ? dateRange.to
                     ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
                     : format(dateRange.from, "d MMM yyyy", { locale: es })
-                  : "Rango personalizado"}
+                  : "Rango de fechas"}
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="range"
                 selected={dateRange}
-                onSelect={(range) => { setDateRange(range); if (range?.from) setPeriodo(0); }}
+                onSelect={setDateRange}
                 locale={es}
                 numberOfMonths={2}
                 initialFocus
               />
               {dateRange?.from && (
                 <div className="flex justify-end px-3 pb-3">
-                  <button onClick={() => { setDateRange(undefined); setPeriodo(30); setCalOpen(false); }}
+                  <button onClick={() => { setDateRange(undefined); setCalOpen(false); }}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                     <X className="w-3 h-3" /> Limpiar rango
                   </button>
@@ -301,6 +290,16 @@ export default function BandejaPage() {
               )}
             </PopoverContent>
           </Popover>
+
+          {/* Registros por página */}
+          <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
+            {PAGE_SIZES.map((s) => (
+              <button key={String(s.value)} onClick={() => setPageSize(s.value)}
+                className={`px-3 py-1.5 transition-colors ${pageSize === s.value ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                {s.label}
+              </button>
+            ))}
+          </div>
 
           {tab !== "evidencias" && (
             <>
@@ -369,7 +368,7 @@ export default function BandejaPage() {
                 {dateRange.to
                   ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
                   : format(dateRange.from, "d MMM yyyy", { locale: es })}
-                <button onClick={() => { setDateRange(undefined); setPeriodo(30); }} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
+                <button onClick={() => setDateRange(undefined)} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -413,9 +412,9 @@ export default function BandejaPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {rceFiltered.length === 0 ? (
+                  {rceVisible.length === 0 ? (
                     <tr><td colSpan={10} className="text-center py-8 text-muted-foreground">Sin guías RCE en este filtro</td></tr>
-                  ) : rceFiltered.map((item) => {
+                  ) : rceVisible.map((item) => {
                     const g = getGuia(item.guia);
                     const dias = diasDesde(item.fechaAsignacion);
                     const isExpanded = expandedRow === item.id;
@@ -485,6 +484,12 @@ export default function BandejaPage() {
                 </tbody>
               </table>
             </div>
+            {pageSize !== "all" && rceFiltered.length > pageSize && (
+              <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground flex items-center justify-between">
+                <span>Mostrando {rceVisible.length} de {rceFiltered.length}</span>
+                <button onClick={() => setPageSize("all")} className="text-primary hover:underline font-medium">Ver todo</button>
+              </div>
+            )}
           </div>
         )}
 
@@ -512,9 +517,9 @@ export default function BandejaPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {faltFiltered.length === 0 ? (
+                  {faltVisible.length === 0 ? (
                     <tr><td colSpan={9} className="text-center py-8 text-muted-foreground">Sin guías faltantes en este filtro</td></tr>
-                  ) : faltFiltered.map((item) => {
+                  ) : faltVisible.map((item) => {
                     const dias = diasDesde(item.fechaNovedad);
                     const isExpanded = expandedRow === item.id;
                     return (
@@ -575,6 +580,12 @@ export default function BandejaPage() {
                 </tbody>
               </table>
             </div>
+            {pageSize !== "all" && faltFiltered.length > pageSize && (
+              <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground flex items-center justify-between">
+                <span>Mostrando {faltVisible.length} de {faltFiltered.length}</span>
+                <button onClick={() => setPageSize("all")} className="text-primary hover:underline font-medium">Ver todo</button>
+              </div>
+            )}
           </div>
         )}
       </div>
