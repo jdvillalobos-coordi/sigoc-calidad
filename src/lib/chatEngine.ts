@@ -204,7 +204,7 @@ function intentBuscarGuia(text: string): QueryResult | null {
       const evts = getEventosPorGuia(guia.numero);
       const evid = evidencias.filter((e) => e.guia === guia.numero);
       return {
-        content: `**Guía ${guia.numero}**\n\nOrigen: ${guia.terminalOrigen} → Destino: ${guia.terminalDestino}\nCliente: ${guia.nombreCliente} (NIT ${guia.nitCliente})\nValor declarado: ${formatCurrency(guia.valorDeclarado)}\nEstado: ${guia.estadoGeneral}\n\n**Eventos asociados (${evts.length}):**\n${evts.map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}\n\n**Evidencias (${evid.length}):**\n${evid.map((e) => `- ${e.id}: ${e.resultadoIA} | ${e.terminal} | ${e.tipoEvidencia}`).join("\n") || "Ninguna"}`,
+        content: `**Guía ${guia.numero}**\n\nOrigen: ${guia.terminalOrigen} → Destino: ${guia.terminalDestino}\nCliente: ${guia.nombreCliente} (NIT ${guia.nitCliente})\nValor declarado: ${formatCurrency(guia.valorDeclarado)}\nEstado: ${guia.estadoGeneral}\n\n**Eventos asociados (${evts.length}):**\n${evts.map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}\n\n**Evidencias (${evid.length}):**\n${evid.map((e) => `- ${e.id}: ${e.resultadoIA} | ${e.terminal}`).join("\n") || "Ninguna"}`,
         entities: [
           { type: "guia", id: guia.numero, label: `Guía ${guia.numero}` },
           ...evts.map((e) => ({ type: "evento" as const, id: e.id, label: e.id })),

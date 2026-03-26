@@ -64,9 +64,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
     if (generaEvento) {
       const id = `EV-EVI-${Date.now()}`;
       const hoy = new Date().toISOString().split("T")[0];
-      const tipoEv = ev.tipoEvidencia === "entrega"
-        ? "Falsa evidencia de entrega"
-        : "Falsa evidencia de intento de entrega";
+      const tipoEv = "Evidencia de entrega inválida";
 
       const personasResp: Evento["personasResponsables"] = [];
       if (ev.operadorCedula) {
@@ -123,7 +121,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
     <div className="border-b border-border last:border-0">
       {/* Fila principal */}
       <button
-        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 items-center"
+        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-center"
         onClick={() => setExpanded((v) => !v)}
       >
         <div>
@@ -135,9 +133,6 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
           </button>
           <span className="ml-2 text-xs text-muted-foreground">{ev.terminal}</span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {ev.tipoEvidencia === "entrega" ? "Evidencia entrega" : "Evidencia intento"}
-        </span>
         <ResultadoIABadge resultado={ev.resultadoIA} />
         {ev.veredictoOperador
           ? <VeredictoTag v={ev.veredictoOperador} />
@@ -166,7 +161,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
                     >
                       <Camera className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                       <span className="text-xs text-primary group-hover:underline truncate flex-1">
-                        Foto {i + 1} — {ev.tipoEvidencia === "entrega" ? "Evidencia de entrega" : "Evidencia de intento"}
+                        Foto {i + 1} — Evidencia de entrega
                       </span>
                       <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                     </a>
@@ -194,7 +189,6 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
               {/* Metadata */}
               <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
                 <div><span className="font-medium">Guía:</span> {ev.guia}</div>
-                <div><span className="font-medium">Tipo:</span> {ev.tipoEvidencia === "entrega" ? "Evidencia de entrega" : "Evidencia de intento de entrega"}</div>
                 <div><span className="font-medium">Fecha:</span> {formatDate(ev.fecha)}</div>
                 {ev.revisadoPor && <div><span className="font-medium">Revisado por:</span> {ev.revisadoPor}</div>}
               </div>
@@ -343,9 +337,8 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
           <span>Guía / Terminal</span>
-          <span>Tipo</span>
           <span>Resultado IA</span>
           <span>Estado revisión</span>
           <span>Fecha</span>
@@ -376,7 +369,7 @@ export default function EvidenciasPage() {
           Gestión de Evidencias
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Revisa las evidencias de entrega validadas por IA y confirma o corrige el resultado
+          Revisa las evidencias de intento de entrega validadas por IA y confirma o corrige el resultado
         </p>
       </div>
       <div className="flex-1 overflow-y-auto p-6">
