@@ -291,15 +291,6 @@ export default function BandejaPage() {
             </PopoverContent>
           </Popover>
 
-          {/* Registros por página */}
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-            {PAGE_SIZES.map((s) => (
-              <button key={String(s.value)} onClick={() => setPageSize(s.value)}
-                className={`px-3 py-1.5 transition-colors ${pageSize === s.value ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                {s.label}
-              </button>
-            ))}
-          </div>
 
           {tab !== "evidencias" && (
             <>
@@ -484,12 +475,19 @@ export default function BandejaPage() {
                 </tbody>
               </table>
             </div>
-            {pageSize !== "all" && rceFiltered.length > pageSize && (
-              <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground flex items-center justify-between">
-                <span>Mostrando {rceVisible.length} de {rceFiltered.length}</span>
-                <button onClick={() => setPageSize("all")} className="text-primary hover:underline font-medium">Ver todo</button>
+            <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {rceVisible.length} de {rceFiltered.length} guías
+              </span>
+              <div className="flex rounded-lg border border-border overflow-hidden text-[11px] bg-background">
+                {PAGE_SIZES.map((s) => (
+                  <button key={String(s.value)} onClick={() => setPageSize(s.value)}
+                    className={`px-2.5 py-1 transition-colors ${pageSize === s.value ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                    {s.label}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -580,12 +578,19 @@ export default function BandejaPage() {
                 </tbody>
               </table>
             </div>
-            {pageSize !== "all" && faltFiltered.length > pageSize && (
-              <div className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground flex items-center justify-between">
-                <span>Mostrando {faltVisible.length} de {faltFiltered.length}</span>
-                <button onClick={() => setPageSize("all")} className="text-primary hover:underline font-medium">Ver todo</button>
+            <div className="border-t border-border px-4 py-2.5 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {faltVisible.length} de {faltFiltered.length} guías
+              </span>
+              <div className="flex rounded-lg border border-border overflow-hidden text-[11px] bg-background">
+                {PAGE_SIZES.map((s) => (
+                  <button key={String(s.value)} onClick={() => setPageSize(s.value)}
+                    className={`px-2.5 py-1 transition-colors ${pageSize === s.value ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                    {s.label}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

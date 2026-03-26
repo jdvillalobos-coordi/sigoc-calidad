@@ -282,16 +282,6 @@ export default function RegistrosPage() {
 
           <DateRangeFilter range={dateRange} onChange={(r) => { setDateRange(r); setPage(1); }} />
 
-          <div className="w-px h-5 bg-border mx-0.5" />
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-            {PAGE_SIZES.map((s) => (
-              <button key={String(s.value)} onClick={() => { setPerPage(s.value); setPage(1); }}
-                className={`px-2.5 py-1.5 transition-colors ${perPage === s.value ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
-                {s.label}
-              </button>
-            ))}
-          </div>
-
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground font-medium">{totalVisible} evento{totalVisible !== 1 ? "s" : ""}</span>
           <button onClick={() => setNuevaRegistroAbierto(true)}
@@ -416,11 +406,11 @@ export default function RegistrosPage() {
           </div>
 
           {/* Paginación */}
-          {pages > 1 && (
-            <div className="border-t border-border bg-card px-5 py-3 flex items-center justify-between flex-shrink-0">
-              <span className="text-xs text-muted-foreground">
-                {(page - 1) * effectivePerPage + 1}–{Math.min(page * effectivePerPage, filtered.length)} de {filtered.length}
-              </span>
+          <div className="border-t border-border bg-card px-5 py-3 flex items-center justify-between flex-shrink-0">
+            <span className="text-xs text-muted-foreground">
+              {filtered.length === 0 ? "0 eventos" : `${(page - 1) * effectivePerPage + 1}–${Math.min(page * effectivePerPage, filtered.length)} de ${filtered.length}`}
+            </span>
+            {pages > 1 && (
               <div className="flex items-center gap-1">
                 <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
                   className="px-2.5 py-1.5 text-xs border border-border rounded-lg disabled:opacity-40 hover:bg-muted transition-colors">
@@ -440,8 +430,16 @@ export default function RegistrosPage() {
                   →
                 </button>
               </div>
+            )}
+            <div className="flex rounded-lg border border-border overflow-hidden text-[11px] bg-background">
+              {PAGE_SIZES.map((s) => (
+                <button key={String(s.value)} onClick={() => { setPerPage(s.value); setPage(1); }}
+                  className={`px-2.5 py-1 transition-colors ${perPage === s.value ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                  {s.label}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
