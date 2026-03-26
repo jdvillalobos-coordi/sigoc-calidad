@@ -5,7 +5,19 @@ import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter, CalendarDays } from "lucide-react";
 import { EvidenciasPanel, evidenciasPendientesCount } from "./EvidenciasPage";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, subDays, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { es } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 import type { InsumoRCE, InsumoFaltante } from "@/types";
+
+const PERIODOS = [
+  { label: "7d",  days: 7 },
+  { label: "30d", days: 30 },
+  { label: "90d", days: 90 },
+  { label: "Todo", days: 0 },
+] as const;
 
 type TabId = "rce" | "faltantes" | "evidencias";
 type FiltroEstadoRCE = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
@@ -100,8 +112,9 @@ export default function BandejaPage() {
   const [filtroTerminal, setFiltroTerminal] = useState("todos");
   const [filtroEstadoRCE, setFiltroEstadoRCE] = useState<FiltroEstadoRCE>("todas");
   const [filtroEstadoFalt, setFiltroEstadoFalt] = useState<FiltroEstadoFalt>("todas");
-  const [fechaDesde, setFechaDesde] = useState("");
-  const [fechaHasta, setFechaHasta] = useState("");
+  const [periodo, setPeriodo] = useState<number>(30);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [calOpen, setCalOpen] = useState(false);
 
   const [rceData, setRceData] = useState<InsumoRCE[]>(insumosRCE);
   const [faltData, setFaltData] = useState<InsumoFaltante[]>(insumosFaltantes);
@@ -127,14 +140,20 @@ export default function BandejaPage() {
   }
 
   function limpiarFiltrosGeo() { setFiltroRegional("todos"); setFiltroTerminal("todos"); }
-  function limpiarFechas() { setFechaDesde(""); setFechaHasta(""); }
-  const hayFiltrosFecha = fechaDesde !== "" || fechaHasta !== "";
 
-  function matchFecha(fecha: string): boolean {
-    if (fechaDesde && fecha < fechaDesde) return false;
-    if (fechaHasta && fecha > fechaHasta) return false;
+  function matchFecha(fechaStr: string): boolean {
+    const fecha = new Date(fechaStr);
+    if (dateRange?.from || dateRange?.to) {
+      if (dateRange.from && isBefore(fecha, startOfDay(dateRange.from))) return false;
+      if (dateRange.to && isAfter(fecha, endOfDay(dateRange.to))) return false;
+      return true;
+    }
+    if (periodo > 0) return isAfter(fecha, subDays(new Date(), periodo));
     return true;
   }
+
+  const fechaDesdeStr = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : periodo > 0 ? format(subDays(new Date(), periodo), "yyyy-MM-dd") : "";
+  const fechaHastaStr = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : "";
 
   const rceFiltered = useMemo(() => {
     return rceData.filter((i) => {
@@ -147,7 +166,7 @@ export default function BandejaPage() {
       }
       return true;
     });
-  }, [rceData, filtroEstadoRCE, filtroRegional, filtroTerminal, fechaDesde, fechaHasta]);
+  }, [rceData, filtroEstadoRCE, filtroRegional, filtroTerminal, periodo, dateRange]);
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
@@ -159,7 +178,7 @@ export default function BandejaPage() {
       if (!matchTerminal(i.terminal)) return false;
       return true;
     });
-  }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal, fechaDesde, fechaHasta]);
+  }, [faltData, filtroEstadoFalt, filtroRegional, filtroTerminal, periodo, dateRange]);
 
   const pendientesRCE = rceData.filter((i) => i.estadoRevision === "pendiente").length;
   const pendientesFalt = faltData.filter((i) => i.estadoRevision === "pendiente").length;
@@ -241,34 +260,47 @@ export default function BandejaPage() {
 
         {/* Filtros */}
         <div className="flex flex-wrap gap-2 items-center">
-          {/* Filtro de fechas — aplica a los 3 tabs */}
-          <div className="flex items-center gap-1.5">
-            <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              type="date"
-              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-              value={fechaDesde}
-              onChange={(e) => setFechaDesde(e.target.value)}
-              title="Fecha desde"
-            />
-            <span className="text-xs text-muted-foreground">—</span>
-            <input
-              type="date"
-              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-              value={fechaHasta}
-              onChange={(e) => setFechaHasta(e.target.value)}
-              title="Fecha hasta"
-            />
-            {hayFiltrosFecha && (
-              <button
-                onClick={limpiarFechas}
-                className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Limpiar fechas"
-              >
-                <X className="w-3 h-3" />
+          {/* Periodos + Calendario — aplica a los 3 tabs */}
+          <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
+            {PERIODOS.map((p) => (
+              <button key={p.label}
+                onClick={() => { setPeriodo(p.days); setDateRange(undefined); }}
+                className={`px-3 py-1.5 transition-colors ${!dateRange && periodo === p.days ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+                {p.label}
               </button>
-            )}
+            ))}
           </div>
+
+          <Popover open={calOpen} onOpenChange={setCalOpen}>
+            <PopoverTrigger asChild>
+              <button className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${dateRange?.from ? "border-primary bg-primary/5 text-primary font-medium" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
+                <CalendarDays className="w-3.5 h-3.5" />
+                {dateRange?.from
+                  ? dateRange.to
+                    ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
+                    : format(dateRange.from, "d MMM yyyy", { locale: es })
+                  : "Rango personalizado"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={(range) => { setDateRange(range); if (range?.from) setPeriodo(0); }}
+                locale={es}
+                numberOfMonths={2}
+                initialFocus
+              />
+              {dateRange?.from && (
+                <div className="flex justify-end px-3 pb-3">
+                  <button onClick={() => { setDateRange(undefined); setPeriodo(30); setCalOpen(false); }}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <X className="w-3 h-3" /> Limpiar rango
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
 
           {tab !== "evidencias" && (
             <>
@@ -329,21 +361,15 @@ export default function BandejaPage() {
         </div>
 
         {/* Pills de filtros activos */}
-        {(hayFiltrosGeo || hayFiltrosFecha) && (
+        {(hayFiltrosGeo || !!dateRange?.from) && (
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Filtros:</span>
-            {fechaDesde && (
+            {dateRange?.from && (
               <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                Desde: {fechaDesde}
-                <button onClick={() => setFechaDesde("")} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            )}
-            {fechaHasta && (
-              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                Hasta: {fechaHasta}
-                <button onClick={() => setFechaHasta("")} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
+                {dateRange.to
+                  ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
+                  : format(dateRange.from, "d MMM yyyy", { locale: es })}
+                <button onClick={() => { setDateRange(undefined); setPeriodo(30); }} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -464,7 +490,7 @@ export default function BandejaPage() {
 
         {/* Panel Evidencias */}
         {tab === "evidencias" && (
-          <EvidenciasPanel filtroTerminalExt={filtroTerminal} fechaDesde={fechaDesde} fechaHasta={fechaHasta} />
+          <EvidenciasPanel filtroTerminalExt={filtroTerminal} fechaDesde={fechaDesdeStr} fechaHasta={fechaHastaStr} />
         )}
 
         {/* Tabla Faltantes */}
