@@ -16,9 +16,33 @@ const CATEGORIAS = [
 ] as const;
 
 const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[] }[]> = {
-  dineros:            [{ opciones: ["Hurto de dinero", "Faltante de dinero", "Faltante injustificado", "Seguimiento RCE"] }],
+  dineros:            [{ opciones: ["Hurto de dinero", "Pérdida de dinero", "Faltante de dinero", "Faltante injustificado", "Fraude de dinero (Jineteo)", "Dinero falsos", "Seguimiento RCE"] }],
   unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
-  listas_vinculantes: [{ opciones: ["Denuncia penal", "Accidente de tránsito", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] }],
+  listas_vinculantes: [
+    { grupo: "Investigación", opciones: ["Denuncia penal", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] },
+    { grupo: "Eventos de seguridad", opciones: [
+      "Accidente de tránsito",
+      "Activo CM Hurto / Pérdida (Sede)",
+      "Aéreo",
+      "Afectaciones a la seguridad híbrida",
+      "Bloqueo de vías",
+      "Descuelgue",
+      "Extorsión",
+      "Falla del Servidor (Plataforma GPS)",
+      "Fraude en la Documentación",
+      "Fuga de Información",
+      "Homicidio",
+      "Hurto de Combustible",
+      "Inhibidores de Señal (GSM, GPRS, GPS)",
+      "Intrusión",
+      "Lesiones Personales",
+      "Sabotaje",
+      "Secuestro",
+      "Suplantación",
+      "Terrorismo",
+      "Vandalismo",
+    ] },
+  ],
   pqr: [{ opciones: [
     "Alerta NYS no atendida",
     "Certificación de entrega - mala entrega",

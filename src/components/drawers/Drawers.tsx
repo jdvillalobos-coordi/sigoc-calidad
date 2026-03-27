@@ -68,11 +68,18 @@ const RESOLUCION_OPTIONS: { value: ResolucionFinal; label: string }[] = [
 const RESOLUCION_LABELS: Record<string, string> = Object.fromEntries(RESOLUCION_OPTIONS.map(o => [o.value, o.label]));
 
 const PERSONAS_ESCALAMIENTO = [
-  { id: "u-jefe-seg", nombre: "Carlos Mendoza", cargo: "Jefe de Seguridad" },
-  { id: "u-dir-calidad", nombre: "María Elena Rojas", cargo: "Directora de Calidad" },
-  { id: "u-coord-dineros", nombre: "Jorge Castaño", cargo: "Coordinador Nacional Dineros" },
-  { id: "u-coord-unidades", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad" },
-  { id: "u-gerente-ops", nombre: "Andrés Gutiérrez", cargo: "Gerente de Operaciones" },
+  // Coordinadores nacionales
+  { id: "u-jefe-seg", nombre: "Carlos Mendoza", cargo: "Jefe de Seguridad", grupo: "Coordinación Nacional" },
+  { id: "u-dir-calidad", nombre: "María Elena Rojas", cargo: "Directora de Calidad", grupo: "Coordinación Nacional" },
+  { id: "u-coord-dineros", nombre: "Jorge Castaño", cargo: "Coordinador Nacional Dineros", grupo: "Coordinación Nacional" },
+  { id: "u-coord-unidades", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional Calidad", grupo: "Coordinación Nacional" },
+  { id: "u-gerente-ops", nombre: "Andrés Gutiérrez", cargo: "Gerente de Operaciones", grupo: "Coordinación Nacional" },
+  // Investigadores de terminal
+  { id: "u-inv-bog", nombre: "Luis Alberto Díaz", cargo: "Investigador SG — Bogotá", grupo: "Investigadores Terminal" },
+  { id: "u-inv-med", nombre: "Patricia Gómez", cargo: "Investigador SG — Medellín", grupo: "Investigadores Terminal" },
+  { id: "u-inv-cal", nombre: "Ricardo Morales", cargo: "Investigador SG — Cali", grupo: "Investigadores Terminal" },
+  { id: "u-inv-baq", nombre: "Carmen Lucia Vega", cargo: "Investigador SG — Barranquilla", grupo: "Investigadores Terminal" },
+  { id: "u-inv-buc", nombre: "Diego Fernando Ruiz", cargo: "Investigador SG — Bucaramanga", grupo: "Investigadores Terminal" },
 ];
 
 // ---- RecordDetail Drawer ----
@@ -364,8 +371,17 @@ export function RecordDetailDrawer() {
                 className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="">Seleccionar persona...</option>
-                {PERSONAS_ESCALAMIENTO.map(p => (
-                  <option key={p.id} value={p.id}>{p.nombre} — {p.cargo}</option>
+                {Object.entries(
+                  PERSONAS_ESCALAMIENTO.reduce<Record<string, typeof PERSONAS_ESCALAMIENTO>>((acc, p) => {
+                    (acc[p.grupo] ??= []).push(p);
+                    return acc;
+                  }, {})
+                ).map(([grupo, personas]) => (
+                  <optgroup key={grupo} label={grupo}>
+                    {personas.map(p => (
+                      <option key={p.id} value={p.id}>{p.nombre} — {p.cargo}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <textarea
@@ -595,6 +611,273 @@ export function RecordDetailDrawer() {
               </div>
             )}
           </section>
+
+          {/* Gestión de Seguridad — solo para dineros/unidades */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
+            <section className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
+                🛡️ Gestión de Seguridad
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Intervención Seguridad</label>
+                  <select
+                    value={ev.intervencionSeguridad ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].intervencionSeguridad = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Sin asignar</option>
+                    <option value="Acompañamiento de SG en la entrega y RCE">Acompañamiento SG en entrega y RCE</option>
+                    <option value="Seguimiento a la entrega y RCE">Seguimiento a la entrega y RCE</option>
+                    <option value="Seguimiento a la devolución">Seguimiento a la devolución</option>
+                    <option value="Investigación de Faltante">Investigación de Faltante</option>
+                    <option value="Investigación (Guía anulada)">Investigación (Guía anulada)</option>
+                    <option value="Proceso Denuncia">Proceso Denuncia</option>
+                    <option value="Reporte Acta de Aprehensión">Reporte Acta de Aprehensión</option>
+                    <option value="Reporte Acta de Incautación">Reporte Acta de Incautación</option>
+                    <option value="602. Envío en Validación por Seguridad (Unidad retenida)">602. Envío en Validación por Seguridad</option>
+                    <option value="N/A (Devolución efectiva al momento de investigar)">N/A (Devolución efectiva)</option>
+                    <option value="N/A (RCE / Entrega Efectiva al momento de investigar)">N/A (RCE / Entrega Efectiva)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Desviaciones identificadas</label>
+                  <select
+                    value={ev.desviacionesIdentificadas ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].desviacionesIdentificadas = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Sin asignar</option>
+                    <option value="Demora legalización reexpedidor">Demora legalización reexpedidor</option>
+                    <option value="Demora anulación RCE">Demora anulación RCE</option>
+                    <option value="Pendiente devolución al remitente">Pendiente devolución al remitente</option>
+                    <option value="Pendiente inventario unidad">Pendiente inventario unidad</option>
+                    <option value="RCE mal liquidado">RCE mal liquidado</option>
+                    <option value="RCE pagado, no se refleja en el sistema">RCE pagado, no se refleja en el sistema</option>
+                    <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
+                    <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estado (Gestión SG)</label>
+                  <select
+                    value={ev.estadoGestionSG ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].estadoGestionSG = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Sin asignar</option>
+                    <option value="Asignada">Asignada</option>
+                    <option value="En proceso">En proceso</option>
+                    <option value="En proceso (NyS)">En proceso (NyS)</option>
+                    <option value="Parcial">Parcial</option>
+                    <option value="RCE / Entrega Efectiva">RCE / Entrega Efectiva</option>
+                    <option value="Devolución Efectiva">Devolución Efectiva</option>
+                    <option value="Hurto">Hurto</option>
+                    <option value="Pérdida">Pérdida</option>
+                    <option value="Aprehensión">Aprehensión</option>
+                    <option value="Incautación">Incautación</option>
+                    <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
+                    <option value="Cierre Investig.">Cierre Investigación</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Causa raíz y cierre — solo para unidades */}
+          {ev.categoria === "unidades" && ev.estadoFlujo !== "cerrado" && (
+            <section className="border border-purple-200 bg-purple-50/30 rounded-xl p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
+                🔎 Investigación y cierre
+              </h3>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Causa raíz de la novedad</label>
+                <select
+                  value={ev.causaRaiz ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].causaRaiz = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Seleccionar causa raíz...</option>
+                  <optgroup label="1 — Rotulado / Etiquetas">
+                    <option value="1-Unidad mal rotulada o sin marcar">Unidad mal rotulada o sin marcar</option>
+                    <option value="1-Unidad con doble rótulo">Unidad con doble rótulo</option>
+                    <option value="1-Etiquetas Trocadas">Etiquetas Trocadas</option>
+                    <option value="1-Guía pendiente por anular">Guía pendiente por anular</option>
+                  </optgroup>
+                  <optgroup label="2 — Despacho / Transporte">
+                    <option value="2-Unidad se queda dentro del Vehículo Local">Unidad se queda en Vehículo Local</option>
+                    <option value="2-Unidad se queda dentro del Vehículo Ruta Nacional">Unidad se queda en Vehículo Ruta Nacional</option>
+                    <option value="2-Unidad se queda en Origen">Unidad se queda en Origen</option>
+                    <option value="2-Unidad llega a Destino Errado">Unidad llega a Destino Errado</option>
+                    <option value="2-Unidad se despacha en otro Trailer">Unidad se despacha en otro Trailer</option>
+                    <option value="2-Cargue de la Unidad a la Móvil Sin Guía">Cargue de la Unidad a la Móvil Sin Guía</option>
+                  </optgroup>
+                  <optgroup label="3 — Entrega">
+                    <option value="3-Entrega Trocada">Entrega Trocada</option>
+                    <option value="3-Entrega Unidad Sin Guía">Entrega Unidad Sin Guía</option>
+                    <option value="3-Suplantación de Firma">Suplantación de Firma</option>
+                  </optgroup>
+                  <optgroup label="4 — Solución operativa">
+                    <option value="4-La Unidad si llegó, mal reporte">La Unidad si llegó, mal reporte</option>
+                    <option value="4-MQP - Entrega directa al cliente">MQP - Entrega directa al cliente</option>
+                    <option value="4-Unidad dentro del Tiempo de Entrega">Unidad dentro del Tiempo de Entrega</option>
+                    <option value="4-Unidad ya Entregada al Cliente">Unidad ya Entregada al Cliente</option>
+                    <option value="4-Unidad se queda donde el Cliente">Unidad se queda donde el Cliente</option>
+                    <option value="4-Se entrega unidad sellada (sellos originales)">Se entrega unidad sellada</option>
+                    <option value="4-Se entrega unidad con guía vínculo">Se entrega unidad con guía vínculo</option>
+                    <option value="4-Devolución al remitente con guía vínculo">Devolución con guía vínculo</option>
+                    <option value="4-Demora por enlace">Demora por enlace</option>
+                    <option value="4-Unidad se queda en Terminal de Enlace">Unidad se queda en Terminal de Enlace</option>
+                    <option value="4-Pérdida de Etiqueta">Pérdida de Etiqueta</option>
+                    <option value="4-Unidad Incautada por autoridad competente">Unidad Incautada por autoridad</option>
+                    <option value="4-Unidad aprehendida por autoridad competente">Unidad aprehendida por autoridad</option>
+                    <option value="4-Contrabando (Unidad incautada)">Contrabando (Unidad incautada)</option>
+                    <option value="4-Unidad no es leída por el Sorter">Unidad no es leída por el Sorter</option>
+                  </optgroup>
+                  <optgroup label="5 — Checkpoint">
+                    <option value="5-Ausencia lectura Checkpoint">Ausencia lectura Checkpoint</option>
+                    <option value="5-Lectura checkpoint sin cobertura de cámaras">Lectura checkpoint sin cobertura de cámaras</option>
+                  </optgroup>
+                  <optgroup label="6-14 — Otras causas">
+                    <option value="6-Unidad se queda por Deterioro en el Despacho">Deterioro en el Despacho</option>
+                    <option value="7-Unidad en planilla cero o mal leída en despacho">Planilla cero o mal leída</option>
+                    <option value="8-Avería en el transporte">Avería en el transporte</option>
+                    <option value="9-Cambio de destino">Cambio de destino</option>
+                    <option value="10-Cliente recibe y firma, guía se pierde">Cliente recibe y firma, guía se pierde</option>
+                    <option value="11-Despacho mal elaborado, anulado o repetido">Despacho mal elaborado</option>
+                    <option value="12-Unidad con Dummy mal Asociado">Unidad con Dummy mal Asociado</option>
+                    <option value="13-Unidad va en Consolidadora pero no llega">Unidad va en Consolidadora pero no llega</option>
+                    <option value="14-Retracto Remitente">Retracto Remitente</option>
+                  </optgroup>
+                  <optgroup label="15 — Seguridad externa">
+                    <option value="15-Atraco en vía pública">Atraco en vía pública</option>
+                    <option value="15-Vandalismo">Vandalismo</option>
+                    <option value="15-Intrusión en Sede">Intrusión en Sede</option>
+                  </optgroup>
+                  <optgroup label="16 — Protocolo de seguridad">
+                    <option value="16-Descuido, Distracción, Imprudencia">Descuido, Distracción, Imprudencia</option>
+                    <option value="16-Entrega en dirección diferente">Entrega en dirección diferente</option>
+                    <option value="16-Mercancía al borde del furgón">Mercancía al borde del furgón</option>
+                    <option value="16-Mercancía en la cabina">Mercancía en la cabina</option>
+                    <option value="16-Mercancía a cuidado de terceros">Mercancía a cuidado de terceros</option>
+                    <option value="16-No uso de candado">No uso de candado</option>
+                    <option value="16-No uso de caletas para dinero">No uso de caletas para dinero</option>
+                    <option value="16-No firma guía destinatario con CC">No firma guía destinatario con CC</option>
+                    <option value="16-Móvil sola (Rompen el candado)">Móvil sola (Rompen el candado)</option>
+                    <option value="16-No se identifica la unidad por cámaras">No se identifica por cámaras</option>
+                  </optgroup>
+                  <optgroup label="17+ — Infraestructura y otros">
+                    <option value="17-Ausencia de cobertura por CCTV">Ausencia de cobertura por CCTV</option>
+                    <option value="17-No se cuenta con grabación de CCTV">No se cuenta con grabación de CCTV</option>
+                    <option value="18-Empleado/Aliado deshonesto">Empleado/Aliado deshonesto</option>
+                    <option value="20-Cierre de Vías">Cierre de Vías</option>
+                    <option value="22-Intrusión">Intrusión</option>
+                    <option value="22-Hurto por terceros (Accidente en ruta)">Hurto por terceros (Accidente en ruta)</option>
+                    <option value="23-Ubicada en NyS">Ubicada en NyS</option>
+                    <option value="23-Se pierde trazabilidad en NyS">Se pierde trazabilidad en NyS</option>
+                    <option value="24-Bloqueo de vías">Bloqueo de vías</option>
+                    <option value="24-Descuelgue">Descuelgue</option>
+                    <option value="25-Se entrega unidad a Control Salvamento">Se entrega unidad a Control Salvamento</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Grupo de cierre</label>
+                  <select
+                    value={ev.grupoCierre ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].grupoCierre = e.target.value || undefined; eventos[idx].subgrupoCierre = undefined; setLocalEventos([...eventos]); }
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Seleccionar grupo...</option>
+                    <option value="Hurto">Hurto</option>
+                    <option value="Perdida">Pérdida</option>
+                    <option value="Solución SG en la Operación">Solución SG en la Operación</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Subgrupo de cierre</label>
+                  <select
+                    value={ev.subgrupoCierre ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].subgrupoCierre = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={!ev.grupoCierre}
+                  >
+                    <option value="">Seleccionar subgrupo...</option>
+                    {ev.grupoCierre === "Hurto" && <>
+                      <option value="Hurto Unidad en Distribución">Hurto Unidad en Distribución</option>
+                      <option value="Hurto Unidad en Plataforma / Sede">Hurto Unidad en Plataforma / Sede</option>
+                      <option value="Hurto unidad en recogida">Hurto unidad en recogida</option>
+                      <option value="Hurto Unidad Interna en Distribución">Hurto Unidad Interna en Distribución</option>
+                      <option value="Hurto Unidad Interna en Plataforma / Sede">Hurto Unidad Interna en Plataforma / Sede</option>
+                      <option value="Hurto Unidad interna en recogida">Hurto Unidad interna en recogida</option>
+                    </>}
+                    {ev.grupoCierre === "Perdida" && <>
+                      <option value="Perdida Unidad en Distribución">Pérdida Unidad en Distribución</option>
+                      <option value="Perdida Unidad en Plataforma / Sede">Pérdida Unidad en Plataforma / Sede</option>
+                      <option value="Perdida Unidad en recogida">Pérdida Unidad en recogida</option>
+                      <option value="Perdida Unidad Interna en Distribución">Pérdida Unidad Interna en Distribución</option>
+                      <option value="Perdida Unidad Interna en Plataforma / Sede">Pérdida Unidad Interna en Plataforma / Sede</option>
+                      <option value="Perdida Unidad Interna en recogida">Pérdida Unidad Interna en recogida</option>
+                    </>}
+                    {ev.grupoCierre === "Solución SG en la Operación" && <>
+                      <option value="Cliente no Despacha">Cliente no Despacha</option>
+                      <option value="Unidad Incautada por Autoridad">Unidad Incautada por Autoridad</option>
+                      <option value="Unidad Aprehendida por Autoridad">Unidad Aprehendida por Autoridad</option>
+                      <option value="Unidad Interna Ubicada">Unidad Interna Ubicada</option>
+                      <option value="Unidad Interna Ubicada (sobrante)">Unidad Interna Ubicada (sobrante)</option>
+                      <option value="Unidad Ubicada">Unidad Ubicada</option>
+                      <option value="Unidad Ubicada (sobrante)">Unidad Ubicada (sobrante)</option>
+                      <option value="Unidad Recuperada">Unidad Recuperada</option>
+                      <option value="Unidad Interna Recuperada">Unidad Interna Recuperada</option>
+                    </>}
+                  </select>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Causa raíz y cierre — read-only si cerrado */}
+          {ev.categoria === "unidades" && ev.estadoFlujo === "cerrado" && (ev.causaRaiz || ev.grupoCierre) && (
+            <section className="bg-muted/40 rounded-xl p-4">
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">🔎 Investigación y cierre</h3>
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                {ev.causaRaiz && <div><div className="text-muted-foreground mb-0.5">Causa raíz</div><div className="font-medium">{ev.causaRaiz}</div></div>}
+                {ev.grupoCierre && <div><div className="text-muted-foreground mb-0.5">Grupo cierre</div><div className="font-medium">{ev.grupoCierre}</div></div>}
+                {ev.subgrupoCierre && <div><div className="text-muted-foreground mb-0.5">Subgrupo cierre</div><div className="font-medium">{ev.subgrupoCierre}</div></div>}
+              </div>
+            </section>
+          )}
+
+          {/* Gestión SG — vista read-only si cerrado */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo === "cerrado" && (ev.intervencionSeguridad || ev.desviacionesIdentificadas || ev.estadoGestionSG) && (
+            <section className="bg-muted/40 rounded-xl p-4">
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">🛡️ Gestión de Seguridad</h3>
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                {ev.intervencionSeguridad && <div><div className="text-muted-foreground mb-0.5">Intervención</div><div className="font-medium">{ev.intervencionSeguridad}</div></div>}
+                {ev.desviacionesIdentificadas && <div><div className="text-muted-foreground mb-0.5">Desviaciones</div><div className="font-medium">{ev.desviacionesIdentificadas}</div></div>}
+                {ev.estadoGestionSG && <div><div className="text-muted-foreground mb-0.5">Estado SG</div><div className="font-medium">{ev.estadoGestionSG}</div></div>}
+              </div>
+            </section>
+          )}
 
           {/* Guías */}
           {ev.guias && ev.guias.length > 0 && (

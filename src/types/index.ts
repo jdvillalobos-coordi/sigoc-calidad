@@ -170,6 +170,13 @@ export interface Evento {
   equipoRecogida?: string;
   equipoEntrega?: string;
   equipoTenencia?: number;
+  // Gestión de Seguridad (RCE / Faltantes):
+  intervencionSeguridad?: string;
+  desviacionesIdentificadas?: string;
+  estadoGestionSG?: string;
+  causaRaiz?: string;
+  grupoCierre?: string;
+  subgrupoCierre?: string;
   // Disciplinarios:
   gravedadFalta?: "leve" | "grave" | "gravisima";
   decisionGH?: string;
@@ -357,7 +364,7 @@ export interface InsumoRCE {
 export interface InsumoFaltante {
   id: string;
   guia: string;
-  codigoNovedad: "100" | "300" | "400" | "403" | "529";
+  codigoNovedad: "100" | "101" | "300" | "400" | "403" | "529";
   estadoRevision: "pendiente" | "en_investigacion" | "revisada_sin_novedad" | "con_novedad";
   fechaNovedad: string;
   terminal: string;
