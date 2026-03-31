@@ -22,24 +22,25 @@ const PAGE_SIZES: { value: PageSize; label: string }[] = [
 type TabId = "rce" | "faltantes" | "evidencias";
 type FiltroEstadoRCE = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
 type FiltroEstadoFalt = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
-type FiltroEstadoQlik = "todas" | EstadoFaltanteQlik;
+type FiltroEstadoQlik = "todas" | "solo_sg" | EstadoFaltanteQlik;
 
 const ESTADOS_QLIK_OPTIONS: { value: FiltroEstadoQlik; label: string }[] = [
   { value: "todas", label: "Todos los estados" },
-  { value: "2_solucion_no_ubicado_sin_100", label: "2. Sol. No Ubic. Sin 100" },
-  { value: "3_causal_pendientes", label: "3. Causal Pendientes" },
-  { value: "4_causal_100_sin_400_previo", label: "4. Causal 100 sin 400" },
-  { value: "5_causal_100_solucion_despacho_no_ubicado", label: "5. Sol. Despacho No Ubic." },
-  { value: "7_solucion_notificar_y_sin_notificar", label: "7. Sol. Notif. y sin Notif." },
-  { value: "8_notificado", label: "8. Notificado" },
+  { value: "solo_sg", label: "Solo SG (100/101)" },
+  { value: "2_solucion_no_ubicado_sin_100", label: "Sol. No Ubicado Sin 100" },
+  { value: "3_causal_pendientes", label: "Causal Pendientes" },
+  { value: "4_causal_100_sin_400_previo", label: "Causal 100 sin 400" },
+  { value: "5_causal_100_solucion_despacho_no_ubicado", label: "Sol. Despacho No Ubicado" },
+  { value: "7_solucion_notificar_y_sin_notificar", label: "Sol. Notificar y sin Notificar" },
+  { value: "8_notificado", label: "Notificado" },
 ];
 
 function CheckpointBadge({ origen, destino }: { origen?: boolean; destino?: boolean }) {
   if (!origen && !destino) return <span className="text-muted-foreground">—</span>;
   return (
-    <div className="flex items-center gap-1">
-      {origen && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 border border-blue-200">O</span>}
-      {destino && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700 border border-green-200">D</span>}
+    <div className="flex items-center gap-1 flex-wrap">
+      {origen && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap">En origen</span>}
+      {destino && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-green-100 text-green-700 border border-green-200 whitespace-nowrap">En destino</span>}
     </div>
   );
 }
@@ -144,7 +145,6 @@ export default function BandejaPage() {
   const [filtroTerminal, setFiltroTerminal] = useState("todos");
   const [filtroEstadoRCE, setFiltroEstadoRCE] = useState<FiltroEstadoRCE>("todas");
   const [filtroEstadoFalt, setFiltroEstadoFalt] = useState<FiltroEstadoFalt>("todas");
-  const [filtroNovedadSG, setFiltroNovedadSG] = useState(true); // por defecto solo 100/101
   const [filtroEstadoQlik, setFiltroEstadoQlik] = useState<FiltroEstadoQlik>("todas");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calOpen, setCalOpen] = useState(false);
@@ -253,12 +253,12 @@ export default function BandejaPage() {
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
-      if (filtroNovedadSG && i.codigoNovedad !== "100" && i.codigoNovedad !== "101") return false;
+      if (filtroEstadoQlik === "solo_sg" && i.codigoNovedad !== "100" && i.codigoNovedad !== "101") return false;
       if (filtroEstadoFalt !== "todas") {
         const estadoNorm = i.estadoRevision === "en_investigacion" ? "pendiente" : i.estadoRevision;
         if (estadoNorm !== filtroEstadoFalt) return false;
       }
-      if (filtroEstadoQlik !== "todas" && i.estadoQlik !== filtroEstadoQlik) return false;
+      if (filtroEstadoQlik !== "todas" && filtroEstadoQlik !== "solo_sg" && i.estadoQlik !== filtroEstadoQlik) return false;
       if (!matchFecha(i.fechaNovedad)) return false;
       if (!matchTerminal(i.terminal)) return false;
       if (filtroCliente !== "todos") {
@@ -267,7 +267,7 @@ export default function BandejaPage() {
       }
       return true;
     });
-  }, [faltData, filtroEstadoFalt, filtroEstadoQlik, filtroNovedadSG, filtroRegional, filtroTerminal, filtroCliente, dateRange]);
+  }, [faltData, filtroEstadoFalt, filtroEstadoQlik, filtroRegional, filtroTerminal, filtroCliente, dateRange]);
 
   const rceSorted = useMemo(() => {
     const sorted = [...rceFiltered].sort((a, b) => {
@@ -374,13 +374,13 @@ export default function BandejaPage() {
 
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b border-border">
-          <TabButton active={tab === "rce"} onClick={() => setTab("rce")}>
+          <TabButton active={tab === "rce"} onClick={() => { setTab("rce"); setSortField("dias"); setSortDir("desc"); }}>
             💰 RCE ({rceFiltered.length} guías)
           </TabButton>
-          <TabButton active={tab === "faltantes"} onClick={() => setTab("faltantes")}>
+          <TabButton active={tab === "faltantes"} onClick={() => { setTab("faltantes"); setSortField("dias"); setSortDir("desc"); }}>
             📦 Faltantes ({faltFiltered.length} guías)
           </TabButton>
-          <TabButton active={tab === "evidencias"} onClick={() => setTab("evidencias")}>
+          <TabButton active={tab === "evidencias"} onClick={() => { setTab("evidencias"); setSortField("dias"); setSortDir("desc"); }}>
             📸 Evidencias ({pendientesEvi} pendientes)
           </TabButton>
           <div className="flex-1" />
@@ -522,16 +522,6 @@ export default function BandejaPage() {
                       </button>
                     ))}
                   </div>
-                  <button
-                    onClick={() => setFiltroNovedadSG(!filtroNovedadSG)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                      filtroNovedadSG
-                        ? "border-red-300 bg-red-50 text-red-700"
-                        : "border-border bg-card text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    🛡️ Solo SG (100/101)
-                  </button>
                   <select
                     value={filtroEstadoQlik}
                     onChange={(e) => setFiltroEstadoQlik(e.target.value as FiltroEstadoQlik)}
@@ -550,7 +540,7 @@ export default function BandejaPage() {
         </div>
 
         {/* Pills de filtros activos */}
-        {(hayFiltrosGeo || !!dateRange?.from || filtroCliente !== "todos" || filtroEstadoQlik !== "todas") && (
+        {(hayFiltrosGeo || !!dateRange?.from || filtroCliente !== "todos" || (tab === "faltantes" && filtroEstadoQlik !== "todas")) && (
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Filtros:</span>
             {dateRange?.from && (
@@ -587,10 +577,14 @@ export default function BandejaPage() {
                 </button>
               </span>
             )}
-            {filtroEstadoQlik !== "todas" && (
-              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
-                Qlik: {ESTADOS_QLIK_LABELS[filtroEstadoQlik] ?? filtroEstadoQlik}
-                <button onClick={() => setFiltroEstadoQlik("todas")} className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors ml-0.5">
+            {tab === "faltantes" && filtroEstadoQlik !== "todas" && (
+              <span className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium border ${
+                filtroEstadoQlik === "solo_sg" ? "bg-red-100 text-red-700 border-red-200" : "bg-indigo-100 text-indigo-700 border-indigo-200"
+              }`}>
+                {filtroEstadoQlik === "solo_sg" ? "Solo SG (100/101)" : (ESTADOS_QLIK_LABELS[filtroEstadoQlik] ?? filtroEstadoQlik)}
+                <button onClick={() => setFiltroEstadoQlik("todas")} className={`rounded-full p-0.5 transition-colors ml-0.5 ${
+                  filtroEstadoQlik === "solo_sg" ? "hover:bg-red-200" : "hover:bg-indigo-200"
+                }`}>
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -722,12 +716,12 @@ export default function BandejaPage() {
                     <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Guía</th>
                     <SortHeader field="cliente">Cliente</SortHeader>
                     <SortHeader field="novedad" align="text-center">Novedad</SortHeader>
-                    <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground" title="Checkpoint: O=Origen, D=Destino">CP</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Checkpoint</th>
                     <SortHeader field="terminal_origen">Terminal origen</SortHeader>
                     <SortHeader field="terminal_destino">Terminal destino</SortHeader>
                     <SortHeader field="fecha">Fecha novedad</SortHeader>
                     <SortHeader field="dias" align="text-center">Días</SortHeader>
-                    <SortHeader field="estado_qlik" align="text-center">Estado Qlik</SortHeader>
+                    <SortHeader field="estado_qlik" align="text-center">Estado</SortHeader>
                     <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Revisión</th>
                     <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground">Acciones</th>
                   </tr>

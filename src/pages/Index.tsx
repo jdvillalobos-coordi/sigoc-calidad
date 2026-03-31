@@ -26,12 +26,12 @@ function AppContent() {
         {paginaActiva === "configuracion"   && <ConfiguracionPage />}
       </div>
 
-      {drawer.tipo === "registro"    && <RecordDetailDrawer />}
-      {drawer.tipo === "persona360"  && <Persona360Drawer />}
-      {drawer.tipo === "vehiculo360" && <Vehiculo360Drawer />}
-      {drawer.tipo === "guia360"     && <Guia360Drawer />}
-      {drawer.tipo === "terminal360" && <Terminal360Drawer />}
-      {drawer.tipo === "resolucion_acumulativa" && <ResolucionAcumulativaPanel />}
+      {drawer.tipo === "registro"    && <RecordDetailDrawer key={drawer.id} />}
+      {drawer.tipo === "persona360"  && <Persona360Drawer key={drawer.id} />}
+      {drawer.tipo === "vehiculo360" && <Vehiculo360Drawer key={drawer.id} />}
+      {drawer.tipo === "guia360"     && <Guia360Drawer key={drawer.id} />}
+      {drawer.tipo === "terminal360" && <Terminal360Drawer key={drawer.id} />}
+      {drawer.tipo === "resolucion_acumulativa" && <ResolucionAcumulativaPanel key={drawer.id} />}
 
       {nuevaRegistroAbierto && (
         <NewRecordForm

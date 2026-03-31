@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos } from "@/data/mockData";
+import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
-import type { CategoriaEvento, FormPrefill, Persona, Evento } from "@/types";
+import type { CategoriaEvento, CategoriaLesiva, FormPrefill, Persona, Evento } from "@/types";
 
 const CATEGORIAS = [
   { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
@@ -17,7 +17,7 @@ const CATEGORIAS = [
 
 const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[] }[]> = {
   dineros:            [{ opciones: ["Hurto de dinero", "Pérdida de dinero", "Faltante de dinero", "Faltante injustificado", "Fraude de dinero (Jineteo)", "Dinero falsos", "Seguimiento RCE"] }],
-  unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
+  unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 101", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
   listas_vinculantes: [
     { grupo: "Investigación", opciones: ["Denuncia penal", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] },
     { grupo: "Eventos de seguridad", opciones: [
@@ -124,6 +124,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [equipoRecogida, setEquipoRecogida] = useState("");
   const [equipoEntrega, setEquipoEntrega] = useState("");
   const [equipoTenencia, setEquipoTenencia] = useState(1);
+  const [categoriaLesiva, setCategoriaLesiva] = useState("");
+  const [subcategoriaLesiva, setSubcategoriaLesiva] = useState("");
   const [eventoCreado, setEventoCreado] = useState<string | null>(null);
 
   function buscarGuia(idx: number, num: string) {
@@ -164,7 +166,12 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   }
 
   const esVehiculo = tipoEntidad === "Vehículo";
-  const puedeCrear = !!(categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion && (esVehiculo ? placaInput : true));
+  const puedeCrear = !!(
+    categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion
+    && (esVehiculo ? placaInput : true)
+    && (!esVehiculo ? cedulas.some(c => c.length > 5) : true)
+    && (categoria === "pqr" ? (terminalDestino && ciudadDestino && equipoRecogida) : true)
+  );
 
   const primerPersona = Object.values(cedulasPersona)[0];
 
@@ -197,6 +204,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setEquipoRecogida("");
     setEquipoEntrega("");
     setEquipoTenencia(1);
+    setCategoriaLesiva("");
+    setSubcategoriaLesiva("");
     setEventoCreado(null);
   }
 
@@ -212,16 +221,19 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       "Contratista":              "contratista",
       "Tercero (persona jurídica)": "tercero",
       "Vehículo":                 "vehiculo",
+      "Delincuencia":             "delincuencia",
+      "Remitente":                "remitente",
+      "Destinatario":             "destinatario",
     };
 
     const guiaPrincipal = guiaInputs[0] ? getGuia(guiaInputs[0]) : null;
     const ciudad = guiaPrincipal?.ciudadOrigen ?? terminal;
 
-    const personasResponsables = Object.values(cedulasPersona).map((p) => ({
+    const personasVinculadas = Object.values(cedulasPersona).map((p) => ({
       personaId: p.id,
       cedula: p.cedula,
       nombre: p.nombre,
-      rol: "responsable" as const,
+      rol: (categoria === "dineros" ? "participante" : "responsable") as "responsable" | "participante",
     }));
 
     const nuevoEvento: Evento = {
@@ -234,8 +246,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       terminal,
       ciudad,
       guias: guiaInputs.filter(Boolean),
-      personasResponsables,
-      personasParticipantes: [],
+      personasResponsables: categoria === "dineros" ? [] : personasVinculadas,
+      personasParticipantes: categoria === "dineros" ? personasVinculadas : [],
       vehiculosVinculados: placaData
         ? [{ vehiculoId: placaData.placa }]
         : [],
@@ -246,6 +258,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       nitCliente: nitCliente || undefined,
       nombreCliente: nombreCliente || undefined,
       rolSolicitante: rolSolicitante as Evento["rolSolicitante"] || undefined,
+      categoriaLesivaEvento: categoria === "listas_vinculantes" ? categoriaLesiva || undefined : undefined,
+      subcategoriaLesivaEvento: categoria === "listas_vinculantes" ? subcategoriaLesiva || undefined : undefined,
       gravedadFalta: gravedadFalta as Evento["gravedadFalta"] || undefined,
       decisionGH: decisionGH || undefined,
       terminalDestino: categoria === "pqr" ? terminalDestino || undefined : undefined,
@@ -344,7 +358,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de entidad *</label>
                 <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={tipoEntidad} onChange={(e) => setTipoEntidad(e.target.value)}>
                   <option value="">Seleccionar...</option>
-                  {["Empleado CM", "Aliado Goo", "Aliado Droop", "Contratista", "Tercero (persona jurídica)", "Vehículo"].map((o) => <option key={o} value={o}>{o}</option>)}
+                  {["Empleado CM", "Aliado Goo", "Aliado Droop", "Contratista", "Tercero (persona jurídica)", "Vehículo", "Delincuencia", "Remitente", "Destinatario"].map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
 
@@ -424,7 +438,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               {/* Personas responsables (opcional para vehículos) */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                  Persona(s) responsable(s){esVehiculo ? "" : " *"}
+                  {categoria === "dineros" ? "Persona(s) presente(s) en el evento" : "Persona(s) responsable(s)"}{esVehiculo ? "" : " *"}
                 </label>
                 <div className="space-y-2">
                   {cedulas.map((ced, i) => (
@@ -489,11 +503,43 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">Código novedad</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={codigoNovedad} onChange={(e) => setCodigoNovedad(e.target.value)}>
                     <option value="">Seleccionar...</option>
-                    {["100", "300", "400", "403", "529"].map((c) => <option key={c} value={c}>{c}</option>)}
+                    {["100", "101", "300", "400", "403", "529"].map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               )}
 
+              {categoria === "listas_vinculantes" && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Categoría</label>
+                    <select
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={categoriaLesiva}
+                      onChange={(e) => { setCategoriaLesiva(e.target.value); setSubcategoriaLesiva(""); }}
+                    >
+                      <option value="">Seleccionar categoría...</option>
+                      {Object.entries(CATEGORIAS_LESIVAS).map(([key, val]) => (
+                        <option key={key} value={key}>{val.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {categoriaLesiva && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Subcategoría</label>
+                      <select
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        value={subcategoriaLesiva}
+                        onChange={(e) => setSubcategoriaLesiva(e.target.value)}
+                      >
+                        <option value="">Seleccionar subcategoría...</option>
+                        {(CATEGORIAS_LESIVAS[categoriaLesiva as CategoriaLesiva]?.subcategorias ?? []).map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {categoria === "pqr" && (
                 <div className="space-y-3">
@@ -609,13 +655,15 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <span className="text-muted-foreground">Terminal:</span>
                     <span className="font-medium">{terminal}</span>
                     {primerPersona && (<>
-                      <span className="text-muted-foreground">Persona responsable:</span>
+                      <span className="text-muted-foreground">{categoria === "dineros" ? "Persona presente:" : "Persona responsable:"}</span>
                       <span className="font-medium">
                         {primerPersona.nombre} (ID {primerPersona.cedula})
                       </span>
                     </>)}
-                    <span className="text-muted-foreground">Asignado a:</span>
-                    <span className="font-medium">{usuarioLogueado.nombre}</span>
+                    {categoria !== "pqr" && (<>
+                      <span className="text-muted-foreground">Asignado a:</span>
+                      <span className="font-medium">{usuarioLogueado.nombre}</span>
+                    </>)}
                     <span className="text-muted-foreground">Estado:</span>
                     <span className="font-medium">Abierto</span>
                   </div>

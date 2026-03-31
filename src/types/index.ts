@@ -114,7 +114,7 @@ export interface Evento {
   fuenteExterna?: string;
 
   // === ENTIDAD INVOLUCRADA ===
-  tipoEntidad: "empleado" | "aliado_goo" | "aliado_droop" | "contratista" | "tercero" | "vehiculo";
+  tipoEntidad: "empleado" | "aliado_goo" | "aliado_droop" | "contratista" | "tercero" | "vehiculo" | "delincuencia" | "remitente" | "destinatario";
 
   // === CONTEXTO ===
   fecha: string;
@@ -185,6 +185,9 @@ export interface Evento {
   personasResponsablesHechos?: string;
   registroWorkflow?: string;
   soportesAdjuntos?: string[];
+  // Listas vinculantes:
+  categoriaLesivaEvento?: string;
+  subcategoriaLesivaEvento?: string;
   // Disciplinarios:
   gravedadFalta?: "leve" | "grave" | "gravisima";
   decisionGH?: string;
@@ -194,9 +197,10 @@ export interface Evento {
   asignadoA?: { id: string; nombre: string; cargo: string };
   tipoEscalamiento?: TipoEscalamiento;
   escaladoA?: { id: string; nombre: string; cargo: string };
-  escaladoPor?: { id: string; nombre: string };
+  escaladoPor?: { id: string; nombre: string; cargo?: string };
   fechaEscalamiento?: string;
   motivoEscalamiento?: string;
+  tareaAsignada?: string;
 
   // === RESOLUCIÓN ===
   resolucionFinal?: ResolucionFinal;

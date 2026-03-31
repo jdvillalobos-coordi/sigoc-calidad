@@ -84,7 +84,7 @@ const PERSONAS_ESCALAMIENTO = [
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
-  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, agregarNotificacion } = useApp();
+  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, setFormPrefill, agregarNotificacion } = useApp();
   const [localEventos, setLocalEventos] = useState(eventos);
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");
   const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo");
@@ -96,6 +96,7 @@ export function RecordDetailDrawer() {
   const [escalandoAbierto, setEscalandoAbierto] = useState(false);
   const [escaladoPersonaId, setEscaladoPersonaId] = useState("");
   const [escaladoMotivo, setEscaladoMotivo] = useState("");
+  const [escaladoTarea, setEscaladoTarea] = useState("");
   const [localCCTV, setLocalCCTV] = useState<SolicitudCCTV[]>(solicitudesCCTV);
   const [cctvFormAbierto, setCctvFormAbierto] = useState(false);
   const [cctvDescripcion, setCctvDescripcion] = useState("");
@@ -147,15 +148,17 @@ export function RecordDetailDrawer() {
       escaladoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo },
       fechaEscalamiento: new Date().toISOString(),
       motivoEscalamiento: escaladoMotivo,
+      tareaAsignada: escaladoTarea || undefined,
     });
     agregarNotificacion(
       "caso_escalado",
-      `⬆️ Sandra Herrera te escaló el evento ${ev!.id} — Motivo: ${escaladoMotivo}`,
+      `⬆️ ${usuarioLogueado.nombre} te asignó el evento ${ev!.id}${escaladoTarea ? ` — Tarea: ${escaladoTarea}` : ""} — Motivo: ${escaladoMotivo}`,
       ev!.id,
     );
     setEscalandoAbierto(false);
     setEscaladoPersonaId("");
     setEscaladoMotivo("");
+    setEscaladoTarea("");
   }
 
   function devolverAlCreador() {
@@ -169,6 +172,7 @@ export function RecordDetailDrawer() {
       escaladoPor: undefined,
       fechaEscalamiento: undefined,
       motivoEscalamiento: undefined,
+      tareaAsignada: undefined,
     });
     toast({ title: `Evento devuelto a ${ev!.usuarioRegistro}` });
   }
@@ -321,7 +325,7 @@ export function RecordDetailDrawer() {
               <>
                 <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200 font-medium">
                   <AlertTriangle className="w-3 h-3" />
-                  Escalado a: {ev.escaladoA.nombre} · Motivo: {ev.motivoEscalamiento ?? "—"}
+                  Asignado a: {ev.escaladoA.nombre}{ev.tareaAsignada ? ` · Tarea: ${ev.tareaAsignada}` : ""}{ev.motivoEscalamiento ? ` · ${ev.motivoEscalamiento}` : ""}
                 </span>
                 <button
                   onClick={devolverAlCreador}
@@ -364,7 +368,7 @@ export function RecordDetailDrawer() {
           {/* Mini-form de escalamiento */}
           {escalandoAbierto && ev.estadoFlujo === "abierto" && (
             <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 space-y-3">
-              <div className="text-xs font-semibold text-amber-800">Escalar evento</div>
+              <div className="text-xs font-semibold text-amber-800">Asignar tarea / Escalar evento</div>
               <select
                 value={escaladoPersonaId}
                 onChange={(e) => setEscaladoPersonaId(e.target.value)}
@@ -384,12 +388,27 @@ export function RecordDetailDrawer() {
                   </optgroup>
                 ))}
               </select>
+              <select
+                value={escaladoTarea}
+                onChange={(e) => setEscaladoTarea(e.target.value)}
+                className="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Tarea a realizar (opcional)...</option>
+                <option value="Reporte inicial de hechos">Reporte inicial de hechos</option>
+                <option value="Verificación en terminal">Verificación en terminal</option>
+                <option value="Revisión de CCTV">Revisión de CCTV</option>
+                <option value="Toma de versión libre">Toma de versión libre</option>
+                <option value="Gestión de denuncia">Gestión de denuncia</option>
+                <option value="Seguimiento a entrega/devolución">Seguimiento a entrega/devolución</option>
+                <option value="Cierre concluyente de investigación">Cierre concluyente de investigación</option>
+                <option value="Otra tarea">Otra tarea (detallar en motivo)</option>
+              </select>
               <textarea
                 value={escaladoMotivo}
                 onChange={(e) => setEscaladoMotivo(e.target.value)}
                 className="w-full text-xs bg-background border border-border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 rows={2}
-                placeholder="Motivo del escalamiento..."
+                placeholder="Instrucciones o motivo de la asignación..."
               />
               <div className="flex items-center gap-2">
                 <button
@@ -397,10 +416,10 @@ export function RecordDetailDrawer() {
                   disabled={!escaladoPersonaId || !escaladoMotivo.trim()}
                   className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 disabled:opacity-40 transition-colors"
                 >
-                  Escalar evento
+                  Asignar tarea
                 </button>
                 <button
-                  onClick={() => { setEscalandoAbierto(false); setEscaladoPersonaId(""); setEscaladoMotivo(""); }}
+                  onClick={() => { setEscalandoAbierto(false); setEscaladoPersonaId(""); setEscaladoMotivo(""); setEscaladoTarea(""); }}
                   className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-muted transition-colors"
                 >
                   Cancelar
@@ -487,17 +506,23 @@ export function RecordDetailDrawer() {
                 ev.estadoFlujo === "escalado" ? "text-amber-800" : "text-muted-foreground"
               }`}>
                 <AlertTriangle className="w-4 h-4" />
-                {ev.estadoFlujo === "escalado" ? "Evento escalado" : "Fue escalado"}
+                {ev.estadoFlujo === "escalado" ? "Tarea asignada" : "Fue asignado"}
               </h3>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <div className="text-muted-foreground mb-0.5">Escalado a</div>
+                  <div className="text-muted-foreground mb-0.5">Asignado a</div>
                   <div className="font-medium">{ev.escaladoA.nombre} · {ev.escaladoA.cargo}</div>
                 </div>
                 {ev.escaladoPor && (
                   <div>
-                    <div className="text-muted-foreground mb-0.5">Escalado por</div>
+                    <div className="text-muted-foreground mb-0.5">Asignado por</div>
                     <div className="font-medium">{ev.escaladoPor.nombre}</div>
+                  </div>
+                )}
+                {ev.tareaAsignada && (
+                  <div className="col-span-2">
+                    <div className="text-muted-foreground mb-0.5">Tarea</div>
+                    <div className="font-medium text-amber-800">{ev.tareaAsignada}</div>
                   </div>
                 )}
                 {ev.fechaEscalamiento && (
@@ -508,7 +533,7 @@ export function RecordDetailDrawer() {
                 )}
                 {ev.motivoEscalamiento && (
                   <div className="col-span-2">
-                    <div className="text-muted-foreground mb-0.5">Motivo</div>
+                    <div className="text-muted-foreground mb-0.5">Instrucciones</div>
                     <div className="font-medium">{ev.motivoEscalamiento}</div>
                   </div>
                 )}
@@ -642,6 +667,11 @@ export function RecordDetailDrawer() {
                     <option value="N/A (Devolución efectiva al momento de investigar)">N/A (Devolución efectiva)</option>
                     <option value="N/A (RCE / Entrega Efectiva al momento de investigar)">N/A (RCE / Entrega Efectiva)</option>
                   </select>
+                  {ev.intervencionSeguridad?.startsWith("602") && (
+                    <p className="text-[10px] text-amber-700 mt-1 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                      Causal 609: esta intervención se registra actualmente en NyS. Verificar si aplica reporte paralelo.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Desviaciones identificadas</label>
@@ -679,6 +709,7 @@ export function RecordDetailDrawer() {
                     <option value="En proceso">En proceso</option>
                     <option value="En proceso (NyS)">En proceso (NyS)</option>
                     <option value="Parcial">Parcial</option>
+                    <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
                     <option value="RCE / Entrega Efectiva">RCE / Entrega Efectiva</option>
                     <option value="Devolución Efectiva">Devolución Efectiva</option>
                     <option value="Hurto">Hurto</option>
@@ -690,11 +721,175 @@ export function RecordDetailDrawer() {
                   </select>
                 </div>
               </div>
+              {(ev.estadoGestionSG === "Hurto" || ev.estadoGestionSG === "Pérdida" || ev.tipoEvento?.includes("RCE")) && (
+                <div className="pt-2 border-t border-blue-200">
+                  <button
+                    onClick={() => {
+                      setFormPrefill({
+                        categoria: "dineros",
+                        guia: ev.guias?.[0],
+                        terminal: ev.terminal,
+                      });
+                      setNuevaRegistroAbierto(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-xs font-medium hover:bg-amber-100 transition-colors"
+                  >
+                    💰 Crear evento de Dinero
+                  </button>
+                  <p className="text-[10px] text-muted-foreground mt-1">Si durante el seguimiento se materializa un hurto o pérdida de dinero, crea un evento asociado.</p>
+                </div>
+              )}
             </section>
           )}
 
-          {/* Causa raíz y cierre — solo para unidades */}
-          {ev.categoria === "unidades" && ev.estadoFlujo !== "cerrado" && (
+          {/* Hallazgos de investigación — dineros/unidades, solo editable */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
+            <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
+                Hallazgos de investigación
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unidades faltantes</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={ev.unidadesFaltantes ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].unidadesFaltantes = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                    }}
+                    placeholder="0"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Personas responsables de los hechos</label>
+                  <input
+                    type="text"
+                    value={ev.personasResponsablesHechos ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].personasResponsablesHechos = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Contenido / descripción mercancía</label>
+                <textarea
+                  value={ev.contenidoMercancia ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].contenidoMercancia = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                  rows={2}
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Latitud</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={ev.lugarLatitud ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].lugarLatitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                    }}
+                    placeholder="4.6097"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Longitud</label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={ev.lugarLongitud ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].lugarLongitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                    }}
+                    placeholder="-74.0817"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block"># Registro Workflow</label>
+                  <input
+                    type="text"
+                    value={ev.registroWorkflow ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].registroWorkflow = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }}
+                    placeholder="#WF-12345"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adjuntos (denuncias, versión libre, etc.)</label>
+                {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {ev.soportesAdjuntos.map((s, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-green-100 text-green-700 border border-green-200">
+                        📎 {s}
+                        <button onClick={() => {
+                          const idx = eventos.findIndex((x) => x.id === ev.id);
+                          if (idx !== -1) {
+                            eventos[idx].soportesAdjuntos = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                            setLocalEventos([...eventos]);
+                          }
+                        }} className="hover:bg-green-200 rounded-full p-0.5 ml-0.5"><X className="w-2.5 h-2.5" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (!e.target.files) return;
+                    const nombres = Array.from(e.target.files).map(f => f.name);
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) {
+                      eventos[idx].soportesAdjuntos = [...(ev.soportesAdjuntos ?? []), ...nombres];
+                      setLocalEventos([...eventos]);
+                    }
+                    e.target.value = "";
+                  }}
+                  className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-green-100 file:text-green-700 hover:file:bg-green-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2"
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Hallazgos de investigación — read-only para cerrados */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo === "cerrado" &&
+            (ev.unidadesFaltantes || ev.contenidoMercancia || ev.lugarLatitud || ev.lugarLongitud || ev.personasResponsablesHechos || ev.registroWorkflow || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
+            <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-2">
+              <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
+                Hallazgos de investigación
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                {ev.unidadesFaltantes != null && <div><span className="text-muted-foreground">Unidades faltantes:</span> <span className="font-medium">{ev.unidadesFaltantes}</span></div>}
+                {ev.contenidoMercancia && <div className="md:col-span-2"><span className="text-muted-foreground">Contenido mercancía:</span> <span className="font-medium">{ev.contenidoMercancia}</span></div>}
+                {(ev.lugarLatitud || ev.lugarLongitud) && <div><span className="text-muted-foreground">Coordenadas:</span> <span className="font-medium">{ev.lugarLatitud ?? "—"}, {ev.lugarLongitud ?? "—"}</span></div>}
+                {ev.personasResponsablesHechos && <div><span className="text-muted-foreground">Responsables de hechos:</span> <span className="font-medium">{ev.personasResponsablesHechos}</span></div>}
+                {ev.registroWorkflow && <div><span className="text-muted-foreground"># Workflow:</span> <span className="font-medium">{ev.registroWorkflow}</span></div>}
+                {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
+                  <div className="md:col-span-2"><span className="text-muted-foreground">Soportes:</span> <span className="font-medium">{ev.soportesAdjuntos.join(", ")}</span></div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* Causa raíz y cierre — para unidades y dineros */}
+          {(ev.categoria === "unidades" || ev.categoria === "dineros") && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-purple-200 bg-purple-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
                 🔎 Investigación y cierre
@@ -710,6 +905,27 @@ export function RecordDetailDrawer() {
                   className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Seleccionar causa raíz...</option>
+                  {ev.categoria === "dineros" && <>
+                  <optgroup label="Operativo">
+                    <option value="op-1-Faltante en cuadre de cierre">Faltante en cuadre de cierre</option>
+                    <option value="op-2-Error en planilla de recaudo">Error en planilla de recaudo</option>
+                    <option value="op-3-Diferencia en cambio / billete">Diferencia en cambio / billete</option>
+                    <option value="op-4-Doble cobro">Doble cobro</option>
+                  </optgroup>
+                  <optgroup label="Seguridad">
+                    <option value="seg-1-Hurto por empleado">Hurto por empleado</option>
+                    <option value="seg-2-Hurto por tercero">Hurto por tercero</option>
+                    <option value="seg-3-Pérdida en tránsito">Pérdida en tránsito</option>
+                    <option value="seg-4-Jineteo">Jineteo</option>
+                    <option value="seg-5-Fraude documentario">Fraude documentario</option>
+                  </optgroup>
+                  <optgroup label="Operador">
+                    <option value="ope-1-Error de digitación">Error de digitación</option>
+                    <option value="ope-2-Devolución no procesada">Devolución no procesada</option>
+                    <option value="ope-3-Descuadre sin justificación">Descuadre sin justificación</option>
+                  </optgroup>
+                  </>}
+                  {ev.categoria === "unidades" && <>
                   <optgroup label="1 — Rotulado / Etiquetas">
                     <option value="1-Unidad mal rotulada o sin marcar">Unidad mal rotulada o sin marcar</option>
                     <option value="1-Unidad con doble rótulo">Unidad con doble rótulo</option>
@@ -769,12 +985,27 @@ export function RecordDetailDrawer() {
                   <optgroup label="16 — Protocolo de seguridad">
                     <option value="16-Descuido, Distracción, Imprudencia">Descuido, Distracción, Imprudencia</option>
                     <option value="16-Entrega en dirección diferente">Entrega en dirección diferente</option>
+                    <option value="16-Entrega en la Calle / Corredor / Vía">Entrega en la Calle / Corredor / Vía</option>
                     <option value="16-Mercancía al borde del furgón">Mercancía al borde del furgón</option>
                     <option value="16-Mercancía en la cabina">Mercancía en la cabina</option>
                     <option value="16-Mercancía a cuidado de terceros">Mercancía a cuidado de terceros</option>
-                    <option value="16-No uso de candado">No uso de candado</option>
-                    <option value="16-No uso de caletas para dinero">No uso de caletas para dinero</option>
+                    <option value="16-Mercancías en móvil no corresponden zona">Mercancías en móvil no corresponden zona</option>
+                    <option value="16-Carreta Sola con Mercancía">Carreta Sola con Mercancía</option>
+                    <option value="16-Moto Sola con Maletín lleno de Mercancía">Moto Sola con Maletín lleno de Mercancía</option>
+                    <option value="16-No alertar cliente destino (Suplantación CM)">No alertar cliente destino (Suplantación CM)</option>
+                    <option value="16-No exigencia firma y CC guía destinatario">No exigencia firma y CC guía destinatario</option>
                     <option value="16-No firma guía destinatario con CC">No firma guía destinatario con CC</option>
+                    <option value="16-No entrega al interior destinatario">No entrega al interior destinatario</option>
+                    <option value="16-No uso de caletas para dinero">No uso de caletas para dinero</option>
+                    <option value="16-No uso de candado, móvil en movimiento">No uso de candado, móvil en movimiento</option>
+                    <option value="16-No uso de candado, vehículo detenido">No uso de candado, vehículo detenido</option>
+                    <option value="16-No uso botón pánico ante riesgo inminente">No uso botón pánico ante riesgo inminente</option>
+                    <option value="16-No uso de lazo en carreta con Mercancía">No uso de lazo en carreta con Mercancía</option>
+                    <option value="16-Uso de Vanes en Rutas Riesgo alto">Uso de Vanes en Rutas Riesgo alto</option>
+                    <option value="16-Unidades pequeñas en carreta">Unidades pequeñas en carreta</option>
+                    <option value="16-Mercancías Alto valor, sitios marginales">Mercancías Alto valor, sitios marginales</option>
+                    <option value="16-Cargue de Unidad Deteriorada">Cargue de Unidad Deteriorada</option>
+                    <option value="16-Ausencia de Control Personal de Seguridad">Ausencia de Control Personal de Seguridad</option>
                     <option value="16-Móvil sola (Rompen el candado)">Móvil sola (Rompen el candado)</option>
                     <option value="16-No se identifica la unidad por cámaras">No se identifica por cámaras</option>
                   </optgroup>
@@ -783,14 +1014,18 @@ export function RecordDetailDrawer() {
                     <option value="17-No se cuenta con grabación de CCTV">No se cuenta con grabación de CCTV</option>
                     <option value="18-Empleado/Aliado deshonesto">Empleado/Aliado deshonesto</option>
                     <option value="20-Cierre de Vías">Cierre de Vías</option>
+                    <option value="21-Cargue inteligente, sin registro fotográfico">Cargue inteligente, sin registro fotográfico</option>
                     <option value="22-Intrusión">Intrusión</option>
                     <option value="22-Hurto por terceros (Accidente en ruta)">Hurto por terceros (Accidente en ruta)</option>
                     <option value="23-Ubicada en NyS">Ubicada en NyS</option>
                     <option value="23-Se pierde trazabilidad en NyS">Se pierde trazabilidad en NyS</option>
                     <option value="24-Bloqueo de vías">Bloqueo de vías</option>
                     <option value="24-Descuelgue">Descuelgue</option>
+                    <option value="24-Terrorismo">Terrorismo</option>
+                    <option value="24-Vandalismo">Vandalismo</option>
                     <option value="25-Se entrega unidad a Control Salvamento">Se entrega unidad a Control Salvamento</option>
                   </optgroup>
+                  </>}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -856,7 +1091,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Causa raíz y cierre — read-only si cerrado */}
-          {ev.categoria === "unidades" && ev.estadoFlujo === "cerrado" && (ev.causaRaiz || ev.grupoCierre) && (
+          {(ev.categoria === "unidades" || ev.categoria === "dineros") && ev.estadoFlujo === "cerrado" && (ev.causaRaiz || ev.grupoCierre) && (
             <section className="bg-muted/40 rounded-xl p-4">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">🔎 Investigación y cierre</h3>
               <div className="grid grid-cols-3 gap-3 text-xs">
@@ -1229,14 +1464,35 @@ export function RecordDetailDrawer() {
               <p className="text-sm text-muted-foreground italic">No se encontraron eventos relacionados.</p>
             ) : (
               <div className="space-y-2">
-                {relacionados.map((r) => (
-                  <button key={r.id} onClick={() => abrirRegistro(r.id)} className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted transition-colors">
-                    <CategoriaBadge categoria={r.categoria} />
-                    <span className="font-mono text-xs text-muted-foreground">{r.id}</span>
-                    <span className="text-sm flex-1 truncate">{r.tipoEvento}</span>
-                    <EstadoBadge estado={r.estado} />
-                  </button>
-                ))}
+                {relacionados.map((r) => {
+                  const guiasCompartidas = ev.guias?.filter(g => r.guias?.includes(g)) ?? [];
+                  return (
+                    <button key={r.id} onClick={() => abrirRegistro(r.id)} className="w-full text-left p-3 rounded-xl border border-border hover:bg-muted transition-colors space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <CategoriaBadge categoria={r.categoria} />
+                        <span className="font-mono text-xs font-bold">{r.id}</span>
+                        <EstadoBadge estado={r.estado} />
+                        {r.estadoFlujo === "escalado" && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">Escalado</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-foreground">{r.tipoEvento}</div>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span>{r.terminal}</span>
+                        <span>·</span>
+                        <span>{r.fecha}</span>
+                        {r.asignadoA && <><span>·</span><span>Asignado: {r.asignadoA.nombre}</span></>}
+                      </div>
+                      {guiasCompartidas.length > 0 && (
+                        <div className="flex gap-1">
+                          {guiasCompartidas.map(g => (
+                            <span key={g} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">Guía: {g}</span>
+                          ))}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </section>

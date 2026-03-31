@@ -213,6 +213,62 @@ export const guias: Guia[] = [
     nitCliente: "800345678", nombreCliente: "Grupo Empresarial Caribe Ltda.",
     valorDeclarado: 5100000, fechaCreacion: "2026-03-16", estadoGeneral: "con_novedad",
   },
+  {
+    numero: "19900293020",
+    terminalOrigen: "Barranquilla", ciudadOrigen: "Barranquilla",
+    terminalDestino: "Bogotá", ciudadDestino: "Bogotá",
+    nitCliente: "900987654", nombreCliente: "Servicios PQR S.A.",
+    valorDeclarado: 320000, fechaCreacion: "2026-03-12", estadoGeneral: "en_gestion",
+  },
+  {
+    numero: "20000001234",
+    terminalOrigen: "Medellín", ciudadOrigen: "Medellín",
+    terminalDestino: "Cali", ciudadDestino: "Cali",
+    nitCliente: "800123456", nombreCliente: "Logística Andina S.A.",
+    valorDeclarado: 1200000, fechaCreacion: "2026-03-10", estadoGeneral: "normal",
+  },
+  {
+    numero: "20000001014",
+    terminalOrigen: "Bogotá", ciudadOrigen: "Bogotá",
+    terminalDestino: "Cali", ciudadDestino: "Cali",
+    nitCliente: "800345678", nombreCliente: "Grupo Empresarial Caribe Ltda.",
+    valorDeclarado: 950000, fechaCreacion: "2026-03-15", estadoGeneral: "normal",
+  },
+  {
+    numero: "20000001016",
+    terminalOrigen: "Cartagena", ciudadOrigen: "Cartagena",
+    terminalDestino: "Bogotá", ciudadDestino: "Bogotá",
+    nitCliente: "900234567", nombreCliente: "Textiles La Merced S.A.S.",
+    valorDeclarado: 780000, fechaCreacion: "2026-03-14", estadoGeneral: "normal",
+  },
+  {
+    numero: "20000001017",
+    terminalOrigen: "Bucaramanga", ciudadOrigen: "Bucaramanga",
+    terminalDestino: "Barranquilla", ciudadDestino: "Barranquilla",
+    nitCliente: "800654321", nombreCliente: "Industrias del Norte Ltda.",
+    valorDeclarado: 1450000, fechaCreacion: "2026-03-13", estadoGeneral: "normal",
+  },
+  {
+    numero: "20000001018",
+    terminalOrigen: "Cali", ciudadOrigen: "Cali",
+    terminalDestino: "Medellín", ciudadDestino: "Medellín",
+    nitCliente: "900876543", nombreCliente: "Distribuciones Valle S.A.S.",
+    valorDeclarado: 2100000, fechaCreacion: "2026-03-12", estadoGeneral: "normal",
+  },
+  {
+    numero: "20000001019",
+    terminalOrigen: "Medellín", ciudadOrigen: "Medellín",
+    terminalDestino: "Bogotá", ciudadDestino: "Bogotá",
+    nitCliente: "800987654", nombreCliente: "Transportes Antioqueños S.A.",
+    valorDeclarado: 3200000, fechaCreacion: "2026-03-11", estadoGeneral: "normal",
+  },
+  {
+    numero: "20000001020",
+    terminalOrigen: "Bogotá", ciudadOrigen: "Bogotá",
+    terminalDestino: "Cartagena", ciudadDestino: "Cartagena",
+    nitCliente: "900123456", nombreCliente: "Envíos Express S.A.S.",
+    valorDeclarado: 560000, fechaCreacion: "2026-03-10", estadoGeneral: "normal",
+  },
 ];
 
 // ============================================================
@@ -2291,6 +2347,8 @@ export const insumosFaltantes: InsumoFaltante[] = [
   // 2 con novedad (evento generado — unidades)
   { id: "FAL-014", guia: "20000001001", codigoNovedad: "300", estadoRevision: "con_novedad", estadoQlik: "3_causal_pendientes", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-02", terminal: "Bogotá", ciudad: "Bogotá", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-03", eventoGenerado: "UNI-004" },
   { id: "FAL-015", guia: "20000001015", codigoNovedad: "400", estadoRevision: "con_novedad", estadoQlik: "4_causal_100_sin_400_previo", checkpointOrigen: true, checkpointDestino: false, infoInterventorOps: "Ops: última lectura en plataforma Medellín", fechaNovedad: "2026-03-11", terminal: "Medellín", ciudad: "Medellín", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-12", eventoGenerado: "UNI-007" },
+  { id: "FAL-016", guia: "19900293009", codigoNovedad: "101", estadoRevision: "pendiente", estadoQlik: "3_causal_pendientes", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-20", terminal: "Cali", ciudad: "Cali" },
+  { id: "FAL-017", guia: "20000001003", codigoNovedad: "101", estadoRevision: "en_investigacion", estadoQlik: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-18", terminal: "Bogotá", ciudad: "Bogotá" },
 ];
 
 // ============================================================

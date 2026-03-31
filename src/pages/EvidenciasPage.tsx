@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Camera, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, User, FileText } from "lucide-react";
-import { evidencias, terminales, usuarioLogueado, eventos, getPersonaPorCedula } from "@/data/mockData";
+import { evidencias, usuarioLogueado, eventos, getPersonaPorCedula } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
@@ -59,7 +59,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
     ev.revisadoPor = usuarioLogueado.nombre;
     ev.fechaRevision = new Date().toISOString().split("T")[0];
 
-    if (generaEvento) {
+    if (generaEvento && !eventoGeneradoId) {
       const id = `EV-EVI-${Date.now()}`;
       const hoy = new Date().toISOString().split("T")[0];
       const tipoEv = "Evidencia de entrega inválida";
@@ -126,12 +126,15 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
         onClick={() => setExpanded((v) => !v)}
       >
         <div>
-          <button
-            className="text-xs font-mono text-primary hover:underline"
+          <span
+            role="link"
+            tabIndex={0}
+            className="text-xs font-mono text-primary hover:underline cursor-pointer"
             onClick={(e) => { e.stopPropagation(); abrirGuia(ev.guia); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); abrirGuia(ev.guia); } }}
           >
             {ev.guia}
-          </button>
+          </span>
           <span className="ml-2 text-xs text-muted-foreground">{ev.terminal}</span>
         </div>
         <ResultadoIABadge resultado={ev.resultadoIA} />
