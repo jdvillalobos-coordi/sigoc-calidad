@@ -1626,7 +1626,7 @@ export const eventos: Evento[] = [
   // ── Eventos de Evidencias (auto-generados por módulo IA) ──
   {
     id: "EDIA-001",
-    estado: "abierto",
+    estado: "cerrado",
     categoria: "evidencias",
     tipoEvento: "Falsa evidencia de entrega",
     tipoEntidad: "empleado",
@@ -1638,7 +1638,7 @@ export const eventos: Evento[] = [
     personasParticipantes: [],
     vehiculosVinculados: [],
     descripcionHechos: "Evento automático: Falsa evidencia de entrega. La IA detectó que la foto no corresponde a la dirección de entrega y el operador fue confirmado como responsable.",
-    estadoFlujo: "abierto",
+    estadoFlujo: "cerrado",
     asignadoA: { id: "u-sandra", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional" },
     usuarioRegistro: "u-sandra",
     perfilUsuario: "Coordinadora Nacional",
@@ -1646,7 +1646,7 @@ export const eventos: Evento[] = [
     fechaRegistro: "2026-03-10",
     anotaciones: [],
     historial: [{ id: "h-edia1", fecha: "2026-03-10", usuarioNombre: "Sandra Herrera", accion: "Evento creado automáticamente desde Evidencias" }],
-    diasAbierto: 14,
+    diasAbierto: 0,
   },
   {
     id: "EDIA-002",
