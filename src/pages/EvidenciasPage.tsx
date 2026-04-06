@@ -122,7 +122,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
     <div className="border-b border-border last:border-0">
       {/* Fila principal */}
       <button
-        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_auto_auto_auto_auto] gap-6 items-center"
+        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_100px_110px_130px_24px] gap-4 items-center"
         onClick={() => setExpanded((v) => !v)}
       >
         <div>
@@ -137,12 +137,14 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
           </span>
           <span className="ml-2 text-xs text-muted-foreground">{ev.terminal}</span>
         </div>
-        <ResultadoIABadge resultado={ev.resultadoIA} />
-        {ev.veredictoOperador
-          ? <VeredictoTag v={ev.veredictoOperador} />
-          : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">Pendiente</span>
-        }
-        <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(ev.fecha)}</span>
+        <div className="flex justify-center"><ResultadoIABadge resultado={ev.resultadoIA} /></div>
+        <div className="flex justify-center">
+          {ev.veredictoOperador
+            ? <VeredictoTag v={ev.veredictoOperador} />
+            : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">Pendiente</span>
+          }
+        </div>
+        <span className="text-xs text-muted-foreground whitespace-nowrap text-right">{formatDate(ev.fecha)}</span>
         {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
 
@@ -341,11 +343,11 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-6 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1fr_100px_110px_130px_24px] gap-4 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
           <span>Guía / Terminal</span>
-          <span>Resultado IA</span>
-          <span>Estado revisión</span>
-          <span>Fecha</span>
+          <span className="text-center">Resultado IA</span>
+          <span className="text-center">Estado revisión</span>
+          <span className="text-right">Fecha</span>
           <span />
         </div>
         {filtradas.length === 0 ? (
