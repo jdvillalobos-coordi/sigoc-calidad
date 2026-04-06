@@ -35,23 +35,18 @@ const CAUSALES_OPTIONS: { value: FiltroCausal; label: string }[] = [
 ];
 
 function CheckpointBadge({ origen, destino }: { origen?: boolean; destino?: boolean }) {
-  if (!origen && !destino) return <span className="text-muted-foreground">—</span>;
+  if (!origen && !destino) return <span className="text-muted-foreground text-xs">—</span>;
   return (
-    <div className="flex items-center gap-1 flex-wrap">
-      {origen && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap">En origen</span>}
-      {destino && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-green-100 text-green-700 border border-green-200 whitespace-nowrap">En destino</span>}
-    </div>
+    <span className="text-xs text-muted-foreground">
+      {[origen && "Origen", destino && "Destino"].filter(Boolean).join(" / ")}
+    </span>
   );
 }
 
 function CausalBadge({ causal }: { causal?: string }) {
-  if (!causal) return <span className="text-muted-foreground">—</span>;
+  if (!causal) return <span className="text-muted-foreground text-xs">—</span>;
   const label = CAUSALES_LABELS[causal] ?? causal;
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 whitespace-nowrap">
-      {label}
-    </span>
-  );
+  return <span className="text-xs text-muted-foreground">{label}</span>;
 }
 
 function diasDesde(fecha: string): number {
@@ -60,17 +55,7 @@ function diasDesde(fecha: string): number {
 }
 
 function DiasBadge({ dias }: { dias: number }) {
-  const cls =
-    dias > 7
-      ? "bg-destructive/10 text-destructive border-destructive/20"
-      : dias > 3
-        ? "bg-orange-100 text-orange-700 border-orange-200"
-        : "bg-muted text-muted-foreground border-border";
-  return (
-    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${cls}`}>
-      {dias}d
-    </span>
-  );
+  return <span className="text-xs text-muted-foreground">{dias}d</span>;
 }
 
 function EstadoRevisionBadge({ estado, eventoId }: { estado: string; eventoId?: string }) {
@@ -89,19 +74,7 @@ function EstadoRevisionBadge({ estado, eventoId }: { estado: string; eventoId?: 
 }
 
 function NovedadBadge({ codigo }: { codigo: string }) {
-  const colors: Record<string, string> = {
-    "100": "bg-red-100 text-red-700 border-red-200",
-    "101": "bg-red-100 text-red-700 border-red-200",
-    "300": "bg-orange-100 text-orange-700 border-orange-200",
-    "400": "bg-amber-100 text-amber-700 border-amber-200",
-    "403": "bg-blue-100 text-blue-700 border-blue-200",
-    "529": "bg-purple-100 text-purple-700 border-purple-200",
-  };
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${colors[codigo] ?? "bg-muted text-muted-foreground border-border"}`}>
-      {codigo}
-    </span>
-  );
+  return <span className="text-xs text-muted-foreground">{codigo}</span>;
 }
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -384,11 +357,9 @@ export default function BandejaPage() {
             📸 Evidencias ({pendientesEvi} pendientes)
           </TabButton>
           <div className="flex-1" />
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pb-2">
-            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-              {pendientesRCE + pendientesFalt + pendientesEvi} pendientes
-            </span>
-          </div>
+          <span className="text-xs text-muted-foreground pb-2">
+            {pendientesRCE + pendientesFalt + pendientesEvi} pendientes
+          </span>
         </div>
 
         {/* Filtros */}
@@ -464,9 +435,7 @@ export default function BandejaPage() {
                       value={clienteBusqueda}
                       onChange={(e) => { setClienteBusqueda(e.target.value); setClienteDropOpen(true); }}
                       onFocus={() => setClienteDropOpen(true)}
-                      className={`text-xs border rounded-lg pl-7 pr-7 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring w-[200px] ${
-                        filtroCliente !== "todos" ? "border-green-300 bg-green-50/50" : "border-border"
-                      }`}
+                      className={`text-xs border rounded-lg pl-7 pr-7 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring w-[200px] border-border`}
                     />
                     {filtroCliente !== "todos" && (
                       <button
@@ -484,7 +453,7 @@ export default function BandejaPage() {
                           key={c}
                           onClick={() => { setFiltroCliente(c); setClienteBusqueda(""); setClienteDropOpen(false); }}
                           className={`w-full text-left px-3 py-2 text-xs hover:bg-muted transition-colors ${
-                            filtroCliente === c ? "bg-green-50 text-green-700 font-medium" : ""
+                            filtroCliente === c ? "bg-muted font-medium" : ""
                           }`}
                         >
                           {c}
@@ -525,9 +494,7 @@ export default function BandejaPage() {
                   <select
                     value={filtroCausal}
                     onChange={(e) => setFiltroCausal(e.target.value as FiltroCausal)}
-                    className={`text-xs border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring ${
-                      filtroCausal !== "todas" ? "border-indigo-300 bg-indigo-50/50 text-indigo-700 font-medium" : "border-border text-muted-foreground"
-                    }`}
+                    className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring text-muted-foreground"
                   >
                     {CAUSALES_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -544,47 +511,43 @@ export default function BandejaPage() {
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Filtros:</span>
             {dateRange?.from && (
-              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border border-border">
                 {dateRange.to
                   ? `${format(dateRange.from, "d MMM", { locale: es })} – ${format(dateRange.to, "d MMM", { locale: es })}`
                   : format(dateRange.from, "d MMM yyyy", { locale: es })}
-                <button onClick={() => setDateRange(undefined)} className="hover:bg-blue-200 rounded-full p-0.5 transition-colors ml-0.5">
+                <button onClick={() => setDateRange(undefined)} className="hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             {filtroRegional !== "todos" && (
-              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border border-border">
                 Regional: {filtroRegional}
-                <button onClick={() => handleRegionalChange("todos")} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors ml-0.5">
+                <button onClick={() => handleRegionalChange("todos")} className="hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             {filtroTerminal !== "todos" && (
-              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border border-border">
                 Terminal: {filtroTerminal}
-                <button onClick={() => setFiltroTerminal("todos")} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors ml-0.5">
+                <button onClick={() => setFiltroTerminal("todos")} className="hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             {filtroCliente !== "todos" && (
-              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border border-border">
                 Cliente: {filtroCliente}
-                <button onClick={() => setFiltroCliente("todos")} className="hover:bg-green-200 rounded-full p-0.5 transition-colors ml-0.5">
+                <button onClick={() => setFiltroCliente("todos")} className="hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             {tab === "faltantes" && filtroCausal !== "todas" && (
-              <span className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium border ${
-                filtroCausal === "solo_sg" ? "bg-red-100 text-red-700 border-red-200" : "bg-indigo-100 text-indigo-700 border-indigo-200"
-              }`}>
+              <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border border-border">
                 {filtroCausal === "solo_sg" ? "Solo SG (100/101)" : (CAUSALES_LABELS[filtroCausal] ?? filtroCausal)}
-                <button onClick={() => setFiltroCausal("todas")} className={`rounded-full p-0.5 transition-colors ml-0.5 ${
-                  filtroCausal === "solo_sg" ? "hover:bg-red-200" : "hover:bg-indigo-200"
-                }`}>
+                <button onClick={() => setFiltroCausal("todas")} className="hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -635,7 +598,7 @@ export default function BandejaPage() {
                             <div className="text-[10px] text-muted-foreground">{g?.nitCliente ?? ""}</div>
                           </td>
                           <td className="px-3 py-2.5 text-right">
-                            <span className={`font-bold ${item.valorRecaudo >= 5_000_000 ? "text-green-600" : ""}`}>
+                            <span className="font-bold">
                               {formatCurrency(item.valorRecaudo)}
                             </span>
                           </td>
@@ -793,7 +756,7 @@ export default function BandejaPage() {
                               <div>
                                 <PanelDetalle guiaNum={item.guia} />
                                 {item.infoInterventorOps && (
-                                  <div className="bg-amber-50/50 border-t border-amber-200 px-4 py-2.5">
+                                  <div className="bg-muted/50 border-t border-border px-4 py-2.5">
                                     <div className="flex items-start gap-2 text-xs">
                                       <span className="font-semibold text-amber-700 whitespace-nowrap">📋 Ops (400):</span>
                                       <span className="text-amber-800">{item.infoInterventorOps}</span>
