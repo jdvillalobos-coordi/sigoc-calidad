@@ -11,29 +11,29 @@ type FiltroIA = "todos" | "cumple" | "no_cumple";
 
 function ResultadoIABadge({ resultado }: { resultado: "cumple" | "no_cumple" }) {
   return resultado === "cumple" ? (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
-      ✅ Cumple
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200 whitespace-nowrap">
+      Cumple
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
-      ❌ No cumple
+    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200 whitespace-nowrap">
+      No cumple
     </span>
   );
 }
 
 function VeredictoTag({ v }: { v: "confirma" | "falso_negativo" | "falso_positivo" }) {
   const map = {
-    confirma:       "bg-gray-100 text-gray-700 border-gray-200",
-    falso_negativo: "bg-amber-100 text-amber-700 border-amber-200",
-    falso_positivo: "bg-red-100 text-red-700 border-red-200",
+    confirma:       "bg-green-50 text-green-700 border-green-200",
+    falso_negativo: "bg-amber-50 text-amber-700 border-amber-200",
+    falso_positivo: "bg-red-50 text-red-700 border-red-200",
   };
   const label = {
     confirma: "Confirmado",
     falso_negativo: "Falso negativo",
-    falso_positivo: "No cumple",
+    falso_positivo: "Falso positivo",
   };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${map[v]}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border whitespace-nowrap ${map[v]}`}>
       {label[v]}
     </span>
   );
@@ -122,14 +122,14 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
     <div className="border-b border-border last:border-0">
       {/* Fila principal */}
       <button
-        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-center"
+        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_120px_140px_140px_32px] gap-2 items-center"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div>
+        <div className="min-w-0">
           <span
             role="link"
             tabIndex={0}
-            className="text-xs font-mono text-primary hover:underline cursor-pointer"
+            className="text-sm font-mono font-semibold text-primary hover:underline cursor-pointer"
             onClick={(e) => { e.stopPropagation(); abrirGuia(ev.guia); }}
             onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); abrirGuia(ev.guia); } }}
           >
@@ -137,12 +137,14 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
           </span>
           <span className="ml-2 text-xs text-muted-foreground">{ev.terminal}</span>
         </div>
-        <ResultadoIABadge resultado={ev.resultadoIA} />
-        {ev.veredictoOperador
-          ? <VeredictoTag v={ev.veredictoOperador} />
-          : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">⏳ Pendiente</span>
-        }
-        <span className="text-xs text-muted-foreground">{formatDate(ev.fecha)}</span>
+        <div className="flex justify-center"><ResultadoIABadge resultado={ev.resultadoIA} /></div>
+        <div className="flex justify-center">
+          {ev.veredictoOperador
+            ? <VeredictoTag v={ev.veredictoOperador} />
+            : <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">Pendiente</span>
+          }
+        </div>
+        <span className="text-xs text-muted-foreground text-right whitespace-nowrap">{formatDate(ev.fecha)}</span>
         {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
       </button>
 
@@ -341,11 +343,11 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1fr_120px_140px_140px_32px] gap-2 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
           <span>Guía / Terminal</span>
-          <span>Resultado IA</span>
-          <span>Estado revisión</span>
-          <span>Fecha</span>
+          <span className="text-center">Resultado IA</span>
+          <span className="text-center">Estado revisión</span>
+          <span className="text-right">Fecha</span>
           <span />
         </div>
         {filtradas.length === 0 ? (
