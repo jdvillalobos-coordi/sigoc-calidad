@@ -55,6 +55,7 @@ export default function CuadroContactoPage() {
   const [calOpen, setCalOpen]     = React.useState(false);
   const [ccBusqueda, setCcBusqueda] = React.useState("");
   const [sortDir, setSortDir]     = React.useState<"desc" | "asc">("desc");
+  const [subTabPersonas, setSubTabPersonas] = React.useState<"activos" | "desvinculados">("activos");
   const [filtroDecision, setFiltroDecision] = React.useState<string>("todas");
 
   const filtrados = React.useMemo(() => {
@@ -121,11 +122,16 @@ export default function CuadroContactoPage() {
 
   const cuadroFiltrado = React.useMemo(() => {
     let lista = cuadroContacto;
-    if (filtroDecision !== "todas") {
-      if (filtroDecision === "sin_decision") {
-        lista = lista.filter(p => !p?.ultimaDecision);
-      } else {
-        lista = lista.filter(p => p?.ultimaDecision?.decision === filtroDecision);
+    if (subTabPersonas === "desvinculados") {
+      lista = lista.filter(p => p?.ultimaDecision?.decision === "desvinculacion");
+    } else {
+      lista = lista.filter(p => p?.ultimaDecision?.decision !== "desvinculacion");
+      if (filtroDecision !== "todas") {
+        if (filtroDecision === "sin_decision") {
+          lista = lista.filter(p => !p?.ultimaDecision);
+        } else {
+          lista = lista.filter(p => p?.ultimaDecision?.decision === filtroDecision);
+        }
       }
     }
     if (ccBusqueda) {
@@ -133,7 +139,7 @@ export default function CuadroContactoPage() {
       lista = lista.filter((p) => p?.nombre.toLowerCase().includes(q) || p?.cedula.toLowerCase().includes(q) || p?.terminal.toLowerCase().includes(q));
     }
     return lista;
-  }, [cuadroContacto, ccBusqueda, filtroDecision]);
+  }, [cuadroContacto, ccBusqueda, filtroDecision, subTabPersonas]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -262,8 +268,37 @@ export default function CuadroContactoPage() {
           )}
 
           {/* Personas */}
-          {tab === "personas" && (
+          {tab === "personas" && (() => {
+            const totalActivos = cuadroContacto.filter(p => p?.ultimaDecision?.decision !== "desvinculacion").length;
+            const totalDesvinculados = cuadroContacto.filter(p => p?.ultimaDecision?.decision === "desvinculacion").length;
+            return (
             <div>
+              {/* Sub-tabs Activos / Desvinculados */}
+              <div className="flex border-b border-border">
+                <button
+                  onClick={() => { setSubTabPersonas("activos"); setFiltroDecision("todas"); }}
+                  className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors relative ${
+                    subTabPersonas === "activos"
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Activos ({totalActivos})
+                  {subTabPersonas === "activos" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />}
+                </button>
+                <button
+                  onClick={() => { setSubTabPersonas("desvinculados"); setFiltroDecision("todas"); }}
+                  className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors relative ${
+                    subTabPersonas === "desvinculados"
+                      ? "text-red-600"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Desvinculados ({totalDesvinculados})
+                  {subTabPersonas === "desvinculados" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-t" />}
+                </button>
+              </div>
+
               <div className="px-4 py-3 border-b border-border space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
@@ -282,13 +317,13 @@ export default function CuadroContactoPage() {
                     <ArrowUpDown className="w-3 h-3" />
                     {sortDir === "desc" ? "Más eventos primero" : "Menos eventos primero"}
                   </button>
-                  <span className="text-[11px] text-muted-foreground">{cuadroContacto.length} personas</span>
+                  <span className="text-[11px] text-muted-foreground">{cuadroFiltrado.length} personas</span>
                 </div>
+                {subTabPersonas === "activos" && (
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { value: "todas", label: "Todas" },
                     { value: "sin_decision", label: "Sin decisión" },
-                    { value: "desvinculacion", label: "Desvinculado" },
                     { value: "proceso_disciplinario", label: "Proceso disc." },
                     { value: "suspension_temporal", label: "Suspensión" },
                     { value: "llamado_atencion_escrito", label: "Llamado escrito" },
@@ -308,22 +343,32 @@ export default function CuadroContactoPage() {
                     </button>
                   ))}
                 </div>
+                )}
               </div>
 
               <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
                 {cuadroFiltrado.length === 0 ? (
-                  <p className="text-center py-8 text-muted-foreground text-xs">Sin personas con los filtros aplicados</p>
+                  <p className="text-center py-8 text-muted-foreground text-xs">
+                    {subTabPersonas === "desvinculados" ? "No hay personas desvinculadas" : "Sin personas con los filtros aplicados"}
+                  </p>
                 ) : cuadroFiltrado.map((p) => {
                   if (!p) return null;
                   return (
                     <button key={p.id} onClick={() => abrirPersona(p.id)}
                       className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-muted/30 transition-colors">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                      <div className={`w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center flex-shrink-0 ${
+                        subTabPersonas === "desvinculados" ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
+                      }`}>
                         {p.nombre.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className="text-xs font-semibold text-foreground truncate block">{p.nombre}</span>
+                        <span className={`text-xs font-semibold truncate block ${subTabPersonas === "desvinculados" ? "text-muted-foreground" : "text-foreground"}`}>{p.nombre}</span>
                         <span className="text-[10px] text-muted-foreground">{p.cargo} · {p.terminal}</span>
+                        {subTabPersonas === "desvinculados" && p.ultimaDecision && (
+                          <span className="text-[10px] text-red-500 block">
+                            Desvinculado el {p.ultimaDecision.fecha}{p.ultimaDecision.observacion ? ` — ${p.ultimaDecision.observacion}` : ""}
+                          </span>
+                        )}
                       </div>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold flex-shrink-0">
                         {p.totalEventos} evento{p.totalEventos !== 1 ? "s" : ""}
@@ -333,10 +378,9 @@ export default function CuadroContactoPage() {
                           {p.lesivas} lesiva{p.lesivas > 1 ? "s" : ""}
                         </span>
                       )}
-                      {p.ultimaDecision && (
+                      {subTabPersonas === "activos" && p.ultimaDecision && (
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 border ${
-                          p.ultimaDecision.decision === "desvinculacion" ? "bg-red-50 text-red-700 border-red-200"
-                          : p.ultimaDecision.decision === "proceso_disciplinario" ? "bg-orange-50 text-orange-700 border-orange-200"
+                          p.ultimaDecision.decision === "proceso_disciplinario" ? "bg-orange-50 text-orange-700 border-orange-200"
                           : p.ultimaDecision.decision === "caso_insuficiente" || p.ultimaDecision.decision === "sin_hallazgos" ? "bg-green-50 text-green-700 border-green-200"
                           : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}>
@@ -348,7 +392,8 @@ export default function CuadroContactoPage() {
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
         </div>
 
       </div>
