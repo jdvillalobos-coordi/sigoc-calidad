@@ -74,7 +74,6 @@ function DiasBadge({ dias }: { dias: number }) {
 }
 
 function EstadoRevisionBadge({ estado, eventoId }: { estado: string; eventoId?: string }) {
-  const { abrirRegistro } = useApp();
   const map: Record<string, { label: string; cls: string }> = {
     pendiente: { label: "Pendiente", cls: "bg-amber-100 text-amber-700 border-amber-200" },
     sin_novedad: { label: "Sin novedad", cls: "bg-green-100 text-green-700 border-green-200" },
@@ -82,19 +81,9 @@ function EstadoRevisionBadge({ estado, eventoId }: { estado: string; eventoId?: 
     cerrado: { label: "Evento cerrado", cls: "bg-gray-100 text-gray-600 border-gray-200" },
   };
   const { label, cls } = map[estado] ?? { label: estado, cls: "bg-muted text-muted-foreground border-border" };
-  if ((estado === "abierto" || estado === "cerrado") && eventoId) {
-    return (
-      <button
-        onClick={(e) => { e.stopPropagation(); abrirRegistro(eventoId); }}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap hover:opacity-80 transition-opacity ${cls}`}
-      >
-        {label} · {eventoId}
-      </button>
-    );
-  }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${cls}`}>
-      {label}
+      {eventoId ? `${label} · ${eventoId}` : label}
     </span>
   );
 }
