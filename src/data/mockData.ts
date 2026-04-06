@@ -269,6 +269,63 @@ export const guias: Guia[] = [
     nitCliente: "900123456", nombreCliente: "Envíos Express S.A.S.",
     valorDeclarado: 560000, fechaCreacion: "2026-03-10", estadoGeneral: "normal",
   },
+  // ── Guías México ──
+  {
+    numero: "30000001001",
+    terminalOrigen: "CDMX", ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Monterrey", ciudadDestino: "Monterrey",
+    nitCliente: "MEX900001", nombreCliente: "Logística Nacional MX S.A. de C.V.",
+    valorDeclarado: 185000, fechaCreacion: "2026-04-01", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "30000001002",
+    terminalOrigen: "Monterrey", ciudadOrigen: "Monterrey",
+    terminalDestino: "CDMX", ciudadDestino: "Ciudad de México",
+    nitCliente: "MEX800002", nombreCliente: "Distribuidora Regia S.A. de C.V.",
+    valorDeclarado: 245000, fechaCreacion: "2026-04-02", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "30000001003",
+    terminalOrigen: "CDMX", ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Monterrey", ciudadDestino: "Monterrey",
+    nitCliente: "MEX900003", nombreCliente: "Comercializadora del Bajío S.A.",
+    valorDeclarado: 320000, fechaCreacion: "2026-04-02", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "30000001004",
+    terminalOrigen: "Monterrey", ciudadOrigen: "Monterrey",
+    terminalDestino: "CDMX", ciudadDestino: "Ciudad de México",
+    nitCliente: "MEX800004", nombreCliente: "Envíos Express México S.A.",
+    valorDeclarado: 158000, fechaCreacion: "2026-04-03", estadoGeneral: "sin_novedad",
+  },
+  {
+    numero: "30000001005",
+    terminalOrigen: "CDMX", ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Monterrey", ciudadDestino: "Monterrey",
+    nitCliente: "MEX900005", nombreCliente: "Grupo Industrial Azteca S.A. de C.V.",
+    valorDeclarado: 412000, fechaCreacion: "2026-04-03", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "30000001006",
+    terminalOrigen: "Monterrey", ciudadOrigen: "Monterrey",
+    terminalDestino: "CDMX", ciudadDestino: "Ciudad de México",
+    nitCliente: "MEX800006", nombreCliente: "Transportes del Norte MX Ltda.",
+    valorDeclarado: 275000, fechaCreacion: "2026-04-04", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "30000001007",
+    terminalOrigen: "CDMX", ciudadOrigen: "Ciudad de México",
+    terminalDestino: "Monterrey", ciudadDestino: "Monterrey",
+    nitCliente: "MEX900001", nombreCliente: "Logística Nacional MX S.A. de C.V.",
+    valorDeclarado: 530000, fechaCreacion: "2026-04-05", estadoGeneral: "con_novedad",
+  },
+  {
+    numero: "30000001008",
+    terminalOrigen: "Monterrey", ciudadOrigen: "Monterrey",
+    terminalDestino: "CDMX", ciudadDestino: "Ciudad de México",
+    nitCliente: "MEX800002", nombreCliente: "Distribuidora Regia S.A. de C.V.",
+    valorDeclarado: 195000, fechaCreacion: "2026-04-05", estadoGeneral: "sin_novedad",
+  },
 ];
 
 // ============================================================
@@ -2347,6 +2404,12 @@ export const insumosRCE: InsumoRCE[] = [
   { id: "RCE-026", guia: "20000001019", valorRecaudo: 1450000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-04-01", revisadoPor: "Ana Martínez", fechaRevision: "2026-04-02" },
   { id: "RCE-027", guia: "20000001020", valorRecaudo: 2880000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-04-02", revisadoPor: "Sandra Herrera", fechaRevision: "2026-04-03" },
   { id: "RCE-028", guia: "20000001002", valorRecaudo: 1690000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-04-03", revisadoPor: "Jorge Castaño", fechaRevision: "2026-04-04" },
+  // --- México ---
+  { id: "RCE-029", guia: "30000001001", valorRecaudo: 185000, estadoRevision: "pendiente", fechaAsignacion: "2026-04-01" },
+  { id: "RCE-030", guia: "30000001003", valorRecaudo: 320000, estadoRevision: "pendiente", fechaAsignacion: "2026-04-02" },
+  { id: "RCE-031", guia: "30000001005", valorRecaudo: 412000, estadoRevision: "pendiente", fechaAsignacion: "2026-04-03" },
+  { id: "RCE-032", guia: "30000001007", valorRecaudo: 530000, estadoRevision: "pendiente", fechaAsignacion: "2026-04-05" },
+  { id: "RCE-033", guia: "30000001004", valorRecaudo: 158000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-04-03", revisadoPor: "Ana Martínez", fechaRevision: "2026-04-04" },
 ];
 
 // ============================================================
@@ -2401,6 +2464,11 @@ export const insumosFaltantes: InsumoFaltante[] = [
   // 2 sin novedad
   { id: "FAL-030", guia: "20000001002", codigoNovedad: "403", estadoRevision: "sin_novedad", causal: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: false, fechaNovedad: "2026-04-01", terminal: "Bogotá", ciudad: "Bogotá", revisadoPor: "Sandra Herrera", fechaRevision: "2026-04-02" },
   { id: "FAL-031", guia: "20000001010", codigoNovedad: "300", estadoRevision: "sin_novedad", causal: "2_solucion_no_ubicado_sin_100", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-04-02", terminal: "Cali", ciudad: "Cali", revisadoPor: "Diego Ramírez", fechaRevision: "2026-04-03" },
+  // --- México ---
+  { id: "FAL-032", guia: "30000001002", codigoNovedad: "100", estadoRevision: "pendiente", causal: "3_causal_pendientes", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-04-02", terminal: "Monterrey", ciudad: "Monterrey" },
+  { id: "FAL-033", guia: "30000001006", codigoNovedad: "400", estadoRevision: "pendiente", causal: "4_causal_100_sin_400_previo", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-04-04", terminal: "CDMX", ciudad: "Ciudad de México" },
+  { id: "FAL-034", guia: "30000001007", codigoNovedad: "300", estadoRevision: "pendiente", causal: "2_solucion_no_ubicado_sin_100", checkpointOrigen: true, checkpointDestino: true, fechaNovedad: "2026-04-05", terminal: "CDMX", ciudad: "Ciudad de México" },
+  { id: "FAL-035", guia: "30000001008", codigoNovedad: "529", estadoRevision: "pendiente", causal: "5_causal_100_solucion_despacho_no_ubicado", checkpointOrigen: false, checkpointDestino: true, infoInterventorOps: "Ops MX: paquete sin lectura en plataforma Monterrey", fechaNovedad: "2026-04-05", terminal: "Monterrey", ciudad: "Monterrey" },
 ];
 
 // ============================================================
