@@ -21,7 +21,7 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
 ];
 
 export default function InicioPage() {
-  const { setPaginaActiva, irARegistros } = useApp();
+  const { setPaginaActiva, irARegistros, dataVersion } = useApp();
   const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
   const [calOpen, setCalOpen]     = React.useState(false);
@@ -37,7 +37,7 @@ export default function InicioPage() {
       const okCat = cat === "todas" || e.categoria === cat;
       return okFecha && okCat;
     });
-  }, [cat, dateRange]);
+  }, [cat, dateRange, dataVersion]);
 
   /* Mi trabajo */
   const misEventos    = eventos.filter((e) => e.asignadoA?.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
@@ -56,7 +56,7 @@ export default function InicioPage() {
     const conEventos = new Set<string>();
     eventos.forEach((e) => (e.guias ?? []).forEach((g) => conEventos.add(g.trim())));
     return guias.filter((g) => !conEventos.has(g.numero.trim()) && (g.valorDeclarado >= 1_000_000 || g.estadoGeneral === "con_novedad")).length;
-  }, []);
+  }, [dataVersion]);
 
   const fechaHoy = format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es });
 

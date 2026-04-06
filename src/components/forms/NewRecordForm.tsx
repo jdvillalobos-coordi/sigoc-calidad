@@ -86,7 +86,7 @@ const FUENTES: Record<CategoriaEvento, string> = {
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
 
 export default function NewRecordForm({ onClose, prefill }: { onClose: () => void; prefill?: FormPrefill }) {
-  const { abrirRegistro } = useApp();
+  const { abrirRegistro, bumpData } = useApp();
   const [categoria, setCategoria] = useState<CategoriaEvento | null>(prefill?.categoria ?? null);
   const [tipoEvento, setTipoEvento] = useState("");
   const [tipoEntidad, setTipoEntidad] = useState("");
@@ -154,7 +154,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   function buscarVehiculo(placa: string) {
     const v = getVehiculoPorPlaca(placa.toUpperCase());
     if (v) {
-      setPlacaData({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId, estado: v.estado });
+      setPlacaData({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId ?? "N/A", estado: v.estado });
       setPlacaError(false);
     } else if (placa.length >= 3) {
       setPlacaData(null);
@@ -170,18 +170,33 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
 
   function buscarVehiculoAdicional(placa: string) {
     const v = getVehiculoPorPlaca(placa.toUpperCase());
-    if (v) { setPlacaAdicionalData({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId, estado: v.estado }); setPlacaAdicionalError(false); }
+    if (v) { setPlacaAdicionalData({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId ?? "N/A", estado: v.estado }); setPlacaAdicionalError(false); }
     else if (placa.length >= 3) { setPlacaAdicionalData(null); setPlacaAdicionalError(true); }
   }
 
   const esVehiculo = tipoEntidad === "Vehículo";
   const mostrarPlacaAdicional = !esVehiculo && (categoria === "dineros" || categoria === "unidades" || categoria === "listas_vinculantes");
+  const personaOpcional = esVehiculo || categoria === "pqr" || categoria === "listas_vinculantes" || categoria === "evidencias";
   const puedeCrear = !!(
     categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion
     && (esVehiculo ? placaInput : true)
-    && (!esVehiculo ? cedulas.some(c => c.length >= 3) : true)
+    && (personaOpcional || cedulas.some(c => c.length >= 3))
     && (categoria === "pqr" ? (terminalDestino && ciudadDestino && equipoRecogida) : true)
   );
+
+  const [intentoCrear, setIntentoCrear] = useState(false);
+  const camposFaltantes: string[] = [];
+  if (intentoCrear && !puedeCrear) {
+    if (!tipoEvento) camposFaltantes.push("Tipo de evento");
+    if (!tipoEntidad) camposFaltantes.push("Tipo de entidad");
+    if (!terminal) camposFaltantes.push("Terminal");
+    if (!descripcion) camposFaltantes.push("Descripción");
+    if (esVehiculo && !placaInput) camposFaltantes.push("Placa del vehículo");
+    if (!personaOpcional && !cedulas.some(c => c.length >= 3)) camposFaltantes.push("Persona responsable");
+    if (categoria === "pqr" && !terminalDestino) camposFaltantes.push("Terminal destino");
+    if (categoria === "pqr" && !ciudadDestino) camposFaltantes.push("Ciudad destino");
+    if (categoria === "pqr" && !equipoRecogida) camposFaltantes.push("Equipo recogida");
+  }
 
   const primerPersona = Object.values(cedulasPersona)[0];
 
@@ -202,6 +217,9 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setPlacaInput("");
     setPlacaData(null);
     setPlacaError(false);
+    setResultadoIA("");
+    setVeredicto("");
+    setJustificacion("");
     setNitCliente("");
     setNombreCliente("");
     setRolSolicitante("");
@@ -219,6 +237,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setPlacaAdicional("");
     setPlacaAdicionalData(null);
     setPlacaAdicionalError(false);
+    setIntentoCrear(false);
     setEventoCreado(null);
   }
 
@@ -283,6 +302,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       equipoRecogida: categoria === "pqr" ? equipoRecogida || undefined : undefined,
       equipoEntrega: categoria === "pqr" ? equipoEntrega || undefined : undefined,
       equipoTenencia: categoria === "pqr" ? equipoTenencia : undefined,
+      fuenteExterna: FUENTES[categoria!],
       estadoFlujo: "abierto",
       asignadoA: categoria === "pqr" ? undefined : {
         id: usuarioLogueado.id,
@@ -319,6 +339,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     }
 
     setEventoCreado(id);
+    bumpData();
     toast({ title: `✅ Evento ${id} creado exitosamente` });
   }
 
@@ -492,7 +513,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               {/* Personas responsables (opcional para vehículos) */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                  {categoria === "dineros" ? "Persona(s) presente(s) en el evento" : "Persona(s) responsable(s)"}{esVehiculo ? "" : " *"}
+                  {categoria === "dineros" ? "Persona(s) presente(s) en el evento" : categoria === "pqr" ? "Persona(s) relacionada(s)" : "Persona(s) responsable(s)"}{personaOpcional ? "" : " *"}
                 </label>
                 <div className="space-y-2">
                   {cedulas.map((ced, i) => (
@@ -522,7 +543,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <Plus className="w-3 h-3" /> Agregar persona
                   </button>
                 </div>
-                {esVehiculo && <p className="text-xs text-muted-foreground/70 mt-1">Opcional — puedes asociar el conductor u otra persona si aplica</p>}
+                {personaOpcional && <p className="text-xs text-muted-foreground/70 mt-1">{esVehiculo ? "Opcional — puedes asociar el conductor u otra persona si aplica" : "Opcional — puedes vincular una persona si aplica"}</p>}
               </div>
 
               {/* Descripción */}
@@ -702,14 +723,22 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <span className="font-medium">{CATEGORIAS.find(c => c.id === categoria)?.label}</span>
                     <span className="text-muted-foreground">Tipo:</span>
                     <span className="font-medium">{tipoEvento}</span>
+                    <span className="text-muted-foreground">Entidad:</span>
+                    <span className="font-medium">{tipoEntidad}</span>
+                    <span className="text-muted-foreground">Fecha:</span>
+                    <span className="font-medium">{fecha}</span>
                     {guiaInputs[0] && (<>
                       <span className="text-muted-foreground">Guía:</span>
                       <span className="font-medium font-mono">{guiaInputs[0]}</span>
                     </>)}
                     <span className="text-muted-foreground">Terminal:</span>
                     <span className="font-medium">{terminal}</span>
+                    {esVehiculo && placaData && (<>
+                      <span className="text-muted-foreground">Vehículo:</span>
+                      <span className="font-medium">{placaData.placa} ({placaData.tipo})</span>
+                    </>)}
                     {primerPersona && (<>
-                      <span className="text-muted-foreground">{categoria === "dineros" ? "Persona presente:" : "Persona responsable:"}</span>
+                      <span className="text-muted-foreground">{categoria === "dineros" ? "Persona presente:" : categoria === "pqr" ? "Persona relacionada:" : "Persona responsable:"}</span>
                       <span className="font-medium">
                         {primerPersona.nombre} (ID {primerPersona.cedula})
                       </span>
@@ -718,9 +747,27 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                       <span className="text-muted-foreground">Vehículo asociado:</span>
                       <span className="font-medium">{placaAdicionalData.placa} ({placaAdicionalData.tipo})</span>
                     </>)}
+                    {valorAfectacion && (<>
+                      <span className="text-muted-foreground">{categoria === "dineros" ? "Valor dinero:" : "Valor afectación:"}</span>
+                      <span className="font-medium">{formatCurrency(Number(valorAfectacion), getMonedaPorTerminal(terminal).currency, getMonedaPorTerminal(terminal).locale)}</span>
+                    </>)}
+                    {categoria === "pqr" && terminalDestino && (<>
+                      <span className="text-muted-foreground">Destino:</span>
+                      <span className="font-medium">{terminalDestino}{ciudadDestino ? ` — ${ciudadDestino}` : ""}</span>
+                    </>)}
+                    {categoria === "pqr" && equipoRecogida && (<>
+                      <span className="text-muted-foreground">Equipo recogida:</span>
+                      <span className="font-medium">{equipoRecogida}</span>
+                    </>)}
+                    <span className="text-muted-foreground">Fuente:</span>
+                    <span className="font-medium">{FUENTES[categoria]}</span>
                     {categoria !== "pqr" && (<>
                       <span className="text-muted-foreground">Asignado a:</span>
                       <span className="font-medium">{usuarioLogueado.nombre}</span>
+                    </>)}
+                    {categoria === "pqr" && (<>
+                      <span className="text-muted-foreground">Asignación:</span>
+                      <span className="font-medium text-amber-600">Sin asignar — pendiente de interventor</span>
                     </>)}
                     <span className="text-muted-foreground">Estado:</span>
                     <span className="font-medium">Abierto</span>
@@ -757,15 +804,22 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
 
         {/* Footer */}
         {categoria && !eventoCreado && (
-          <div className="border-t border-border px-6 py-4 flex justify-end gap-3 flex-shrink-0">
-            <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors">Cancelar</button>
-            <button
-              onClick={crear}
-              disabled={!puedeCrear}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors"
-            >
-              Registrar evento
-            </button>
+          <div className="border-t border-border px-6 py-4 flex-shrink-0 space-y-2">
+            {intentoCrear && camposFaltantes.length > 0 && (
+              <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-xs font-semibold text-red-700 mb-1">Campos requeridos faltantes:</p>
+                <p className="text-xs text-red-600">{camposFaltantes.join(" · ")}</p>
+              </div>
+            )}
+            <div className="flex justify-end gap-3">
+              <button onClick={onClose} className="px-4 py-2 border border-border rounded-lg text-sm hover:bg-muted transition-colors">Cancelar</button>
+              <button
+                onClick={() => { setIntentoCrear(true); if (puedeCrear) crear(); }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${puedeCrear ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-muted text-muted-foreground cursor-not-allowed"}`}
+              >
+                Registrar evento
+              </button>
+            </div>
           </div>
         )}
       </div>

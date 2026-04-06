@@ -110,7 +110,7 @@ function PanelDetalle({ guiaNum }: { guiaNum: string }) {
 }
 
 export default function BandejaPage() {
-  const { setNuevaRegistroAbierto, setFormPrefill, abrirRegistro } = useApp();
+  const { setNuevaRegistroAbierto, setFormPrefill, abrirRegistro, dataVersion } = useApp();
   const [tab, setTab] = useState<TabId>("rce");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filtroRegional, setFiltroRegional] = useState("todos");

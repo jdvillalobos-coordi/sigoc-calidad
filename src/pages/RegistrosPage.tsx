@@ -86,7 +86,7 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, setFormPrefill, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro } = useApp();
+  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, setFormPrefill, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro, dataVersion } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [estadoFlujoFiltro, setEstadoFlujoFiltro] = useState<string>("todos");
@@ -189,7 +189,7 @@ export default function RegistrosPage() {
       else                                  cmp = a.id.localeCompare(b.id);
       return sortDir === "asc" ? cmp : -cmp;
     })
-  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir]);
+  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir, dataVersion]);
 
   const effectivePerPage = perPage === "all" ? filtered.length : perPage;
   const pages = effectivePerPage > 0 ? Math.ceil(filtered.length / effectivePerPage) : 1;

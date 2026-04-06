@@ -90,7 +90,7 @@ function VehiculoVinculador({ ev, setLocalEventos }: { ev: Evento; setLocalEvent
 
   function buscar(placa: string) {
     const v = getVehiculoPorPlaca(placa.toUpperCase());
-    if (v) { setResultado({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId, estado: v.estado }); setError(false); }
+    if (v) { setResultado({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId ?? "N/A", estado: v.estado }); setError(false); }
     else if (placa.length >= 3) { setResultado(null); setError(true); }
   }
 
@@ -664,6 +664,8 @@ export function RecordDetailDrawer() {
                 ...(ev.equipoRecogida ? [["Equipo recogida", ev.equipoRecogida]] : []),
                 ...(ev.equipoEntrega ? [["Equipo entrega", ev.equipoEntrega]] : []),
                 ...(ev.equipoTenencia != null ? [["Equipo tenencia", `${ev.equipoTenencia} unidad(es)`]] : []),
+                ...(ev.categoriaLesivaEvento ? [["Categoría lesiva", ev.categoriaLesivaEvento]] : []),
+                ...(ev.subcategoriaLesivaEvento ? [["Subcategoría lesiva", ev.subcategoriaLesivaEvento]] : []),
                 ...(ev.resultadoIA ? [["Resultado IA", ev.resultadoIA]] : []),
                 ...(ev.veredictoOperador ? [["Veredicto operador", ev.veredictoOperador]] : []),
                 ...(ev.direccion ? [["Dirección", ev.direccion]] : []),
