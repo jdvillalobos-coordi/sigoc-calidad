@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getVehiculoPorPlaca, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
@@ -81,6 +81,61 @@ const PERSONAS_ESCALAMIENTO = [
   { id: "u-inv-baq", nombre: "Carmen Lucia Vega", cargo: "Investigador SG — Barranquilla", grupo: "Investigadores Terminal" },
   { id: "u-inv-buc", nombre: "Diego Fernando Ruiz", cargo: "Investigador SG — Bucaramanga", grupo: "Investigadores Terminal" },
 ];
+
+// ---- Componente para vincular vehículos a un evento existente ----
+function VehiculoVinculador({ ev, setLocalEventos }: { ev: Evento; setLocalEventos: React.Dispatch<React.SetStateAction<Evento[]>> }) {
+  const [busqueda, setBusqueda] = useState("");
+  const [error, setError] = useState(false);
+  const [resultado, setResultado] = useState<{ placa: string; tipo: string; conductorId: string; estado: string } | null>(null);
+
+  function buscar(placa: string) {
+    const v = getVehiculoPorPlaca(placa.toUpperCase());
+    if (v) { setResultado({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId, estado: v.estado }); setError(false); }
+    else if (placa.length >= 3) { setResultado(null); setError(true); }
+  }
+
+  function agregar() {
+    if (!resultado) return;
+    const yaExiste = ev.vehiculosVinculados?.some(vv => vv.vehiculoId === resultado.placa);
+    if (yaExiste) return;
+    const idx = eventos.findIndex(x => x.id === ev.id);
+    if (idx !== -1) {
+      eventos[idx].vehiculosVinculados = [...(ev.vehiculosVinculados ?? []), { vehiculoId: resultado.placa }];
+      setLocalEventos([...eventos]);
+    }
+    setBusqueda("");
+    setResultado(null);
+  }
+
+  return (
+    <div className="pt-2 border-t border-green-200">
+      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Vincular vehículo al evento <span className="font-normal">(opcional)</span></label>
+      <div className="flex gap-2">
+        <input
+          className={`flex-1 text-xs border rounded-lg px-2.5 py-2 bg-background font-mono uppercase focus:outline-none focus:ring-2 focus:ring-ring ${error ? "border-red-400" : "border-border"}`}
+          placeholder="Placa ABC-123"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value.toUpperCase())}
+          onBlur={() => busqueda && buscar(busqueda)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); busqueda && buscar(busqueda); } }}
+        />
+        {resultado && (
+          <button onClick={agregar} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors">
+            Vincular
+          </button>
+        )}
+      </div>
+      {error && <p className="text-[10px] text-red-500 mt-0.5">Vehículo no encontrado</p>}
+      {resultado && (
+        <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-1.5">
+          {[["Placa", resultado.placa], ["Tipo", resultado.tipo], ["Conductor", resultado.conductorId], ["Estado", resultado.estado]].map(([l, v]) => (
+            <span key={l} className={`text-[10px] bg-white border rounded px-1.5 py-0.5 ${resultado.estado === "bloqueado" && l === "Estado" ? "border-red-200 text-red-700" : "border-blue-200 text-blue-700"}`}>{l}: {v}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
@@ -771,8 +826,8 @@ export function RecordDetailDrawer() {
             </section>
           )}
 
-          {/* Hallazgos de investigación — dineros/unidades, solo editable */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
+          {/* Hallazgos de investigación — dineros/unidades/listas_vinculantes, solo editable */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes") && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
                 Hallazgos de investigación
@@ -894,11 +949,12 @@ export function RecordDetailDrawer() {
                   className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-green-100 file:text-green-700 hover:file:bg-green-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2"
                 />
               </div>
+              <VehiculoVinculador ev={ev} setLocalEventos={setLocalEventos} />
             </section>
           )}
 
           {/* Hallazgos de investigación — read-only para cerrados */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo === "cerrado" &&
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes") && ev.estadoFlujo === "cerrado" &&
             (ev.unidadesFaltantes || ev.contenidoMercancia || ev.lugarLatitud || ev.lugarLongitud || ev.personasResponsablesHechos || ev.registroWorkflow || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-2">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">

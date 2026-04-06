@@ -126,6 +126,9 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [equipoTenencia, setEquipoTenencia] = useState(1);
   const [categoriaLesiva, setCategoriaLesiva] = useState("");
   const [subcategoriaLesiva, setSubcategoriaLesiva] = useState("");
+  const [placaAdicional, setPlacaAdicional] = useState("");
+  const [placaAdicionalData, setPlacaAdicionalData] = useState<{ placa: string; tipo: string; conductorId: string; estado: string } | null>(null);
+  const [placaAdicionalError, setPlacaAdicionalError] = useState(false);
   const [eventoCreado, setEventoCreado] = useState<string | null>(null);
 
   function buscarGuia(idx: number, num: string) {
@@ -165,7 +168,14 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     else if (ced.length >= 3) setCedulasPersona((prev) => { const n = { ...prev }; delete n[idx]; return n; });
   }
 
+  function buscarVehiculoAdicional(placa: string) {
+    const v = getVehiculoPorPlaca(placa.toUpperCase());
+    if (v) { setPlacaAdicionalData({ placa: v.placa, tipo: v.tipo, conductorId: v.conductorId, estado: v.estado }); setPlacaAdicionalError(false); }
+    else if (placa.length >= 3) { setPlacaAdicionalData(null); setPlacaAdicionalError(true); }
+  }
+
   const esVehiculo = tipoEntidad === "Vehículo";
+  const mostrarPlacaAdicional = !esVehiculo && (categoria === "dineros" || categoria === "unidades" || categoria === "listas_vinculantes");
   const puedeCrear = !!(
     categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion
     && (esVehiculo ? placaInput : true)
@@ -206,6 +216,9 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setEquipoTenencia(1);
     setCategoriaLesiva("");
     setSubcategoriaLesiva("");
+    setPlacaAdicional("");
+    setPlacaAdicionalData(null);
+    setPlacaAdicionalError(false);
     setEventoCreado(null);
   }
 
@@ -248,9 +261,10 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       guias: guiaInputs.filter(Boolean),
       personasResponsables: categoria === "dineros" ? [] : personasVinculadas,
       personasParticipantes: categoria === "dineros" ? personasVinculadas : [],
-      vehiculosVinculados: placaData
-        ? [{ vehiculoId: placaData.placa }]
-        : [],
+      vehiculosVinculados: [
+        ...(placaData ? [{ vehiculoId: placaData.placa }] : []),
+        ...(placaAdicionalData ? [{ vehiculoId: placaAdicionalData.placa }] : []),
+      ],
       descripcionHechos: descripcion,
       valorAfectacion: valorAfectacion ? Number(valorAfectacion) : undefined,
       valorDinero: categoria === "dineros" && valorAfectacion ? Number(valorAfectacion) : undefined,
@@ -405,6 +419,36 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                         <span key={l} className={`text-xs bg-white border rounded px-1.5 py-0.5 ${placaData.estado === "bloqueado" && l === "Estado" ? "border-red-200 text-red-700" : "border-blue-200 text-blue-700"}`}>{l}: {v}</span>
                       ))}
                     </div>
+                  )}
+                </div>
+              )}
+
+              {/* Vehículo asociado (opcional, para dineros/unidades/listas vinculantes cuando entidad no es vehículo) */}
+              {mostrarPlacaAdicional && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    Vehículo asociado <span className="font-normal text-muted-foreground">(opcional)</span>
+                  </label>
+                  <p className="text-[10px] text-muted-foreground mb-1">Si el evento involucra un vehículo (ej: tractomula de la ruta), ingresa la placa.</p>
+                  <input
+                    className={`w-full border rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-ring ${placaAdicionalError ? "border-red-400" : "border-border"}`}
+                    placeholder="ABC-123"
+                    value={placaAdicional}
+                    onChange={(e) => setPlacaAdicional(e.target.value.toUpperCase())}
+                    onBlur={() => placaAdicional && buscarVehiculoAdicional(placaAdicional)}
+                  />
+                  {placaAdicionalError && <p className="text-xs text-red-500 mt-0.5">Vehículo no encontrado — verifica la placa</p>}
+                  {placaAdicionalData && (
+                    <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2">
+                      {[["Placa", placaAdicionalData.placa], ["Tipo", placaAdicionalData.tipo], ["Conductor", placaAdicionalData.conductorId], ["Estado", placaAdicionalData.estado]].map(([l, v]) => (
+                        <span key={l} className={`text-xs bg-white border rounded px-1.5 py-0.5 ${placaAdicionalData.estado === "bloqueado" && l === "Estado" ? "border-red-200 text-red-700" : "border-blue-200 text-blue-700"}`}>{l}: {v}</span>
+                      ))}
+                    </div>
+                  )}
+                  {placaAdicionalData && (
+                    <button type="button" onClick={() => { setPlacaAdicional(""); setPlacaAdicionalData(null); setPlacaAdicionalError(false); }} className="text-[10px] text-red-500 hover:underline mt-1">
+                      Quitar vehículo
+                    </button>
                   )}
                 </div>
               )}
@@ -669,6 +713,10 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                       <span className="font-medium">
                         {primerPersona.nombre} (ID {primerPersona.cedula})
                       </span>
+                    </>)}
+                    {placaAdicionalData && (<>
+                      <span className="text-muted-foreground">Vehículo asociado:</span>
+                      <span className="font-medium">{placaAdicionalData.placa} ({placaAdicionalData.tipo})</span>
                     </>)}
                     {categoria !== "pqr" && (<>
                       <span className="text-muted-foreground">Asignado a:</span>
