@@ -691,6 +691,36 @@ export function RecordDetailDrawer() {
               <p className="text-sm leading-relaxed">{ev.descripcionHechos}</p>
             </div>
 
+            {/* Personas vinculadas — resumen rápido dentro de info */}
+            {(ev.personasResponsables.length > 0 || ev.personasParticipantes.length > 0) && (
+              <div className="mt-3 bg-muted/40 rounded-xl p-4">
+                <div className="text-xs text-muted-foreground mb-2">
+                  {ev.categoria === "dineros" ? "Persona(s) presente(s)" : "Persona(s) responsable(s)"}
+                </div>
+                <div className="space-y-1.5">
+                  {[...ev.personasResponsables, ...ev.personasParticipantes].map((pv) => {
+                    const p = getPersona(pv.personaId);
+                    return (
+                      <button
+                        key={pv.personaId}
+                        onClick={() => abrirPersona(pv.personaId)}
+                        className="flex items-center gap-2 w-full text-left hover:bg-background rounded-lg px-2 py-1.5 transition-colors"
+                      >
+                        <AvatarInicial nombre={pv.nombre} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium">{pv.nombre}</span>
+                          <span className="text-xs text-muted-foreground ml-2">ID {pv.cedula}{p?.cargo ? ` · ${p.cargo}` : ""}</span>
+                        </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap ${pv.rol === "responsable" ? "bg-red-50 text-red-700 border-red-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
+                          {pv.rol === "responsable" ? "Responsable" : "Presente"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Justificación operador */}
             {ev.justificacionOperador && (
               <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
