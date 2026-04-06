@@ -727,6 +727,21 @@ export function RecordDetailDrawer() {
                   </select>
                 </div>
               </div>
+              {/* Crear evento de Dinero desde seguimiento */}
+              {(ev.estadoGestionSG === "Hurto" || ev.estadoGestionSG === "Pérdida" || ev.tipoEvento?.includes("RCE") || ev.tipoEvento?.includes("Seguimiento")) && ev.estadoFlujo !== "cerrado" && (
+                <div className="pt-2 border-t border-blue-200">
+                  <button
+                    onClick={() => {
+                      setFormPrefill({ categoria: "dineros", guia: ev.guias?.[0], terminal: ev.terminal });
+                      setNuevaRegistroAbierto(true);
+                    }}
+                    className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors text-left"
+                  >
+                    Crear evento de Dinero
+                    <p className="font-normal text-[10px] text-blue-500 mt-0.5">Si durante el seguimiento se materializa un hurto o pérdida de dinero, crea un evento asociado.</p>
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
