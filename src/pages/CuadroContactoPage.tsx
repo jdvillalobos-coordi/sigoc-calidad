@@ -57,6 +57,7 @@ export default function CuadroContactoPage() {
   const [sortDir, setSortDir]     = React.useState<"desc" | "asc">("desc");
   const [subTabPersonas, setSubTabPersonas] = React.useState<"activos" | "desvinculados">("activos");
   const [subTabVehiculos, setSubTabVehiculos] = React.useState<"activos" | "bloqueados">("activos");
+  const [vehBusqueda, setVehBusqueda] = React.useState("");
   const [filtroDecision, setFiltroDecision] = React.useState<string>("todas");
 
   const filtrados = React.useMemo(() => {
@@ -245,8 +246,11 @@ export default function CuadroContactoPage() {
 
           {/* Vehículos */}
           {tab === "vehiculos" && (() => {
-            const vehActivos = rankVehiculos.filter(({ vehiculo }) => vehiculo.estado !== "bloqueado");
-            const vehBloqueados = rankVehiculos.filter(({ vehiculo }) => vehiculo.estado === "bloqueado");
+            const vehFiltrados = vehBusqueda
+              ? rankVehiculos.filter(({ vehiculo }) => vehiculo.placa.toLowerCase().includes(vehBusqueda.toLowerCase()) || vehiculo.tipo.toLowerCase().includes(vehBusqueda.toLowerCase()))
+              : rankVehiculos;
+            const vehActivos = vehFiltrados.filter(({ vehiculo }) => vehiculo.estado !== "bloqueado");
+            const vehBloqueados = vehFiltrados.filter(({ vehiculo }) => vehiculo.estado === "bloqueado");
             const listaVeh = subTabVehiculos === "activos" ? vehActivos : vehBloqueados;
             return (
             <div>
@@ -270,7 +274,18 @@ export default function CuadroContactoPage() {
                   {subTabVehiculos === "bloqueados" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-t" />}
                 </button>
               </div>
-              <div className="divide-y divide-border">
+              <div className="px-4 py-3 border-b border-border">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="Buscar por matrícula o tipo..."
+                    value={vehBusqueda}
+                    onChange={(e) => setVehBusqueda(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
                 {listaVeh.length === 0
                   ? <p className="text-center py-8 text-muted-foreground text-xs">
                       {subTabVehiculos === "bloqueados" ? "No hay vehículos bloqueados" : "Sin vehículos activos vinculados en el período"}
@@ -289,7 +304,7 @@ export default function CuadroContactoPage() {
                         <span className="text-[10px] text-muted-foreground">{vehiculo.tipo}</span>
                       </div>
                       <Bar value={count} max={rankVehiculos[0]?.count ?? 1} />
-                      <span className="text-xs font-bold text-foreground w-4 text-right flex-shrink-0">{count} evento{count !== 1 ? "s" : ""}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold flex-shrink-0 whitespace-nowrap">{count} evento{count !== 1 ? "s" : ""}</span>
                     </button>
                   ))}
               </div>
