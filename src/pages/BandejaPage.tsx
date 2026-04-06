@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
-import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES, usuarioLogueado, CAUSALES_LABELS, eventos } from "@/data/mockData";
+import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES, usuarioLogueado, CAUSALES_LABELS, eventos, getMonedaPorTerminal } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter, CalendarDays, Search } from "lucide-react";
@@ -99,7 +99,7 @@ function PanelDetalle({ guiaNum }: { guiaNum: string }) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <div><span className="text-muted-foreground">Origen:</span> <span className="font-medium">{guia.terminalOrigen} ({guia.ciudadOrigen})</span></div>
           <div><span className="text-muted-foreground">Destino:</span> <span className="font-medium">{guia.terminalDestino} ({guia.ciudadDestino})</span></div>
-          <div><span className="text-muted-foreground">Valor declarado:</span> <span className="font-medium">{formatCurrency(guia.valorDeclarado)}</span></div>
+          <div><span className="text-muted-foreground">Valor declarado:</span> <span className="font-medium">{(() => { const m = getMonedaPorTerminal(guia.terminalOrigen); return formatCurrency(guia.valorDeclarado, m.currency, m.locale); })()}</span></div>
           <div><span className="text-muted-foreground">Fecha:</span> <span className="font-medium">{guia.fechaCreacion}</span></div>
           <div><span className="text-muted-foreground">Cliente:</span> <span className="font-medium">{guia.nombreCliente}</span></div>
           <div><span className="text-muted-foreground">NIT:</span> <span className="font-medium">{guia.nitCliente}</span></div>
@@ -599,7 +599,7 @@ export default function BandejaPage() {
                           </td>
                           <td className="px-3 py-2.5 text-right">
                             <span className="font-bold">
-                              {formatCurrency(item.valorRecaudo)}
+                              {(() => { const m = getMonedaPorTerminal(g?.terminalOrigen); return formatCurrency(item.valorRecaudo, m.currency, m.locale); })()}
                             </span>
                           </td>
                           <td className="px-3 py-2.5">{g?.terminalOrigen ?? "—"}</td>

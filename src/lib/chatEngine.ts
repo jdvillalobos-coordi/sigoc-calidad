@@ -12,6 +12,7 @@ import {
   getEventosPorVehiculo,
   getPersona,
   getGuia,
+  getMonedaPorTerminal,
 } from "@/data/mockData";
 import type { Evento, Persona } from "@/types";
 
@@ -46,13 +47,14 @@ function matchesAny(text: string, keywords: string[]): boolean {
   return keywords.some((k) => n.includes(k));
 }
 
-function formatCurrency(v: number): string {
-  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 }).format(v);
+function formatCurrency(v: number, currency = "COP", locale = "es-CO"): string {
+  return new Intl.NumberFormat(locale, { style: "currency", currency, minimumFractionDigits: 0 }).format(v);
 }
 
 function formatEventoResumen(e: Evento): string {
   const responsables = e.personasResponsables.map((p) => p.nombre).join(", ") || "Sin asignar";
-  const valor = e.valorAfectacion ? ` | Valor: ${formatCurrency(e.valorAfectacion)}` : "";
+  const m = getMonedaPorTerminal(e.terminal);
+  const valor = e.valorAfectacion ? ` | Valor: ${formatCurrency(e.valorAfectacion, m.currency, m.locale)}` : "";
   return `**${e.id}** — ${e.tipoEvento} (${e.categoria}) | ${e.terminal} | ${e.estado}${valor} | Responsable: ${responsables} | ${e.diasAbierto} días abierto`;
 }
 
@@ -186,7 +188,7 @@ function intentBuscarTerminal(text: string): QueryResult | null {
   const catResumen = Object.entries(categorias).map(([k, v]) => `${k}: ${v}`).join(", ");
 
   return {
-    content: `**Terminal ${terminalNombre}** tiene **${evts.length} eventos** (${abiertos.length} abiertos).\n\n**Por categoría:** ${catResumen}\n**Valor total de afectación:** ${formatCurrency(valorTotal)}\n\n**Eventos abiertos:**\n${abiertos.slice(0, 5).map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}`,
+    content: `**Terminal ${terminalNombre}** tiene **${evts.length} eventos** (${abiertos.length} abiertos).\n\n**Por categoría:** ${catResumen}\n**Valor total de afectación:** ${(() => { const m = getMonedaPorTerminal(terminalNombre); return formatCurrency(valorTotal, m.currency, m.locale); })()}\n\n**Eventos abiertos:**\n${abiertos.slice(0, 5).map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}`,
     entities: [
       { type: "terminal", id: terminalNombre, label: `Terminal ${terminalNombre}` },
       ...abiertos.slice(0, 3).map((e) => ({ type: "evento" as const, id: e.id, label: e.id })),
@@ -204,7 +206,7 @@ function intentBuscarGuia(text: string): QueryResult | null {
       const evts = getEventosPorGuia(guia.numero);
       const evid = evidencias.filter((e) => e.guia === guia.numero);
       return {
-        content: `**Guía ${guia.numero}**\n\nOrigen: ${guia.terminalOrigen} → Destino: ${guia.terminalDestino}\nCliente: ${guia.nombreCliente} (NIT ${guia.nitCliente})\nValor declarado: ${formatCurrency(guia.valorDeclarado)}\nEstado: ${guia.estadoGeneral}\n\n**Eventos asociados (${evts.length}):**\n${evts.map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}\n\n**Evidencias (${evid.length}):**\n${evid.map((e) => `- ${e.id}: ${e.resultadoIA} | ${e.terminal}`).join("\n") || "Ninguna"}`,
+        content: `**Guía ${guia.numero}**\n\nOrigen: ${guia.terminalOrigen} → Destino: ${guia.terminalDestino}\nCliente: ${guia.nombreCliente} (NIT ${guia.nitCliente})\nValor declarado: ${(() => { const m = getMonedaPorTerminal(guia.terminalOrigen); return formatCurrency(guia.valorDeclarado, m.currency, m.locale); })()}\nEstado: ${guia.estadoGeneral}\n\n**Eventos asociados (${evts.length}):**\n${evts.map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}\n\n**Evidencias (${evid.length}):**\n${evid.map((e) => `- ${e.id}: ${e.resultadoIA} | ${e.terminal}`).join("\n") || "Ninguna"}`,
         entities: [
           { type: "guia", id: guia.numero, label: `Guía ${guia.numero}` },
           ...evts.map((e) => ({ type: "evento" as const, id: e.id, label: e.id })),
@@ -349,7 +351,7 @@ function intentBandeja(text: string): QueryResult | null {
   const valorRCEPend = rcePend.reduce((acc, r) => acc + r.valorRecaudo, 0);
 
   return {
-    content: `**Bandeja de trabajo:**\n\n**RCE (Recaudo contra entrega):**\n- Pendientes: **${rcePend.length}** (valor: ${formatCurrency(valorRCEPend)})\n- Con novedad: **${rceNovedad.length}**\n\n**Faltantes:**\n- Pendientes: **${falPend.length}**\n- En investigación: **${falInvest.length}**\n\n**RCE pendientes de mayor valor:**\n${rcePend.sort((a, b) => b.valorRecaudo - a.valorRecaudo).slice(0, 3).map((r) => `- Guía ${r.guia}: ${formatCurrency(r.valorRecaudo)}`).join("\n")}`,
+    content: `**Bandeja de trabajo:**\n\n**RCE (Recaudo contra entrega):**\n- Pendientes: **${rcePend.length}** (valor: ${formatCurrency(valorRCEPend)})\n- Con novedad: **${rceNovedad.length}**\n\n**Faltantes:**\n- Pendientes: **${falPend.length}**\n- En investigación: **${falInvest.length}**\n\n**RCE pendientes de mayor valor:**\n${rcePend.sort((a, b) => b.valorRecaudo - a.valorRecaudo).slice(0, 3).map((r) => { const g = getGuia(r.guia); const m = getMonedaPorTerminal(g?.terminalOrigen); return `- Guía ${r.guia}: ${formatCurrency(r.valorRecaudo, m.currency, m.locale)}`; }).join("\n")}`,
     entities: [],
   };
 }

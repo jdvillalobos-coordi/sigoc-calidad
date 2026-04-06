@@ -1998,6 +1998,11 @@ export function getEventosRelacionados(eventoId: string): Evento[] {
 // GEOGRAFÍA CENTRALIZADA
 // ============================================================
 
+export const MONEDA_POR_PAIS: Record<string, { currency: string; locale: string }> = {
+  "Colombia": { currency: "COP", locale: "es-CO" },
+  "México":   { currency: "MXN", locale: "es-MX" },
+};
+
 export const PAISES_REGIONALES: Record<string, Record<string, string[]>> = {
   "Colombia": {
     "Centro":        ["Bogotá"],
@@ -2028,6 +2033,18 @@ export const REGIONALES_FLAT: Record<string, string[]> = Object.values(PAISES_RE
   .reduce((acc, regionales) => ({ ...acc, ...regionales }), {} as Record<string, string[]>);
 
 export const terminales = TODAS_TERMINALES;
+
+export function getMonedaPorTerminal(terminal?: string): { currency: string; locale: string } {
+  if (!terminal) return MONEDA_POR_PAIS["Colombia"];
+  for (const [pais, regionales] of Object.entries(PAISES_REGIONALES)) {
+    for (const ciudades of Object.values(regionales)) {
+      if (ciudades.some(c => c.toLowerCase() === terminal.toLowerCase())) {
+        return MONEDA_POR_PAIS[pais] ?? MONEDA_POR_PAIS["Colombia"];
+      }
+    }
+  }
+  return MONEDA_POR_PAIS["Colombia"];
+}
 
 // ============================================================
 // EVIDENCIAS (módulo de validación IA)

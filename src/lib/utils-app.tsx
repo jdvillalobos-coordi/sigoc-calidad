@@ -24,10 +24,10 @@ export const severidadConfig: Record<SeveridadIA, { label: string; color: string
 };
 
 
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-CO", {
+export function formatCurrency(value: number, currency = "COP", locale = "es-CO"): string {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "COP",
+    currency,
     minimumFractionDigits: 0,
   }).format(value);
 }

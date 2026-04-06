@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS, insumosRCE, insumosFaltantes } from "@/data/mockData";
+import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS, insumosRCE, insumosFaltantes, getMonedaPorTerminal } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import type { CategoriaEvento, CategoriaLesiva, FormPrefill, Persona, Evento } from "@/types";
@@ -427,7 +427,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                       {guiaErrors[i] && <p className="text-xs text-red-500 mt-0.5">Guía no encontrada — completa datos manualmente</p>}
                       {guiasData[i] && (
                         <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2">
-                          {[["Terminal", guiasData[i].terminal], ["Cliente", guiasData[i].cliente], ["Valor", formatCurrency(guiasData[i].valor)]].map(([l, v]) => (
+                          {[["Terminal", guiasData[i].terminal], ["Cliente", guiasData[i].cliente], ["Valor", (() => { const m = getMonedaPorTerminal(guiasData[i].terminal); return formatCurrency(guiasData[i].valor, m.currency, m.locale); })()]].map(([l, v]) => (
                             <span key={l} className="text-xs bg-white border border-blue-200 rounded px-1.5 py-0.5 text-blue-700">{l}: {v}</span>
                           ))}
                         </div>
@@ -501,7 +501,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 <input
                   type="number"
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="Valor en COP"
+                  placeholder={`Valor en ${getMonedaPorTerminal(terminal).currency}`}
                   value={valorAfectacion}
                   onChange={(e) => setValorAfectacion(e.target.value)}
                 />

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
@@ -595,7 +595,7 @@ export function RecordDetailDrawer() {
                 ...(ev.hora ? [["Hora", ev.hora]] : []),
                 ["Días abierto", `${ev.diasAbierto} días`],
                 ...(ev.fuenteExterna ? [["Fuente", ev.fuenteExterna]] : []),
-                ...(ev.valorAfectacion ? [["Valor afectación", formatCurrency(ev.valorAfectacion)]] : []),
+                ...(ev.valorAfectacion ? [["Valor afectación", (() => { const m = getMonedaPorTerminal(ev.terminal); return formatCurrency(ev.valorAfectacion, m.currency, m.locale); })()]] : []),
                 ...(ev.codigoNovedad ? [["Código novedad", ev.codigoNovedad]] : []),
                 ...(ev.gravedadFalta ? [["Gravedad falta", ev.gravedadFalta]] : []),
                 ...(ev.decisionGH ? [["Decisión GH", ev.decisionGH]] : []),
@@ -2027,7 +2027,7 @@ export function Guia360Drawer() {
           {guia.valorDeclarado >= 1000000 && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4">
               <div className="text-xs font-semibold text-green-700">💰 Guía con recaudo superior a $1M — Seguimiento RCE activo</div>
-              <div className="text-xs text-green-600/70 mt-0.5">Esta guía requiere seguimiento preventivo de seguridad por su alto valor de recaudo ({formatCurrency(guia.valorDeclarado)})</div>
+              <div className="text-xs text-green-600/70 mt-0.5">Esta guía requiere seguimiento preventivo de seguridad por su alto valor de recaudo ({(() => { const m = getMonedaPorTerminal(guia.terminalOrigen); return formatCurrency(guia.valorDeclarado, m.currency, m.locale); })()})</div>
             </div>
           )}
           <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
@@ -2036,7 +2036,7 @@ export function Guia360Drawer() {
               ["Destino", `${guia.terminalDestino} (${guia.ciudadDestino})`],
               ["Cliente", guia.nombreCliente],
               ["NIT", guia.nitCliente],
-              ["Valor declarado", formatCurrency(guia.valorDeclarado)],
+              ["Valor declarado", (() => { const m = getMonedaPorTerminal(guia.terminalOrigen); return formatCurrency(guia.valorDeclarado, m.currency, m.locale); })()],
               ["Fecha creación", formatDate(guia.fechaCreacion)],
             ].map(([l, v]) => (
               <div key={l}><div className="text-xs text-muted-foreground mb-0.5">{l}</div><div className="text-sm font-medium">{v}</div></div>
