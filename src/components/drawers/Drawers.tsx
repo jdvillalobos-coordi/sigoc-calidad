@@ -2009,7 +2009,7 @@ export function Vehiculo360Drawer() {
 
 // ---- Guía 360 ----
 export function Guia360Drawer() {
-  const { drawer, cerrarDrawer, abrirRegistro } = useApp();
+  const { drawer, cerrarDrawer, abrirRegistro, setFormPrefill, setNuevaRegistroAbierto } = useApp();
   if (drawer.tipo !== "guia360" || !drawer.id) return null;
   const guia = guias.find((g) => g.numero === drawer.id);
   if (!guia) return null;
@@ -2045,40 +2045,9 @@ export function Guia360Drawer() {
                 </div>
                 <button
                   onClick={() => {
-                    const nuevoId = `EVT-${Date.now().toString().slice(-6)}`;
-                    const nuevoEvento: Evento = {
-                      id: nuevoId,
-                      estado: "abierto",
-                      estadoFlujo: "abierto",
-                      categoria: "dineros",
-                      tipoEvento: "Seguimiento preventivo RCE",
-                      tipoEntidad: "tercero",
-                      fecha: new Date().toISOString().split("T")[0],
-                      fechaRegistro: new Date().toISOString().split("T")[0],
-                      terminal: guia.terminalOrigen,
-                      ciudad: guia.ciudadOrigen,
-                      guias: [guia.numero],
-                      personasResponsables: [],
-                      personasParticipantes: [],
-                      vehiculosVinculados: [],
-                      descripcionHechos: `Seguimiento preventivo por alto valor de recaudo (${formatCurrency(guia.valorDeclarado)}). Guía: ${guia.numero} · ${guia.nombreCliente}`,
-                      asignadoA: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo },
-                      usuarioRegistro: usuarioLogueado.nombre,
-                      perfilUsuario: usuarioLogueado.cargo,
-                      terminalUsuario: usuarioLogueado.terminal,
-                      anotaciones: [],
-                      historial: [{
-                        id: `h-${Date.now()}`,
-                        fecha: new Date().toISOString(),
-                        usuarioNombre: usuarioLogueado.nombre,
-                        accion: "Evento creado — Seguimiento preventivo RCE",
-                      }],
-                      diasAbierto: 0,
-                    };
-                    eventos.unshift(nuevoEvento);
-                    guia.estadoGeneral = "con_novedad";
-                    toast({ title: "✅ Evento RCE creado", description: `${nuevoId} registrado para guía ${guia.numero}` });
-                    abrirRegistro(nuevoId);
+                    setFormPrefill({ categoria: "dineros", guia: guia.numero, terminal: guia.terminalOrigen });
+                    setNuevaRegistroAbierto(true);
+                    cerrarDrawer();
                   }}
                   className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors flex-shrink-0"
                 >
