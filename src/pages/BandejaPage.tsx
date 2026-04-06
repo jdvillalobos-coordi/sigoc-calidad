@@ -148,7 +148,7 @@ function PanelDetalle({ guiaNum }: { guiaNum: string }) {
 }
 
 export default function BandejaPage() {
-  const { setNuevaRegistroAbierto, setFormPrefill } = useApp();
+  const { setNuevaRegistroAbierto, setFormPrefill, abrirRegistro } = useApp();
   const [tab, setTab] = useState<TabId>("rce");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filtroRegional, setFiltroRegional] = useState("todos");
@@ -680,7 +680,14 @@ export default function BandejaPage() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={10} className="p-0">
-                              <PanelDetalle guiaNum={item.guia} />
+                              {(item.estadoRevision === "abierto" || item.estadoRevision === "cerrado") && item.eventoGenerado ? (
+                                <div className="px-6 py-4 bg-muted/20 border-t border-border">
+                                  <span className="text-xs text-muted-foreground mr-2">Evento asociado:</span>
+                                  <button onClick={() => abrirRegistro(item.eventoGenerado!)} className="text-xs font-mono font-bold text-primary hover:underline">{item.eventoGenerado}</button>
+                                </div>
+                              ) : (
+                                <PanelDetalle guiaNum={item.guia} />
+                              )}
                             </td>
                           </tr>
                         )}
@@ -788,6 +795,12 @@ export default function BandejaPage() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={12} className="p-0">
+                              {(item.estadoRevision === "abierto" || item.estadoRevision === "cerrado") && item.eventoGenerado ? (
+                                <div className="px-6 py-4 bg-muted/20 border-t border-border">
+                                  <span className="text-xs text-muted-foreground mr-2">Evento asociado:</span>
+                                  <button onClick={() => abrirRegistro(item.eventoGenerado!)} className="text-xs font-mono font-bold text-primary hover:underline">{item.eventoGenerado}</button>
+                                </div>
+                              ) : (
                               <div>
                                 <PanelDetalle guiaNum={item.guia} />
                                 {item.infoInterventorOps && (
@@ -799,6 +812,7 @@ export default function BandejaPage() {
                                   </div>
                                 )}
                               </div>
+                              )}
                             </td>
                           </tr>
                         )}
