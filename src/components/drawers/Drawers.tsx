@@ -1858,7 +1858,7 @@ export function Persona360Drawer() {
 
 // ---- Vehículo 360 ----
 export function Vehiculo360Drawer() {
-  const { drawer, cerrarDrawer, abrirPersona, abrirRegistro } = useApp();
+  const { drawer, cerrarDrawer, abrirPersona, abrirRegistro, bumpData } = useApp();
   const [vehLesivaOpen, setVehLesivaOpen] = useState(false);
   const [vehLesivaCat, setVehLesivaCat] = useState("");
   const [vehLesivaSub, setVehLesivaSub] = useState("");
@@ -1962,6 +1962,7 @@ export function Vehiculo360Drawer() {
                       onClick={() => {
                         vehiculo.estado = "bloqueado";
                         forceUpdate(k => k + 1);
+                        bumpData();
                         toast({ title: "🚫 Vehículo bloqueado", description: `${vehiculo.placa} registrado en actividades lesivas.` });
                         setVehLesivaOpen(false); setVehLesivaCat(""); setVehLesivaSub(""); setVehLesivaObs("");
                       }}
@@ -1975,8 +1976,20 @@ export function Vehiculo360Drawer() {
               )}
             </>
           ) : (
-            <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg">
+            <div className="px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg space-y-2">
               <div className="text-xs font-semibold text-red-700">🚫 Vehículo Bloqueado</div>
+              <p className="text-[10px] text-red-600">Este vehículo fue bloqueado por actividad lesiva. Puedes reactivarlo si la situación ha sido resuelta.</p>
+              <button
+                onClick={() => {
+                  vehiculo.estado = "activo";
+                  forceUpdate(k => k + 1);
+                  bumpData();
+                  toast({ title: "✅ Vehículo reactivado", description: `${vehiculo.placa} ha sido reactivado.` });
+                }}
+                className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors"
+              >
+                Reactivar vehículo
+              </button>
             </div>
           )}
 

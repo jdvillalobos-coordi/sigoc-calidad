@@ -56,6 +56,7 @@ export default function CuadroContactoPage() {
   const [ccBusqueda, setCcBusqueda] = React.useState("");
   const [sortDir, setSortDir]     = React.useState<"desc" | "asc">("desc");
   const [subTabPersonas, setSubTabPersonas] = React.useState<"activos" | "desvinculados">("activos");
+  const [subTabVehiculos, setSubTabVehiculos] = React.useState<"activos" | "bloqueados">("activos");
   const [filtroDecision, setFiltroDecision] = React.useState<string>("todas");
 
   const filtrados = React.useMemo(() => {
@@ -99,8 +100,8 @@ export default function CuadroContactoPage() {
         if (c[v.vehiculoId]) c[v.vehiculoId].count++;
       });
     });
-    return Object.values(c).sort((a, b) => b.count - a.count).slice(0, 8);
-  }, [filtrados]);
+    return Object.values(c).sort((a, b) => b.count - a.count);
+  }, [filtrados, dataVersion]);
 
   const cuadroContacto = React.useMemo(() => {
     return personas.map((p) => {
@@ -243,29 +244,58 @@ export default function CuadroContactoPage() {
           )}
 
           {/* Vehículos */}
-          {tab === "vehiculos" && (
-            <div className="divide-y divide-border">
-              {rankVehiculos.length === 0
-                ? <p className="text-center py-8 text-muted-foreground text-xs">Sin vehículos vinculados en el período</p>
-                : rankVehiculos.map(({ vehiculo, count }, i) => (
-                  <div key={vehiculo.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="text-xs font-bold text-muted-foreground w-5 text-right flex-shrink-0">{i + 1}</span>
-                    <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
-                      <Car className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <button onClick={() => abrirVehiculo(vehiculo.id)} className="text-xs font-semibold text-foreground hover:text-primary hover:underline text-left">{vehiculo.placa}</button>
-                      <p className="text-[10px] text-muted-foreground">{vehiculo.tipo}</p>
-                    </div>
-                    <Bar value={count} max={rankVehiculos[0]?.count ?? 1} />
-                    <span className="text-xs font-bold text-foreground w-4 text-right flex-shrink-0">{count}</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border flex-shrink-0 ${vehiculo.estado === "bloqueado" ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-green-100 text-green-700 border-green-200"}`}>
-                      {vehiculo.estado === "bloqueado" ? "Bloqueado" : "Activo"}
-                    </span>
-                  </div>
-                ))}
+          {tab === "vehiculos" && (() => {
+            const vehActivos = rankVehiculos.filter(({ vehiculo }) => vehiculo.estado !== "bloqueado");
+            const vehBloqueados = rankVehiculos.filter(({ vehiculo }) => vehiculo.estado === "bloqueado");
+            const listaVeh = subTabVehiculos === "activos" ? vehActivos : vehBloqueados;
+            return (
+            <div>
+              <div className="flex border-b border-border">
+                <button
+                  onClick={() => setSubTabVehiculos("activos")}
+                  className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors relative ${
+                    subTabVehiculos === "activos" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Activos ({vehActivos.length})
+                  {subTabVehiculos === "activos" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />}
+                </button>
+                <button
+                  onClick={() => setSubTabVehiculos("bloqueados")}
+                  className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors relative ${
+                    subTabVehiculos === "bloqueados" ? "text-red-600" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Bloqueados ({vehBloqueados.length})
+                  {subTabVehiculos === "bloqueados" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500 rounded-t" />}
+                </button>
+              </div>
+              <div className="divide-y divide-border">
+                {listaVeh.length === 0
+                  ? <p className="text-center py-8 text-muted-foreground text-xs">
+                      {subTabVehiculos === "bloqueados" ? "No hay vehículos bloqueados" : "Sin vehículos activos vinculados en el período"}
+                    </p>
+                  : listaVeh.map(({ vehiculo, count }, i) => (
+                    <button key={vehiculo.id} onClick={() => abrirVehiculo(vehiculo.id)}
+                      className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-muted/30 transition-colors">
+                      <span className="text-xs font-bold text-muted-foreground w-5 text-right flex-shrink-0">{i + 1}</span>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        subTabVehiculos === "bloqueados" ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"
+                      }`}>
+                        <Car className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-xs font-semibold block ${subTabVehiculos === "bloqueados" ? "text-muted-foreground" : "text-foreground"}`}>{vehiculo.placa}</span>
+                        <span className="text-[10px] text-muted-foreground">{vehiculo.tipo}</span>
+                      </div>
+                      <Bar value={count} max={rankVehiculos[0]?.count ?? 1} />
+                      <span className="text-xs font-bold text-foreground w-4 text-right flex-shrink-0">{count} evento{count !== 1 ? "s" : ""}</span>
+                    </button>
+                  ))}
+              </div>
             </div>
-          )}
+            );
+          })()}
 
           {/* Personas */}
           {tab === "personas" && (() => {
