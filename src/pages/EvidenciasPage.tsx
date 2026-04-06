@@ -141,7 +141,7 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
         <div className="flex justify-center">
           {ev.veredictoOperador
             ? <VeredictoTag v={ev.veredictoOperador} />
-            : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">Pendiente</span>
+            : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">Pendiente</span>
           }
         </div>
         <span className="text-xs text-muted-foreground whitespace-nowrap text-right">{formatDate(ev.fecha)}</span>
