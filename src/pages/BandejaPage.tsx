@@ -138,7 +138,7 @@ function PanelDetalle({ guiaNum }: { guiaNum: string }) {
 }
 
 export default function BandejaPage() {
-  const { abrirGuia, setNuevaRegistroAbierto, setFormPrefill } = useApp();
+  const { setNuevaRegistroAbierto, setFormPrefill } = useApp();
   const [tab, setTab] = useState<TabId>("rce");
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filtroRegional, setFiltroRegional] = useState("todos");
@@ -628,12 +628,7 @@ export default function BandejaPage() {
                             {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
                           </td>
                           <td className="px-3 py-2.5">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); abrirGuia(item.guia); }}
-                              className="font-mono font-bold text-primary hover:underline"
-                            >
-                              {item.guia}
-                            </button>
+                            <span className="font-mono font-bold">{item.guia}</span>
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="font-medium truncate max-w-[160px]">{g?.nombreCliente ?? "—"}</div>
@@ -743,12 +738,7 @@ export default function BandejaPage() {
                             {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
                           </td>
                           <td className="px-3 py-2.5">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); abrirGuia(item.guia); }}
-                              className="font-mono font-bold text-primary hover:underline"
-                            >
-                              {item.guia}
-                            </button>
+                            <span className="font-mono font-bold">{item.guia}</span>
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="font-medium truncate max-w-[160px]">{g?.nombreCliente ?? "—"}</div>
