@@ -86,7 +86,7 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro } = useApp();
+  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, setFormPrefill, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [estadoFlujoFiltro, setEstadoFlujoFiltro] = useState<string>("todos");
@@ -298,7 +298,7 @@ export default function RegistrosPage() {
 
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground font-medium">{totalVisible} evento{totalVisible !== 1 ? "s" : ""}</span>
-          <button onClick={() => setNuevaRegistroAbierto(true)}
+          <button onClick={() => { setFormPrefill(null); setNuevaRegistroAbierto(true); }}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors">
             <Plus className="w-3.5 h-3.5" /> Nuevo evento
           </button>
