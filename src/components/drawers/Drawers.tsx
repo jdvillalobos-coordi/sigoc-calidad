@@ -727,19 +727,45 @@ export function RecordDetailDrawer() {
                   </select>
                 </div>
               </div>
-              {/* Crear evento de Dinero desde seguimiento */}
-              {(ev.estadoGestionSG === "Hurto" || ev.estadoGestionSG === "Pérdida" || ev.tipoEvento?.includes("RCE") || ev.tipoEvento?.includes("Seguimiento")) && ev.estadoFlujo !== "cerrado" && (
-                <div className="pt-2 border-t border-blue-200">
-                  <button
-                    onClick={() => {
-                      setFormPrefill({ categoria: "dineros", guia: ev.guias?.[0], terminal: ev.terminal });
-                      setNuevaRegistroAbierto(true);
-                    }}
-                    className="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors text-left"
-                  >
-                    Crear evento de Dinero
-                    <p className="font-normal text-[10px] text-blue-500 mt-0.5">Si durante el seguimiento se materializa un hurto o pérdida de dinero, crea un evento asociado.</p>
-                  </button>
+              {/* Reclasificar tipo de evento cuando se confirma hurto/pérdida */}
+              {(ev.estadoGestionSG === "Hurto" || ev.estadoGestionSG === "Pérdida") && ev.estadoFlujo !== "cerrado" && (
+                <div className="pt-2 border-t border-amber-200">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-semibold text-amber-800">Reclasificar tipo de evento</p>
+                    <p className="text-[10px] text-amber-600">El estado de gestión indica "{ev.estadoGestionSG}". Puedes actualizar el tipo de evento para reflejar el resultado de la investigación.</p>
+                    <select
+                      value={ev.tipoEvento}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) {
+                          eventos[idx].tipoEvento = e.target.value;
+                          eventos[idx].historial.push({
+                            id: `h-${Date.now()}`,
+                            fecha: new Date().toISOString(),
+                            usuarioNombre: usuarioLogueado.nombre,
+                            accion: `Reclasificó tipo de evento a "${e.target.value}"`,
+                          });
+                          setLocalEventos([...eventos]);
+                        }
+                      }}
+                      className="w-full border border-amber-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    >
+                      {ev.categoria === "dineros" && <>
+                        <option value="Seguimiento RCE">Seguimiento RCE</option>
+                        <option value="Hurto de dinero">Hurto de dinero</option>
+                        <option value="Pérdida de dinero">Pérdida de dinero</option>
+                        <option value="Faltante de dinero">Faltante de dinero</option>
+                        <option value="Faltante injustificado">Faltante injustificado</option>
+                        <option value="Fraude de dinero (Jineteo)">Fraude de dinero (Jineteo)</option>
+                        <option value="Dinero falsos">Dinero falsos</option>
+                      </>}
+                      {ev.categoria === "unidades" && <>
+                        <option value={ev.tipoEvento}>{ev.tipoEvento}</option>
+                        <option value="Hurto de unidad">Hurto de unidad</option>
+                        <option value="Pérdida de unidad">Pérdida de unidad</option>
+                      </>}
+                    </select>
+                  </div>
                 </div>
               )}
             </section>
