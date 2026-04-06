@@ -727,12 +727,12 @@ export function RecordDetailDrawer() {
                   </select>
                 </div>
               </div>
-              {/* Reclasificar tipo de evento cuando se confirma hurto/pérdida */}
-              {(ev.estadoGestionSG === "Hurto" || ev.estadoGestionSG === "Pérdida") && ev.estadoFlujo !== "cerrado" && (
+              {/* Reclasificar tipo de evento */}
+              {ev.estadoFlujo !== "cerrado" && (
                 <div className="pt-2 border-t border-amber-200">
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-amber-800">Reclasificar tipo de evento</p>
-                    <p className="text-[10px] text-amber-600">El estado de gestión indica "{ev.estadoGestionSG}". Puedes actualizar el tipo de evento para reflejar el resultado de la investigación.</p>
+                    <p className="text-xs font-semibold text-amber-800">Tipo de evento</p>
+                    <p className="text-[10px] text-amber-600">Si la investigación revela un resultado diferente, reclasifica el tipo de evento.</p>
                     <select
                       value={ev.tipoEvento}
                       onChange={(e) => {
