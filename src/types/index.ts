@@ -371,6 +371,8 @@ export interface Evidencia {
   justificacionOperador?: string;
   fechaRevision?: string;
   revisadoPor?: string;
+  asignadoA?: { id: string; nombre: string };
+  fechaAsignacion?: string;
 }
 
 // ---- Insumos Bandeja ----

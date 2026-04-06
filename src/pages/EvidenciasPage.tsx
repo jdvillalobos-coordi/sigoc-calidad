@@ -39,7 +39,7 @@ function VeredictoTag({ v }: { v: "confirma" | "falso_negativo" | "falso_positiv
   );
 }
 
-function EvidenciaRow({ ev }: { ev: Evidencia }) {
+function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void }) {
   const { abrirGuia, abrirRegistro } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [veredicto, setVeredicto] = useState(ev.veredictoOperador ?? "");
@@ -47,8 +47,36 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   const [guardado, setGuardado] = useState(!!ev.veredictoOperador);
   const [eventoGeneradoId, setEventoGeneradoId] = useState<string | null>(null);
 
-  const pendiente = !ev.veredictoOperador;
+  const esMia = ev.asignadoA?.id === usuarioLogueado.id;
+  const sinAsignar = !ev.asignadoA;
+  const deOtro = !!ev.asignadoA && !esMia;
   const generaEvento = veredicto === "falso_positivo";
+
+  function tomar(e: React.MouseEvent) {
+    e.stopPropagation();
+    ev.asignadoA = { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre };
+    ev.fechaAsignacion = new Date().toISOString().split("T")[0];
+    onUpdate();
+    toast({ title: "Evidencia asignada", description: `${ev.guia} asignada a ${usuarioLogueado.nombre}` });
+  }
+
+  function liberar(e: React.MouseEvent) {
+    e.stopPropagation();
+    ev.asignadoA = undefined;
+    ev.fechaAsignacion = undefined;
+    onUpdate();
+  }
+
+  function handleExpand() {
+    if (deOtro) return;
+    if (sinAsignar && !ev.veredictoOperador) {
+      ev.asignadoA = { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre };
+      ev.fechaAsignacion = new Date().toISOString().split("T")[0];
+      onUpdate();
+      toast({ title: "Evidencia asignada", description: `${ev.guia} asignada a ti al abrirla` });
+    }
+    setExpanded(v => !v);
+  }
 
   function guardar() {
     if (!veredicto) return;
@@ -119,11 +147,11 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   }
 
   return (
-    <div className="border-b border-border last:border-0">
+    <div className={`border-b border-border last:border-0 ${deOtro ? "opacity-60" : ""}`}>
       {/* Fila principal */}
       <button
-        className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors grid grid-cols-[1fr_100px_110px_130px_24px] gap-4 items-center"
-        onClick={() => setExpanded((v) => !v)}
+        className={`w-full text-left px-4 py-3 transition-colors grid grid-cols-[1fr_100px_130px_110px_130px_24px] gap-4 items-center ${deOtro ? "cursor-default" : "hover:bg-muted/40"}`}
+        onClick={handleExpand}
       >
         <div>
           <span
@@ -139,13 +167,30 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
         </div>
         <div className="flex justify-center"><ResultadoIABadge resultado={ev.resultadoIA} /></div>
         <div className="flex justify-center">
+          {ev.asignadoA ? (
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                {ev.asignadoA.nombre.split(" ").map(n => n[0]).slice(0, 2).join("")}
+              </div>
+              <span className="text-[11px] text-foreground whitespace-nowrap">{ev.asignadoA.nombre.split(" ").slice(0, 2).join(" ")}</span>
+            </div>
+          ) : (
+            <button onClick={tomar} className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap">
+              Tomar
+            </button>
+          )}
+        </div>
+        <div className="flex justify-center">
           {ev.veredictoOperador
             ? <VeredictoTag v={ev.veredictoOperador} />
             : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 whitespace-nowrap">Pendiente</span>
           }
         </div>
         <span className="text-xs text-muted-foreground whitespace-nowrap text-right">{formatDate(ev.fecha)}</span>
-        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        {deOtro
+          ? <span className="w-4" />
+          : expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        }
       </button>
 
       {/* Panel expandido */}
@@ -196,8 +241,12 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
               <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
                 <div><span className="font-medium">Guía:</span> {ev.guia}</div>
                 <div><span className="font-medium">Fecha:</span> {formatDate(ev.fecha)}</div>
+                {ev.asignadoA && <div><span className="font-medium">Asignada a:</span> {ev.asignadoA.nombre}</div>}
                 {ev.revisadoPor && <div><span className="font-medium">Revisado por:</span> {ev.revisadoPor}</div>}
               </div>
+              {esMia && !ev.veredictoOperador && (
+                <button onClick={liberar} className="mt-2 text-[10px] text-red-500 hover:underline">Liberar evidencia</button>
+              )}
             </div>
 
             {/* Veredicto */}
@@ -303,24 +352,43 @@ function EvidenciaRow({ ev }: { ev: Evidencia }) {
   );
 }
 
+type FiltroAsignacion = "todas" | "mis" | "sin_asignar";
+
 export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: { filtroTerminalExt?: string; fechaDesde?: string; fechaHasta?: string }) {
   const [filtroRevision, setFiltroRevision] = useState<FiltroRevision>("todos");
   const [filtroIA, setFiltroIA] = useState<FiltroIA>("todos");
+  const [filtroAsignacion, setFiltroAsignacion] = useState<FiltroAsignacion>("todas");
+  const [, forceUpdate] = useState(0);
+  const bump = () => forceUpdate(v => v + 1);
 
   const filtradas = evidencias.filter((ev) => {
     if (filtroRevision === "pendientes" && ev.veredictoOperador) return false;
     if (filtroRevision === "revisados" && !ev.veredictoOperador) return false;
     if (filtroIA === "cumple" && ev.resultadoIA !== "cumple") return false;
     if (filtroIA === "no_cumple" && ev.resultadoIA !== "no_cumple") return false;
+    if (filtroAsignacion === "mis" && ev.asignadoA?.id !== usuarioLogueado.id) return false;
+    if (filtroAsignacion === "sin_asignar" && ev.asignadoA) return false;
     if (filtroTerminalExt && filtroTerminalExt !== "todos" && ev.terminal !== filtroTerminalExt) return false;
     if (fechaDesde && ev.fecha < fechaDesde) return false;
     if (fechaHasta && ev.fecha > fechaHasta) return false;
     return true;
   });
 
+  const misCount = evidencias.filter(e => e.asignadoA?.id === usuarioLogueado.id && !e.veredictoOperador).length;
+  const sinAsignarCount = evidencias.filter(e => !e.asignadoA && !e.veredictoOperador).length;
+
   return (
     <>
       <div className="flex flex-wrap gap-2 items-center mb-4">
+        <select
+          value={filtroAsignacion}
+          onChange={(e) => setFiltroAsignacion(e.target.value as FiltroAsignacion)}
+          className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="todas">Asignación: Todas</option>
+          <option value="mis">Mis evidencias ({misCount})</option>
+          <option value="sin_asignar">Sin asignar ({sinAsignarCount})</option>
+        </select>
         <select
           value={filtroRevision}
           onChange={(e) => setFiltroRevision(e.target.value as FiltroRevision)}
@@ -343,9 +411,10 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
       </div>
 
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="grid grid-cols-[1fr_100px_110px_130px_24px] gap-4 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1fr_100px_130px_110px_130px_24px] gap-4 px-4 py-2.5 bg-muted/30 border-b border-border text-xs font-medium text-muted-foreground">
           <span>Guía / Terminal</span>
           <span className="text-center">Resultado IA</span>
+          <span className="text-center">Asignada a</span>
           <span className="text-center">Estado revisión</span>
           <span className="text-right">Fecha</span>
           <span />
@@ -355,7 +424,7 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
             No hay evidencias que coincidan con los filtros seleccionados.
           </div>
         ) : (
-          filtradas.map((ev) => <EvidenciaRow key={ev.id} ev={ev} />)
+          filtradas.map((ev) => <EvidenciaRow key={ev.id} ev={ev} onUpdate={bump} />)
         )}
       </div>
     </>
