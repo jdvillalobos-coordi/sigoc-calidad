@@ -117,7 +117,10 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
         personasResponsables: personasResp,
         personasParticipantes: [],
         vehiculosVinculados: [],
-        descripcionHechos: `El operador tomó una foto que no corresponde a la evidencia de entrega. Guía ${ev.guia}, terminal ${ev.terminal}.${justificacion ? ` Justificación del auditor: ${justificacion}` : ""}`.trim(),
+        descripcionHechos: `El operador tomó una foto que no corresponde a la evidencia de entrega. Guía ${ev.guia}, terminal ${ev.terminal}.`,
+        resultadoIA: ev.resultadoIA,
+        veredictoOperador: "falso_positivo",
+        justificacionOperador: justificacion || undefined,
         estadoFlujo: "cerrado",
         asignadoA: {
           id: usuarioLogueado.id,
@@ -141,6 +144,7 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
       bumpData();
       toast({ title: `📸 Evento ${id} creado automáticamente`, description: `${tipoEv} — ${ev.operadorNombre ?? "Operador"}` });
     } else {
+      bumpData();
       toast({ title: "✅ Veredicto guardado", description: `Evidencia ${ev.id} revisada.` });
     }
 

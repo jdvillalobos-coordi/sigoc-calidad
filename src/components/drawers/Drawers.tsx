@@ -778,8 +778,8 @@ export function RecordDetailDrawer() {
                 ...(ev.equipoTenencia != null ? [["Equipo tenencia", `${ev.equipoTenencia} unidad(es)`]] : []),
                 ...(ev.categoriaLesivaEvento ? [["Categoría lesiva", ev.categoriaLesivaEvento]] : []),
                 ...(ev.subcategoriaLesivaEvento ? [["Subcategoría lesiva", ev.subcategoriaLesivaEvento]] : []),
-                ...(ev.resultadoIA ? [["Resultado IA", ev.resultadoIA]] : []),
-                ...(ev.veredictoOperador ? [["Veredicto operador", ev.veredictoOperador]] : []),
+                ...(ev.resultadoIA ? [["Resultado IA", ev.resultadoIA === "cumple" ? "Cumple" : "No cumple"]] : []),
+                ...(ev.veredictoOperador ? [["Veredicto auditor", ev.veredictoOperador === "confirma" ? "Confirmado" : ev.veredictoOperador === "falso_negativo" ? "Falso negativo" : "Falso positivo"]] : []),
                 ...(ev.direccion ? [["Dirección", ev.direccion]] : []),
               ].map(([l, v]) => (
                 <div key={l}>
@@ -864,10 +864,10 @@ export function RecordDetailDrawer() {
             </div>
 
 
-            {/* Justificación operador */}
+            {/* Justificación del auditor de evidencias */}
             {ev.justificacionOperador && (
               <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <div className="text-xs text-muted-foreground mb-1">Justificación operador</div>
+                <div className="text-xs text-muted-foreground mb-1">Observaciones del auditor</div>
                 <p className="text-sm">{ev.justificacionOperador}</p>
               </div>
             )}
