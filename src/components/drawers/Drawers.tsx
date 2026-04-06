@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
@@ -1642,6 +1642,39 @@ export function Persona360Drawer() {
             </div>
           )}
 
+          {/* Historial de decisiones */}
+          {(() => {
+            const decisiones = getDecisionesPersona(persona.id);
+            if (decisiones.length === 0) return null;
+            const labelMap: Record<string, string> = {
+              caso_insuficiente: "Sin acción",
+              llamado_atencion_verbal: "Llamado verbal",
+              llamado_atencion_escrito: "Llamado escrito",
+              suspension_temporal: "Suspensión temporal",
+              proceso_disciplinario: "Proceso disciplinario",
+              desvinculacion: "Desvinculación",
+              escalamiento_seguridad: "Escalamiento seguridad",
+              sin_hallazgos: "Sin hallazgos",
+            };
+            return (
+              <section className="border border-border rounded-xl p-4 space-y-3">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5"><Scale className="w-4 h-4" /> Decisiones registradas ({decisiones.length})</h3>
+                <div className="space-y-2">
+                  {decisiones.map(d => (
+                    <div key={d.id} className="bg-muted/50 rounded-lg p-3 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold">{labelMap[d.decision] ?? d.decision}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatDate(d.fecha)}</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">Por: {d.tomadaPor} · {d.eventosVinculados.length} evento{d.eventosVinculados.length !== 1 ? "s" : ""}</div>
+                      {d.observaciones && <p className="text-[11px] text-muted-foreground italic">{d.observaciones}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
+
           {/* Actividades Lesivas registradas */}
           {(() => {
             const actLesivas = getActividadesLesivasPorPersona(persona.id);
@@ -2339,6 +2372,17 @@ export function ResolucionAcumulativaPanel() {
           accion: `Cerrado por resolución acumulativa — ${decisionLabel}`,
         });
       }
+    });
+
+    decisionesPersona.unshift({
+      id: `DEC-${String(decisionesPersona.length + 1).padStart(3, "0")}`,
+      personaId: persona!.id,
+      personaNombre: persona!.nombre,
+      decision: decision as ResolucionFinal,
+      observaciones: observaciones || undefined,
+      eventosVinculados: evPersona.map(e => e.id),
+      fecha: new Date().toISOString().split("T")[0],
+      tomadaPor: usuarioLogueado.nombre,
     });
 
     if (alertaRef) alertaRef.estado = "revisada";

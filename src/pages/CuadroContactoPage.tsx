@@ -1,7 +1,7 @@
 import React from "react";
-import { eventos, personas, vehiculos, PAISES_REGIONALES, actividadesLesivas, estudiosSeguridad } from "@/data/mockData";
+import { eventos, personas, vehiculos, PAISES_REGIONALES, actividadesLesivas, estudiosSeguridad, decisionesPersona } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
-import { Users, Car, MapPin, Building2, CalendarDays, X, Search } from "lucide-react";
+import { Users, Car, MapPin, Building2, CalendarDays, X, Search, ArrowUpDown } from "lucide-react";
 import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { CategoriaEvento } from "@/types";
@@ -36,6 +36,17 @@ function Bar({ value, max }: { value: number; max: number }) {
   );
 }
 
+const DECISION_LABELS: Record<string, string> = {
+  caso_insuficiente: "Sin acción",
+  llamado_atencion_verbal: "Llamado verbal",
+  llamado_atencion_escrito: "Llamado escrito",
+  suspension_temporal: "Suspensión",
+  proceso_disciplinario: "Proceso disc.",
+  desvinculacion: "Desvinculado",
+  escalamiento_seguridad: "Esc. seguridad",
+  sin_hallazgos: "Sin hallazgos",
+};
+
 export default function CuadroContactoPage() {
   const { abrirPersona, abrirVehiculo, abrirTerminal } = useApp();
   const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
@@ -43,6 +54,7 @@ export default function CuadroContactoPage() {
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
   const [calOpen, setCalOpen]     = React.useState(false);
   const [ccBusqueda, setCcBusqueda] = React.useState("");
+  const [sortDir, setSortDir]     = React.useState<"desc" | "asc">("desc");
 
   const filtrados = React.useMemo(() => {
     return eventos.filter((e) => {
@@ -97,16 +109,14 @@ export default function CuadroContactoPage() {
       const tieneEventosEnPeriodo = evsPeriodo.length > 0;
       if (!tieneEventosEnPeriodo) return null;
 
-      const evAbiertos = evsPeriodo.filter((e) => e.estado === "abierto").length;
-      const evCerradosConHallazgo = evsPeriodo.filter((e) => e.estado === "cerrado" && e.resolucionFinal && e.resolucionFinal !== "sin_hallazgos" && e.resolucionFinal !== "caso_insuficiente").length;
-      const estudios = estudiosSeguridad.filter((e) => e.personaId === p.id);
-      const estudiosConHallazgo = estudios.filter((e) => e.resultado === "hallazgos_encontrados").length;
-      const riesgo = (evAbiertos * 2) + (evCerradosConHallazgo * 1) + (estudiosConHallazgo * 3);
-      let dinero = 0;
-      evsPeriodo.forEach((e) => { if (e.valorAfectacion) dinero += e.valorAfectacion; if (e.valorDinero) dinero += e.valorDinero; });
-      return { ...p, totalEventos: evsPeriodo.length, riesgo, dinero, lesivas: actividadesLesivas.filter((a) => a.personaId === p.id).length };
-    }).filter(Boolean).sort((a, b) => (b?.riesgo ?? 0) - (a?.riesgo ?? 0));
-  }, [filtrados]);
+      const lesivas = actividadesLesivas.filter((a) => a.personaId === p.id).length;
+      const ultimaDecision = decisionesPersona.filter(d => d.personaId === p.id).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+      return { ...p, totalEventos: evsPeriodo.length, lesivas, ultimaDecision };
+    }).filter(Boolean).sort((a, b) => {
+      const diff = (a?.totalEventos ?? 0) - (b?.totalEventos ?? 0);
+      return sortDir === "desc" ? -diff : diff;
+    });
+  }, [filtrados, sortDir]);
 
   const cuadroFiltrado = React.useMemo(() => {
     if (!ccBusqueda) return cuadroContacto;
@@ -253,6 +263,13 @@ export default function CuadroContactoPage() {
                     onChange={(e) => setCcBusqueda(e.target.value)}
                   />
                 </div>
+                <button
+                  onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border"
+                >
+                  <ArrowUpDown className="w-3 h-3" />
+                  {sortDir === "desc" ? "Más eventos primero" : "Menos eventos primero"}
+                </button>
                 <span className="text-[11px] text-muted-foreground">{cuadroContacto.length} personas</span>
               </div>
 
@@ -271,14 +288,22 @@ export default function CuadroContactoPage() {
                         <span className="text-xs font-semibold text-foreground truncate block">{p.nombre}</span>
                         <span className="text-[10px] text-muted-foreground">{p.cargo} · {p.terminal}</span>
                       </div>
-                      {p.totalEventos > 0 && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold flex-shrink-0">
-                          {p.totalEventos} evento{p.totalEventos !== 1 ? "s" : ""}
-                        </span>
-                      )}
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold flex-shrink-0">
+                        {p.totalEventos} evento{p.totalEventos !== 1 ? "s" : ""}
+                      </span>
                       {p.lesivas > 0 && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium flex-shrink-0">
                           {p.lesivas} lesiva{p.lesivas > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {p.ultimaDecision && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 border ${
+                          p.ultimaDecision.decision === "desvinculacion" ? "bg-red-50 text-red-700 border-red-200"
+                          : p.ultimaDecision.decision === "proceso_disciplinario" ? "bg-orange-50 text-orange-700 border-orange-200"
+                          : p.ultimaDecision.decision === "caso_insuficiente" || p.ultimaDecision.decision === "sin_hallazgos" ? "bg-green-50 text-green-700 border-green-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {DECISION_LABELS[p.ultimaDecision.decision] ?? p.ultimaDecision.decision}
                         </span>
                       )}
                     </button>

@@ -13,6 +13,7 @@ import type {
   SolicitudCCTV,
   ActividadLesiva,
   CategoriaLesiva,
+  DecisionPersona,
 } from "@/types";
 
 // ============================================================
@@ -2592,4 +2593,19 @@ export function getActividadesLesivasPorPersona(personaId: string): ActividadLes
 
 export function getActividadesLesivasPorVehiculo(vehiculoId: string): ActividadLesiva[] {
   return actividadesLesivas.filter((a) => a.vehiculoId === vehiculoId);
+}
+
+// ============================================================
+// DECISIONES SOBRE PERSONAS
+// ============================================================
+export const decisionesPersona: DecisionPersona[] = [
+  { id: "DEC-001", personaId: "1020345678", personaNombre: "Luisa Fernanda Torres Cano", decision: "desvinculacion", observaciones: "Responsabilidad directa comprobada en faltante de unidades y hurto calificado. Evidencia de CCTV.", eventosVinculados: ["UNI-001", "UNI-002"], fecha: "2026-03-05", tomadaPor: "Sandra Herrera" },
+  { id: "DEC-002", personaId: "79845623", personaNombre: "Hernán Darío Ríos Zapata", decision: "llamado_atencion_escrito", observaciones: "Reincidencia en novedades de dinero. Primer llamado formal.", eventosVinculados: ["DIN-001"], fecha: "2026-03-10", tomadaPor: "Jorge Castaño" },
+  { id: "DEC-003", personaId: "39876543", personaNombre: "Claudia Marcela Patiño Soto", decision: "proceso_disciplinario", observaciones: "Entrega de paquetes a terceros no autorizados en 4 ocasiones. RCE no recaudado por $8.2M. Se radica denuncia penal.", eventosVinculados: ["DIN-003", "DIN-004"], fecha: "2026-02-28", tomadaPor: "Sandra Herrera" },
+  { id: "DEC-004", personaId: "1067891234", personaNombre: "Javier Ernesto Castillo Nieto", decision: "desvinculacion", observaciones: "Retención de dinero RCE por $4.5M. Confesión grabada.", eventosVinculados: ["DIN-005"], fecha: "2026-03-08", tomadaPor: "Sandra Herrera" },
+  { id: "DEC-005", personaId: "43567891", personaNombre: "Marta Cecilia Quintero Álvarez", decision: "llamado_atencion_verbal", eventosVinculados: ["UNI-003"], fecha: "2026-03-15", tomadaPor: "Ana Martínez" },
+];
+
+export function getDecisionesPersona(personaId: string): DecisionPersona[] {
+  return decisionesPersona.filter(d => d.personaId === personaId);
 }

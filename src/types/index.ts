@@ -30,6 +30,18 @@ export type TipoEscalamiento = "persona" | "cctv";
 
 export type TipoPersona = "empleado" | "aliado" | "cliente";
 
+// ---- Decisión sobre persona ----
+export interface DecisionPersona {
+  id: string;
+  personaId: string;
+  personaNombre: string;
+  decision: ResolucionFinal;
+  observaciones?: string;
+  eventosVinculados: string[];
+  fecha: string;
+  tomadaPor: string;
+}
+
 // ---- PersonaVinculada ----
 export interface PersonaVinculada {
   personaId: string;
