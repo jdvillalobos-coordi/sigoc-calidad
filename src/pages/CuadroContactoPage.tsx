@@ -55,6 +55,7 @@ export default function CuadroContactoPage() {
   const [calOpen, setCalOpen]     = React.useState(false);
   const [ccBusqueda, setCcBusqueda] = React.useState("");
   const [sortDir, setSortDir]     = React.useState<"desc" | "asc">("desc");
+  const [filtroDecision, setFiltroDecision] = React.useState<string>("todas");
 
   const filtrados = React.useMemo(() => {
     return eventos.filter((e) => {
@@ -119,10 +120,20 @@ export default function CuadroContactoPage() {
   }, [filtrados, sortDir]);
 
   const cuadroFiltrado = React.useMemo(() => {
-    if (!ccBusqueda) return cuadroContacto;
-    const q = ccBusqueda.toLowerCase();
-    return cuadroContacto.filter((p) => p?.nombre.toLowerCase().includes(q) || p?.cedula.toLowerCase().includes(q) || p?.terminal.toLowerCase().includes(q));
-  }, [cuadroContacto, ccBusqueda]);
+    let lista = cuadroContacto;
+    if (filtroDecision !== "todas") {
+      if (filtroDecision === "sin_decision") {
+        lista = lista.filter(p => !p?.ultimaDecision);
+      } else {
+        lista = lista.filter(p => p?.ultimaDecision?.decision === filtroDecision);
+      }
+    }
+    if (ccBusqueda) {
+      const q = ccBusqueda.toLowerCase();
+      lista = lista.filter((p) => p?.nombre.toLowerCase().includes(q) || p?.cedula.toLowerCase().includes(q) || p?.terminal.toLowerCase().includes(q));
+    }
+    return lista;
+  }, [cuadroContacto, ccBusqueda, filtroDecision]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -253,24 +264,50 @@ export default function CuadroContactoPage() {
           {/* Personas */}
           {tab === "personas" && (
             <div>
-              <div className="px-4 py-3 border-b border-border flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <input
-                    className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Buscar nombre, cédula o terminal..."
-                    value={ccBusqueda}
-                    onChange={(e) => setCcBusqueda(e.target.value)}
-                  />
+              <div className="px-4 py-3 border-b border-border space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <input
+                      className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="Buscar nombre, cédula o terminal..."
+                      value={ccBusqueda}
+                      onChange={(e) => setCcBusqueda(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border"
+                  >
+                    <ArrowUpDown className="w-3 h-3" />
+                    {sortDir === "desc" ? "Más eventos primero" : "Menos eventos primero"}
+                  </button>
+                  <span className="text-[11px] text-muted-foreground">{cuadroContacto.length} personas</span>
                 </div>
-                <button
-                  onClick={() => setSortDir(d => d === "desc" ? "asc" : "desc")}
-                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border"
-                >
-                  <ArrowUpDown className="w-3 h-3" />
-                  {sortDir === "desc" ? "Más eventos primero" : "Menos eventos primero"}
-                </button>
-                <span className="text-[11px] text-muted-foreground">{cuadroContacto.length} personas</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { value: "todas", label: "Todas" },
+                    { value: "sin_decision", label: "Sin decisión" },
+                    { value: "desvinculacion", label: "Desvinculado" },
+                    { value: "proceso_disciplinario", label: "Proceso disc." },
+                    { value: "suspension_temporal", label: "Suspensión" },
+                    { value: "llamado_atencion_escrito", label: "Llamado escrito" },
+                    { value: "llamado_atencion_verbal", label: "Llamado verbal" },
+                    { value: "caso_insuficiente", label: "Sin acción" },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setFiltroDecision(opt.value)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors ${
+                        filtroDecision === opt.value
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card text-muted-foreground border-border hover:text-foreground"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
