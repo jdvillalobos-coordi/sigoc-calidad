@@ -324,7 +324,7 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
           onChange={(e) => setFiltroRevision(e.target.value as FiltroRevision)}
           className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
         >
-          <option value="todos">Todos</option>
+          <option value="todos">Estado: Todos</option>
           <option value="pendientes">Pendientes</option>
           <option value="revisados">Revisados</option>
         </select>
@@ -334,8 +334,8 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
           className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="todos">Resultado IA: Todos</option>
-          <option value="cumple">✅ Cumple</option>
-          <option value="no_cumple">❌ No cumple</option>
+          <option value="cumple">Cumple</option>
+          <option value="no_cumple">No cumple</option>
         </select>
         <span className="text-xs text-muted-foreground ml-auto">{filtradas.length} evidencias</span>
       </div>
