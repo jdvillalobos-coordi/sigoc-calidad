@@ -48,7 +48,7 @@ const DECISION_LABELS: Record<string, string> = {
 };
 
 export default function CuadroContactoPage() {
-  const { abrirPersona, abrirVehiculo, abrirTerminal } = useApp();
+  const { abrirPersona, abrirVehiculo, abrirTerminal, dataVersion } = useApp();
   const [cat, setCat]             = React.useState<CategoriaEvento | "todas">("todas");
   const [tab, setTab]             = React.useState<TabId>("regionales");
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
@@ -118,7 +118,7 @@ export default function CuadroContactoPage() {
       const diff = (a?.totalEventos ?? 0) - (b?.totalEventos ?? 0);
       return sortDir === "desc" ? -diff : diff;
     });
-  }, [filtrados, sortDir]);
+  }, [filtrados, sortDir, dataVersion]);
 
   const cuadroFiltrado = React.useMemo(() => {
     let lista = cuadroContacto;

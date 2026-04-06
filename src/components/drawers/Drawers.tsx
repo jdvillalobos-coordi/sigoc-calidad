@@ -2315,7 +2315,7 @@ const DECISION_OPTIONS: { value: ResolucionFinal; label: string; icon: string; c
 const REQUIERE_OBSERVACIONES: ResolucionFinal[] = ["desvinculacion", "proceso_disciplinario"];
 
 export function ResolucionAcumulativaPanel() {
-  const { drawer, cerrarDrawer, abrirRegistro } = useApp();
+  const { drawer, cerrarDrawer, abrirRegistro, bumpData } = useApp();
   const [decision, setDecision] = useState<ResolucionFinal | "">("");
   const [observaciones, setObservaciones] = useState("");
   const [confirmado, setConfirmado] = useState(false);
@@ -2387,6 +2387,7 @@ export function ResolucionAcumulativaPanel() {
 
     if (alertaRef) alertaRef.estado = "revisada";
 
+    bumpData();
     toast({ title: "✅ Decisión registrada", description: `Se aplicó "${decisionLabel}" a ${abiertosAntes} evento${abiertosAntes !== 1 ? "s" : ""} de ${persona!.nombre}` });
     setTimeout(() => {
       cerrarDrawer();

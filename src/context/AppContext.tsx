@@ -35,6 +35,8 @@ interface AppContextType {
   registrosNavFiltro: RegistrosNavFiltro | null;
   setRegistrosNavFiltro: (f: RegistrosNavFiltro | null) => void;
   irARegistros: (filtro: RegistrosNavFiltro) => void;
+  dataVersion: number;
+  bumpData: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -47,6 +49,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [formPrefill, setFormPrefill] = useState<FormPrefill | null>(null);
   const [notificacionesState, setNotificacionesState] = useState<Notificacion[]>(notificacionesIniciales);
   const [registrosNavFiltro, setRegistrosNavFiltro] = useState<RegistrosNavFiltro | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
+  const bumpData = useCallback(() => setDataVersion(v => v + 1), []);
 
   const irARegistros = useCallback((filtro: RegistrosNavFiltro) => {
     setRegistrosNavFiltro(filtro);
@@ -98,6 +102,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         registrosNavFiltro,
         setRegistrosNavFiltro,
         irARegistros,
+        dataVersion,
+        bumpData,
       }}
     >
       {children}
