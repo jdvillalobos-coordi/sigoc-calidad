@@ -290,6 +290,23 @@ export function RecordDetailDrawer() {
       fechaResolucion: new Date().toISOString(),
       resueltoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
     });
+
+    const personasDelEvento = [...(ev!.personasResponsables ?? []), ...(ev!.personasParticipantes ?? [])];
+    if (personasDelEvento.length > 0) {
+      personasDelEvento.forEach(pv => {
+        decisionesPersona.unshift({
+          id: `DEC-${Date.now()}-${pv.personaId.slice(-4)}`,
+          personaId: pv.personaId,
+          personaNombre: pv.nombre,
+          decision: resolucionSeleccionada as ResolucionFinal,
+          observaciones: observacionResolucion || undefined,
+          eventosVinculados: [ev!.id],
+          fecha: new Date().toISOString().split("T")[0],
+          tomadaPor: usuarioLogueado.nombre,
+        });
+      });
+    }
+
     setResolviendoAbierto(false);
     setResolucionSeleccionada("");
     setObservacionResolucion("");

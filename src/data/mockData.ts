@@ -2621,3 +2621,71 @@ export const decisionesPersona: DecisionPersona[] = [
 export function getDecisionesPersona(personaId: string): DecisionPersona[] {
   return decisionesPersona.filter(d => d.personaId === personaId);
 }
+
+// ============================================================
+// PERSISTENCIA EN LOCALSTORAGE
+// ============================================================
+const STORAGE_KEY = "sigoc_data_v1";
+
+interface PersistedData {
+  eventos: Evento[];
+  vehiculosEstado: Record<string, string>;
+  decisionesPersona: DecisionPersona[];
+  actividadesLesivas: ActividadLesiva[];
+  insumosRCE: InsumoRCE[];
+  insumosFaltantes: InsumoFaltante[];
+  evidencias: Evidencia[];
+}
+
+export function persistirDatos() {
+  try {
+    const data: PersistedData = {
+      eventos: eventos,
+      vehiculosEstado: Object.fromEntries(vehiculos.map(v => [v.id, v.estado])),
+      decisionesPersona: decisionesPersona,
+      actividadesLesivas: actividadesLesivas,
+      insumosRCE: insumosRCE,
+      insumosFaltantes: insumosFaltantes,
+      evidencias: evidencias,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch { /* quota exceeded or private mode */ }
+}
+
+function restaurarDatos() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data: PersistedData = JSON.parse(raw);
+
+    if (data.eventos?.length) {
+      eventos.length = 0;
+      data.eventos.forEach(e => eventos.push(e));
+    }
+    if (data.vehiculosEstado) {
+      vehiculos.forEach(v => { if (data.vehiculosEstado[v.id]) v.estado = data.vehiculosEstado[v.id] as typeof v.estado; });
+    }
+    if (data.decisionesPersona?.length) {
+      decisionesPersona.length = 0;
+      data.decisionesPersona.forEach(d => decisionesPersona.push(d));
+    }
+    if (data.actividadesLesivas) {
+      actividadesLesivas.length = 0;
+      data.actividadesLesivas.forEach(a => actividadesLesivas.push(a));
+    }
+    if (data.insumosRCE) {
+      insumosRCE.length = 0;
+      data.insumosRCE.forEach(i => insumosRCE.push(i));
+    }
+    if (data.insumosFaltantes) {
+      insumosFaltantes.length = 0;
+      data.insumosFaltantes.forEach(i => insumosFaltantes.push(i));
+    }
+    if (data.evidencias) {
+      evidencias.length = 0;
+      data.evidencias.forEach(e => evidencias.push(e));
+    }
+  } catch { /* corrupted data, ignore */ }
+}
+
+restaurarDatos();

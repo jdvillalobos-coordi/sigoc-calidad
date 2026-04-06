@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import type { PaginaActiva, DrawerState, FormPrefill, Notificacion, TipoNotificacion } from "@/types";
-import { notificaciones as notificacionesIniciales } from "@/data/mockData";
+import { notificaciones as notificacionesIniciales, persistirDatos } from "@/data/mockData";
 
 export interface RegistrosNavFiltro {
   estadoFlujo?: string;
@@ -50,7 +50,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notificacionesState, setNotificacionesState] = useState<Notificacion[]>(notificacionesIniciales);
   const [registrosNavFiltro, setRegistrosNavFiltro] = useState<RegistrosNavFiltro | null>(null);
   const [dataVersion, setDataVersion] = useState(0);
-  const bumpData = useCallback(() => setDataVersion(v => v + 1), []);
+  const bumpData = useCallback(() => { setDataVersion(v => v + 1); persistirDatos(); }, []);
 
   const irARegistros = useCallback((filtro: RegistrosNavFiltro) => {
     setRegistrosNavFiltro(filtro);
