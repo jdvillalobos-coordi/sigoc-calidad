@@ -376,11 +376,11 @@ export default function RegistrosPage() {
                         <CategoriaBadge categoria={e.categoria} />
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{e.id}</td>
-                      <td className="px-4 py-3 max-w-0">
-                        <span className="truncate block text-xs font-medium text-foreground">{e.tipoEvento}</span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                      <td className="px-4 py-3 min-w-[200px]">
+                        <span className="block text-xs font-medium text-foreground">{e.tipoEvento}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           {responsable && (
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[140px]">
+                            <span className="text-[10px] text-muted-foreground">
                               {responsable.nombre}
                             </span>
                           )}
