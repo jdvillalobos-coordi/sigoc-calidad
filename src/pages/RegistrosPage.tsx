@@ -142,7 +142,7 @@ export default function RegistrosPage() {
     const map = new Map<string, string>();
     eventos.forEach((e) => { if (e.asignadoA?.id) map.set(e.asignadoA.id, e.asignadoA.nombre); });
     return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, []);
+  }, [dataVersion]);
 
   const q = busquedaQuery.toLowerCase().trim();
 
@@ -198,6 +198,7 @@ export default function RegistrosPage() {
   function toggleSort(field: typeof sortField) {
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortField(field); setSortDir("desc"); }
+    setPage(1);
   }
 
   function SortIcon({ field }: { field: typeof sortField }) {

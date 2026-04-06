@@ -40,9 +40,9 @@ export default function InicioPage() {
   }, [cat, dateRange, dataVersion]);
 
   /* Mi trabajo */
-  const misEventos    = eventos.filter((e) => e.asignadoA?.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado");
-  const escaladosAMi  = eventos.filter((e) => e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado");
-  const misCerrados   = eventos.filter((e) => e.asignadoA?.id === usuarioLogueado.id && e.estadoFlujo === "cerrado");
+  const misEventos    = React.useMemo(() => eventos.filter((e) => e.asignadoA?.id === usuarioLogueado.id && e.estadoFlujo !== "cerrado"), [dataVersion]);
+  const escaladosAMi  = React.useMemo(() => eventos.filter((e) => e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado"), [dataVersion]);
+  const misCerrados   = React.useMemo(() => eventos.filter((e) => e.asignadoA?.id === usuarioLogueado.id && e.estadoFlujo === "cerrado"), [dataVersion]);
 
   /* KPIs */
   const abiertos        = filtrados.filter((e) => e.estadoFlujo === "abierto");

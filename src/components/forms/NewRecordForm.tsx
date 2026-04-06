@@ -252,6 +252,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     if (!tipoEvento) camposFaltantes.push("Tipo de evento");
     if (!tipoEntidad) camposFaltantes.push("Tipo de entidad");
     if (!terminal) camposFaltantes.push("Terminal");
+    if (!fecha) camposFaltantes.push("Fecha");
     if (!descripcion) camposFaltantes.push("Descripción");
     if (esVehiculo && !placaInput) camposFaltantes.push("Placa del vehículo");
     if (!personaOpcional && Object.keys(cedulasPersona).length === 0) camposFaltantes.push("Persona responsable");
@@ -412,7 +413,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
         <div className="border-b border-border px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {categoria && !eventoCreado && <button onClick={() => setCategoria(null)} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
+              {categoria && !eventoCreado && <button onClick={() => { setCategoria(null); setTipoEvento(""); setTipoEntidad(""); }} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
               <h2 className="font-bold text-base">
                 {eventoCreado ? `Evento ${eventoCreado} creado` : categoria ? `Nuevo evento — ${CATEGORIAS.find(c => c.id === categoria)?.label}` : "Nuevo evento"}
               </h2>

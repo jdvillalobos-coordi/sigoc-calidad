@@ -71,7 +71,7 @@ export default function CuadroContactoPage() {
       const okCat = cat === "todas" || e.categoria === cat;
       return okFecha && okCat;
     });
-  }, [cat, dateRange]);
+  }, [cat, dateRange, dataVersion]);
 
   const termToRegional = React.useMemo(() => {
     const map: Record<string, string> = {};

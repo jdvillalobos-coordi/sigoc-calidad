@@ -1,9 +1,9 @@
-import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getVehiculoPorPlaca, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona } from "@/data/mockData";
+import React, { useState, useEffect } from "react";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getVehiculoPorPlaca, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona, buscarPersonas } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
-import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV } from "@/types";
+import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV, Persona, PersonaVinculada } from "@/types";
 import { toast } from "@/hooks/use-toast";
 
 // ---- Flujo de trabajo (simplificado: Abierto → Escalado? → Cerrado) ----
@@ -82,6 +82,84 @@ const PERSONAS_ESCALAMIENTO = [
   { id: "u-inv-buc", nombre: "Diego Fernando Ruiz", cargo: "Investigador SG — Bucaramanga", grupo: "Investigadores Terminal" },
 ];
 
+// ---- Buscador de personas para hallazgos de investigación ----
+function PersonaHallazgoBuscador({ ev, setLocalEventos }: { ev: Evento; setLocalEventos: React.Dispatch<React.SetStateAction<Evento[]>> }) {
+  const [busqueda, setBusqueda] = useState("");
+  const [focused, setFocused] = useState(false);
+  const sugerencias = buscarPersonas(busqueda, 6);
+  const showSugerencias = focused && busqueda.length >= 2 && sugerencias.length > 0;
+
+  const vinculadas: PersonaVinculada[] = [...(ev.personasResponsables ?? []), ...(ev.personasParticipantes ?? [])];
+  const personasHallazgo = (ev.personasResponsablesHechos ?? "").split("|").filter(Boolean);
+
+  function agregar(p: Persona) {
+    const yaExiste = personasHallazgo.includes(p.cedula);
+    if (yaExiste) return;
+    const nuevo = [...personasHallazgo, p.cedula].join("|");
+    const idx = eventos.findIndex(x => x.id === ev.id);
+    if (idx !== -1) { eventos[idx].personasResponsablesHechos = nuevo; setLocalEventos([...eventos]); }
+    setBusqueda("");
+  }
+
+  function quitar(cedula: string) {
+    const nuevo = personasHallazgo.filter(c => c !== cedula).join("|");
+    const idx = eventos.findIndex(x => x.id === ev.id);
+    if (idx !== -1) { eventos[idx].personasResponsablesHechos = nuevo || undefined; setLocalEventos([...eventos]); }
+  }
+
+  return (
+    <div>
+      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Personas responsables de los hechos</label>
+      {personasHallazgo.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {personasHallazgo.map(ced => {
+            const p = personas.find(x => x.cedula === ced);
+            return (
+              <span key={ced} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-xs bg-blue-50 text-blue-800 border border-blue-200">
+                {p ? `${p.nombre} · ${ced}` : ced}
+                <button onClick={() => quitar(ced)} className="hover:bg-blue-200 rounded-full p-0.5 ml-0.5"><X className="w-3 h-3" /></button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+      <div className="relative">
+        <input
+          className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          placeholder="Buscar por nombre o cédula..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 200)}
+        />
+        {showSugerencias && (
+          <div className="absolute z-20 left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+            {sugerencias.filter(s => !personasHallazgo.includes(s.cedula)).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center gap-2"
+                onMouseDown={(e) => { e.preventDefault(); agregar(p); }}
+              >
+                <div className="w-6 h-6 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                  {p.nombre.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium">{p.nombre}</div>
+                  <div className="text-[10px] text-muted-foreground">ID {p.cedula} · {p.cargo} · {p.terminal}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {busqueda.length >= 3 && !focused && sugerencias.length === 0 && (
+          <span className="text-xs text-amber-600 mt-0.5 block">No se encontró "{busqueda}"</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ---- Componente para vincular vehículos a un evento existente ----
 function VehiculoVinculador({ ev, setLocalEventos }: { ev: Evento; setLocalEventos: React.Dispatch<React.SetStateAction<Evento[]>> }) {
   const [busqueda, setBusqueda] = useState("");
@@ -115,7 +193,7 @@ function VehiculoVinculador({ ev, setLocalEventos }: { ev: Evento; setLocalEvent
           className={`flex-1 text-xs border rounded-lg px-2.5 py-2 bg-background font-mono uppercase focus:outline-none focus:ring-2 focus:ring-ring ${error ? "border-red-400" : "border-border"}`}
           placeholder="Placa ABC-123"
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value.toUpperCase())}
+          onChange={(e) => { setBusqueda(e.target.value.toUpperCase()); if (!e.target.value) { setError(false); setResultado(null); } }}
           onBlur={() => busqueda && buscar(busqueda)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); busqueda && buscar(busqueda); } }}
         />
@@ -157,6 +235,22 @@ export function RecordDetailDrawer() {
   const [cctvFormAbierto, setCctvFormAbierto] = useState(false);
   const [cctvDescripcion, setCctvDescripcion] = useState("");
   const [cctvArchivos, setCctvArchivos] = useState<File[]>([]);
+
+  useEffect(() => {
+    setNuevaAnotacion("");
+    setComplementando(false);
+    setComplementoTexto("");
+    setResolviendoAbierto(false);
+    setResolucionSeleccionada("");
+    setObservacionResolucion("");
+    setEscalandoAbierto(false);
+    setEscaladoPersonaId("");
+    setEscaladoMotivo("");
+    setEscaladoTarea("");
+    setCctvFormAbierto(false);
+    setCctvDescripcion("");
+    setCctvArchivos([]);
+  }, [drawer.id]);
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
@@ -684,6 +778,66 @@ export function RecordDetailDrawer() {
                   )}
                 </div>
               ))}
+
+              {/* Persona(s) vinculada(s) inline en el grid */}
+              {[...ev.personasResponsables, ...ev.personasParticipantes].length > 0 && (
+                <div className="col-span-2 border-t border-border/50 pt-2 mt-1">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {ev.categoria === "dineros" ? "Persona(s) presente(s)" : "Persona(s) responsable(s)"}
+                  </div>
+                  <div className="space-y-1">
+                    {[...ev.personasResponsables, ...ev.personasParticipantes].map((pv) => {
+                      const p = getPersona(pv.personaId);
+                      return (
+                        <div
+                          key={pv.personaId}
+                          className="flex items-center gap-2 w-full rounded-lg px-2 py-1.5"
+                        >
+                          <AvatarInicial nombre={pv.nombre} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium">{pv.nombre}</span>
+                            <span className="text-xs text-muted-foreground ml-2">ID {pv.cedula}{p?.cargo ? ` · ${p.cargo}` : ""}</span>
+                          </div>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap ${pv.rol === "responsable" ? "bg-red-50 text-red-700 border-red-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
+                            {pv.rol === "responsable" ? "Responsable" : "Presente"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Guía(s) vinculada(s) inline en el grid */}
+              {ev.guias && ev.guias.length > 0 && (
+                <div className="col-span-2 border-t border-border/50 pt-2 mt-1">
+                  <div className="text-xs text-muted-foreground mb-1">Guía(s)</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ev.guias.map((g) => (
+                      <span key={g} className="text-sm font-mono font-medium bg-primary/5 text-foreground px-2 py-0.5 rounded">
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Vehículo(s) vinculado(s) inline en el grid */}
+              {ev.vehiculosVinculados && ev.vehiculosVinculados.length > 0 && (
+                <div className="col-span-2 border-t border-border/50 pt-2 mt-1">
+                  <div className="text-xs text-muted-foreground mb-1">Vehículo(s) vinculado(s)</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ev.vehiculosVinculados.map((vv) => {
+                      const veh = getVehiculo(vv.vehiculoId);
+                      return (
+                        <span key={vv.vehiculoId} className="text-sm font-mono font-medium bg-primary/5 text-foreground px-2 py-0.5 rounded flex items-center gap-1">
+                          {veh?.placa ?? vv.vehiculoId}{veh ? ` · ${veh.tipo}` : ""}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Descripción de hechos */}
@@ -692,35 +846,6 @@ export function RecordDetailDrawer() {
               <p className="text-sm leading-relaxed">{ev.descripcionHechos}</p>
             </div>
 
-            {/* Personas vinculadas — resumen rápido dentro de info */}
-            {(ev.personasResponsables.length > 0 || ev.personasParticipantes.length > 0) && (
-              <div className="mt-3 bg-muted/40 rounded-xl p-4">
-                <div className="text-xs text-muted-foreground mb-2">
-                  {ev.categoria === "dineros" ? "Persona(s) presente(s)" : "Persona(s) responsable(s)"}
-                </div>
-                <div className="space-y-1.5">
-                  {[...ev.personasResponsables, ...ev.personasParticipantes].map((pv) => {
-                    const p = getPersona(pv.personaId);
-                    return (
-                      <button
-                        key={pv.personaId}
-                        onClick={() => abrirPersona(pv.personaId)}
-                        className="flex items-center gap-2 w-full text-left hover:bg-background rounded-lg px-2 py-1.5 transition-colors"
-                      >
-                        <AvatarInicial nombre={pv.nombre} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium">{pv.nombre}</span>
-                          <span className="text-xs text-muted-foreground ml-2">ID {pv.cedula}{p?.cargo ? ` · ${p.cargo}` : ""}</span>
-                        </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap ${pv.rol === "responsable" ? "bg-red-50 text-red-700 border-red-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
-                          {pv.rol === "responsable" ? "Responsable" : "Presente"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Justificación operador */}
             {ev.justificacionOperador && (
@@ -848,9 +973,9 @@ export function RecordDetailDrawer() {
                         <option value="Dinero falsos">Dinero falsos</option>
                       </>}
                       {ev.categoria === "unidades" && <>
-                        <option value={ev.tipoEvento}>{ev.tipoEvento}</option>
-                        <option value="Hurto de unidad">Hurto de unidad</option>
-                        <option value="Pérdida de unidad">Pérdida de unidad</option>
+                        {["Faltante novedad 100", "Faltante novedad 101", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529", "Hurto de unidad", "Pérdida de unidad"].map(t => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
                       </>}
                     </select>
                   </div>
@@ -880,18 +1005,7 @@ export function RecordDetailDrawer() {
                     className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Personas responsables de los hechos</label>
-                  <input
-                    type="text"
-                    value={ev.personasResponsablesHechos ?? ""}
-                    onChange={(e) => {
-                      const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].personasResponsablesHechos = e.target.value || undefined; setLocalEventos([...eventos]); }
-                    }}
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
+                <PersonaHallazgoBuscador ev={ev} setLocalEventos={setLocalEventos} />
               </div>
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Contenido / descripción mercancía</label>
@@ -1255,10 +1369,9 @@ export function RecordDetailDrawer() {
                   const p = getPersona(pv.personaId);
                   if (!p) return null;
                   return (
-                    <button
+                    <div
                       key={pv.personaId}
-                      onClick={() => abrirPersona(p.id)}
-                      className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-border"
                     >
                       <AvatarInicial nombre={p.nombre} size="md" />
                       <div className="flex-1 min-w-0">
@@ -1266,7 +1379,7 @@ export function RecordDetailDrawer() {
                         <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Responsable</span>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -1282,10 +1395,9 @@ export function RecordDetailDrawer() {
                   const p = getPersona(pv.personaId);
                   if (!p) return null;
                   return (
-                    <button
+                    <div
                       key={pv.personaId}
-                      onClick={() => abrirPersona(p.id)}
-                      className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted transition-colors"
+                      className="flex items-center gap-3 p-3 rounded-xl border border-border"
                     >
                       <AvatarInicial nombre={p.nombre} size="md" />
                       <div className="flex-1 min-w-0">
@@ -1293,7 +1405,7 @@ export function RecordDetailDrawer() {
                         <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Participante</span>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -1897,10 +2009,12 @@ export function Persona360Drawer() {
                       categoria: lesivaCat,
                       subcategoria: lesivaSub,
                       observaciones: lesivaObs,
-                      fecha: new Date().toISOString().split("T")[0],
+                      fechaRegistro: new Date().toISOString().split("T")[0],
+                      terminalReporta: persona.terminal,
                       registradoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
                     });
                     forceUpdate(k => k + 1);
+                    bumpData();
                     toast({ title: "🚫 Actividad Lesiva registrada", description: `${persona.nombre}. Categoría: ${CATEGORIAS_LESIVAS[lesivaCat as keyof typeof CATEGORIAS_LESIVAS]?.label} — ${lesivaSub}` });
                     setLesivaOpen(false);
                     setLesivaCat("");
@@ -2090,6 +2204,19 @@ export function Vehiculo360Drawer() {
                     <button
                       disabled={!vehLesivaCat || !vehLesivaSub || !vehLesivaObs.trim()}
                       onClick={() => {
+                        actividadesLesivas.push({
+                          id: `AL-${Date.now()}`,
+                          tipoImplicado: "vehiculo",
+                          identificacion: vehiculo.placa,
+                          nombre: vehiculo.placa,
+                          personaId: vehiculo.id,
+                          categoria: vehLesivaCat,
+                          subcategoria: vehLesivaSub,
+                          observaciones: vehLesivaObs,
+                          fechaRegistro: new Date().toISOString().split("T")[0],
+                          terminalReporta: vehiculo.terminal ?? "",
+                          registradoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
+                        });
                         vehiculo.estado = "bloqueado";
                         forceUpdate(k => k + 1);
                         bumpData();
@@ -2413,6 +2540,17 @@ export function Terminal360Drawer() {
                           {count}×
                         </span>
                       </td>
+                      <td className="px-4 py-2.5">
+                        {(() => {
+                          const dec = getDecisionesPersona(persona!.id);
+                          const ultima = dec.sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+                          if (!ultima) return <span className="text-muted-foreground">—</span>;
+                          const cls = ultima.decision === "desvinculacion" ? "bg-red-100 text-red-700 border-red-200"
+                            : ultima.decision === "proceso_disciplinario" ? "bg-orange-100 text-orange-700 border-orange-200"
+                            : "bg-amber-100 text-amber-700 border-amber-200";
+                          return <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${cls}`}>{RESOLUCION_LABELS[ultima.decision] ?? ultima.decision}</span>;
+                        })()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2462,6 +2600,12 @@ export function ResolucionAcumulativaPanel() {
   const [decision, setDecision] = useState<ResolucionFinal | "">("");
   const [observaciones, setObservaciones] = useState("");
   const [confirmado, setConfirmado] = useState(false);
+
+  useEffect(() => {
+    setDecision("");
+    setObservaciones("");
+    setConfirmado(false);
+  }, [drawer.id]);
 
   if (drawer.tipo !== "resolucion_acumulativa" || !drawer.id) return null;
 

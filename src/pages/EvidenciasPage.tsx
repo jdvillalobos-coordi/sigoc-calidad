@@ -40,7 +40,7 @@ function VeredictoTag({ v }: { v: "confirma" | "falso_negativo" | "falso_positiv
 }
 
 function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void }) {
-  const { abrirGuia, abrirRegistro } = useApp();
+  const { abrirGuia, abrirRegistro, bumpData } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [veredicto, setVeredicto] = useState(ev.veredictoOperador ?? "");
   const [justificacion, setJustificacion] = useState(ev.justificacionOperador ?? "");
@@ -138,6 +138,7 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
 
       eventos.unshift(nuevoEvento);
       setEventoGeneradoId(id);
+      bumpData();
       toast({ title: `📸 Evento ${id} creado automáticamente`, description: `${tipoEv} — ${ev.operadorNombre ?? "Operador"}` });
     } else {
       toast({ title: "✅ Veredicto guardado", description: `Evidencia ${ev.id} revisada.` });
