@@ -162,14 +162,14 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   function validarCedula(idx: number, ced: string) {
     const p = getPersonaPorCedula(ced);
     if (p) setCedulasPersona((prev) => ({ ...prev, [idx]: p }));
-    else if (ced.length > 5) setCedulasPersona((prev) => { const n = { ...prev }; delete n[idx]; return n; });
+    else if (ced.length >= 3) setCedulasPersona((prev) => { const n = { ...prev }; delete n[idx]; return n; });
   }
 
   const esVehiculo = tipoEntidad === "Vehículo";
   const puedeCrear = !!(
     categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion
     && (esVehiculo ? placaInput : true)
-    && (!esVehiculo ? cedulas.some(c => c.length > 5) : true)
+    && (!esVehiculo ? cedulas.some(c => c.length >= 3) : true)
     && (categoria === "pqr" ? (terminalDestino && ciudadDestino && equipoRecogida) : true)
   );
 
@@ -469,7 +469,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                           </div>
                         </div>
                       )}
-                      {ced.length > 5 && !cedulasPersona[i] && (
+                      {ced.length >= 3 && !cedulasPersona[i] && (
                         <span className="text-xs text-muted-foreground mt-0.5 block">Persona no encontrada</span>
                       )}
                     </div>
