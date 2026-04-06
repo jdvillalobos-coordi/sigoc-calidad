@@ -139,8 +139,9 @@ function VehiculoVinculador({ ev, setLocalEventos }: { ev: Evento; setLocalEvent
 
 // ---- RecordDetail Drawer ----
 export function RecordDetailDrawer() {
-  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, setFormPrefill, agregarNotificacion } = useApp();
-  const [localEventos, setLocalEventos] = useState(eventos);
+  const { drawer, cerrarDrawer, abrirPersona, abrirVehiculo, abrirGuia, abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, setFormPrefill, agregarNotificacion, bumpData } = useApp();
+  const [localEventos, _setLocalEventos] = useState(eventos);
+  const setLocalEventos: typeof _setLocalEventos = (v) => { _setLocalEventos(v); bumpData(); };
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");
   const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo");
   const [complementando, setComplementando] = useState(false);
