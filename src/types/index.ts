@@ -362,18 +362,20 @@ export interface Evidencia {
 }
 
 // ---- Insumos Bandeja ----
+export type EstadoRevisionInsumo = "pendiente" | "sin_novedad" | "abierto" | "cerrado";
+
 export interface InsumoRCE {
   id: string;
   guia: string;
   valorRecaudo: number;
-  estadoRevision: "pendiente" | "revisada_sin_novedad" | "con_novedad";
+  estadoRevision: EstadoRevisionInsumo;
   fechaAsignacion: string;
   revisadoPor?: string;
   fechaRevision?: string;
   eventoGenerado?: string;
 }
 
-export type EstadoFaltanteQlik =
+export type CausalFaltante =
   | "2_solucion_no_ubicado_sin_100"
   | "3_causal_pendientes"
   | "4_causal_100_sin_400_previo"
@@ -385,11 +387,11 @@ export interface InsumoFaltante {
   id: string;
   guia: string;
   codigoNovedad: "100" | "101" | "300" | "400" | "403" | "529";
-  estadoRevision: "pendiente" | "en_investigacion" | "revisada_sin_novedad" | "con_novedad";
-  estadoQlik?: EstadoFaltanteQlik;
+  estadoRevision: EstadoRevisionInsumo;
+  causal?: CausalFaltante;
   checkpointOrigen?: boolean;
   checkpointDestino?: boolean;
-  infoInterventorOps?: string; // Gestión previa de interventores Operaciones (causal 400)
+  infoInterventorOps?: string;
   fechaNovedad: string;
   terminal: string;
   ciudad: string;
@@ -417,6 +419,8 @@ export interface FormPrefill {
   guia?: string;
   terminal?: string;
   codigoNovedad?: string;
+  insumoId?: string;
+  insumoTipo?: "rce" | "faltante";
 }
 
 // ---- Navegación ----

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS } from "@/data/mockData";
+import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS, insumosRCE, insumosFaltantes } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import type { CategoriaEvento, CategoriaLesiva, FormPrefill, Persona, Evento } from "@/types";
@@ -291,8 +291,18 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       diasAbierto: 0,
     };
 
-    // Insertar al inicio del array para que aparezca primero en la lista
     eventos.unshift(nuevoEvento);
+
+    if (prefill?.insumoId && prefill?.insumoTipo) {
+      const arr = prefill.insumoTipo === "rce" ? insumosRCE : insumosFaltantes;
+      const idx = arr.findIndex((x) => x.id === prefill.insumoId);
+      if (idx !== -1) {
+        arr[idx].estadoRevision = "abierto";
+        arr[idx].eventoGenerado = id;
+        arr[idx].revisadoPor = usuarioLogueado.nombre;
+        arr[idx].fechaRevision = hoy;
+      }
+    }
 
     setEventoCreado(id);
     toast({ title: `✅ Evento ${id} creado exitosamente` });

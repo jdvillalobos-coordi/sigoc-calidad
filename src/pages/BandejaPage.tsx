@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useApp } from "@/context/AppContext";
-import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES, usuarioLogueado, ESTADOS_QLIK_LABELS } from "@/data/mockData";
+import { insumosRCE, insumosFaltantes, getGuia, PAISES_REGIONALES, REGIONALES_FLAT, TODAS_TERMINALES, usuarioLogueado, CAUSALES_LABELS, eventos } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronRight, CheckCircle2, AlertTriangle, X, Filter, CalendarDays, Search } from "lucide-react";
@@ -10,7 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
-import type { InsumoRCE, InsumoFaltante, EstadoFaltanteQlik } from "@/types";
+import type { InsumoRCE, InsumoFaltante, CausalFaltante, EstadoRevisionInsumo } from "@/types";
 
 type PageSize = 50 | 100 | "all";
 const PAGE_SIZES: { value: PageSize; label: string }[] = [
@@ -20,12 +20,11 @@ const PAGE_SIZES: { value: PageSize; label: string }[] = [
 ];
 
 type TabId = "rce" | "faltantes" | "evidencias";
-type FiltroEstadoRCE = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
-type FiltroEstadoFalt = "todas" | "pendiente" | "revisada_sin_novedad" | "con_novedad";
-type FiltroEstadoQlik = "todas" | "solo_sg" | EstadoFaltanteQlik;
+type FiltroEstadoRevision = "todas" | EstadoRevisionInsumo;
+type FiltroCausal = "todas" | "solo_sg" | CausalFaltante;
 
-const ESTADOS_QLIK_OPTIONS: { value: FiltroEstadoQlik; label: string }[] = [
-  { value: "todas", label: "Todos los estados" },
+const CAUSALES_OPTIONS: { value: FiltroCausal; label: string }[] = [
+  { value: "todas", label: "Todas las causales" },
   { value: "solo_sg", label: "Solo SG (100/101)" },
   { value: "2_solucion_no_ubicado_sin_100", label: "Sol. No Ubicado Sin 100" },
   { value: "3_causal_pendientes", label: "Causal Pendientes" },
@@ -45,9 +44,9 @@ function CheckpointBadge({ origen, destino }: { origen?: boolean; destino?: bool
   );
 }
 
-function EstadoQlikBadge({ estado }: { estado?: string }) {
-  if (!estado) return <span className="text-muted-foreground">—</span>;
-  const label = ESTADOS_QLIK_LABELS[estado] ?? estado;
+function CausalBadge({ causal }: { causal?: string }) {
+  if (!causal) return <span className="text-muted-foreground">—</span>;
+  const label = CAUSALES_LABELS[causal] ?? causal;
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 whitespace-nowrap">
       {label}
@@ -74,14 +73,25 @@ function DiasBadge({ dias }: { dias: number }) {
   );
 }
 
-function EstadoRevisionBadge({ estado }: { estado: string }) {
+function EstadoRevisionBadge({ estado, eventoId }: { estado: string; eventoId?: string }) {
+  const { abrirRegistro } = useApp();
   const map: Record<string, { label: string; cls: string }> = {
     pendiente: { label: "Pendiente", cls: "bg-amber-100 text-amber-700 border-amber-200" },
-    en_investigacion: { label: "En investigación", cls: "bg-blue-100 text-blue-700 border-blue-200" },
-    revisada_sin_novedad: { label: "Sin novedad", cls: "bg-green-100 text-green-700 border-green-200" },
-    con_novedad: { label: "Con novedad", cls: "bg-destructive/10 text-destructive border-destructive/20" },
+    sin_novedad: { label: "Sin novedad", cls: "bg-green-100 text-green-700 border-green-200" },
+    abierto: { label: "Evento abierto", cls: "bg-blue-100 text-blue-700 border-blue-200" },
+    cerrado: { label: "Evento cerrado", cls: "bg-gray-100 text-gray-600 border-gray-200" },
   };
   const { label, cls } = map[estado] ?? { label: estado, cls: "bg-muted text-muted-foreground border-border" };
+  if ((estado === "abierto" || estado === "cerrado") && eventoId) {
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); abrirRegistro(eventoId); }}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap hover:opacity-80 transition-opacity ${cls}`}
+      >
+        {label} · {eventoId}
+      </button>
+    );
+  }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap ${cls}`}>
       {label}
@@ -143,9 +153,9 @@ export default function BandejaPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [filtroRegional, setFiltroRegional] = useState("todos");
   const [filtroTerminal, setFiltroTerminal] = useState("todos");
-  const [filtroEstadoRCE, setFiltroEstadoRCE] = useState<FiltroEstadoRCE>("todas");
-  const [filtroEstadoFalt, setFiltroEstadoFalt] = useState<FiltroEstadoFalt>("todas");
-  const [filtroEstadoQlik, setFiltroEstadoQlik] = useState<FiltroEstadoQlik>("todas");
+  const [filtroEstadoRCE, setFiltroEstadoRCE] = useState<FiltroEstadoRevision>("todas");
+  const [filtroEstadoFalt, setFiltroEstadoFalt] = useState<FiltroEstadoRevision>("todas");
+  const [filtroCausal, setFiltroCausal] = useState<FiltroCausal>("todas");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [calOpen, setCalOpen] = useState(false);
   const [pageSize, setPageSize] = useState<PageSize>(50);
@@ -253,12 +263,9 @@ export default function BandejaPage() {
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
-      if (filtroEstadoQlik === "solo_sg" && i.codigoNovedad !== "100" && i.codigoNovedad !== "101") return false;
-      if (filtroEstadoFalt !== "todas") {
-        const estadoNorm = i.estadoRevision === "en_investigacion" ? "pendiente" : i.estadoRevision;
-        if (estadoNorm !== filtroEstadoFalt) return false;
-      }
-      if (filtroEstadoQlik !== "todas" && filtroEstadoQlik !== "solo_sg" && i.estadoQlik !== filtroEstadoQlik) return false;
+      if (filtroCausal === "solo_sg" && i.codigoNovedad !== "100" && i.codigoNovedad !== "101") return false;
+      if (filtroEstadoFalt !== "todas" && i.estadoRevision !== filtroEstadoFalt) return false;
+      if (filtroCausal !== "todas" && filtroCausal !== "solo_sg" && i.causal !== filtroCausal) return false;
       if (!matchFecha(i.fechaNovedad)) return false;
       if (!matchTerminal(i.terminal)) return false;
       if (filtroCliente !== "todos") {
@@ -267,7 +274,7 @@ export default function BandejaPage() {
       }
       return true;
     });
-  }, [faltData, filtroEstadoFalt, filtroEstadoQlik, filtroRegional, filtroTerminal, filtroCliente, dateRange]);
+  }, [faltData, filtroEstadoFalt, filtroCausal, filtroRegional, filtroTerminal, filtroCliente, dateRange]);
 
   const rceSorted = useMemo(() => {
     const sorted = [...rceFiltered].sort((a, b) => {
@@ -298,7 +305,7 @@ export default function BandejaPage() {
         case "novedad": cmp = a.codigoNovedad.localeCompare(b.codigoNovedad); break;
         case "terminal_origen": cmp = (g1?.terminalOrigen ?? a.terminal).localeCompare(g2?.terminalOrigen ?? b.terminal); break;
         case "terminal_destino": cmp = (g1?.terminalDestino ?? "").localeCompare(g2?.terminalDestino ?? ""); break;
-        case "estado_qlik": cmp = (a.estadoQlik ?? "").localeCompare(b.estadoQlik ?? ""); break;
+        case "estado_qlik": cmp = (a.causal ?? "").localeCompare(b.causal ?? ""); break;
         default: break;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -316,7 +323,7 @@ export default function BandejaPage() {
   function marcarRCESinNovedad(id: string) {
     const idx = insumosRCE.findIndex((i) => i.id === id);
     if (idx !== -1) {
-      insumosRCE[idx].estadoRevision = "revisada_sin_novedad";
+      insumosRCE[idx].estadoRevision = "sin_novedad";
       insumosRCE[idx].revisadoPor = usuarioLogueado.nombre;
       insumosRCE[idx].fechaRevision = new Date().toISOString().split("T")[0];
     }
@@ -331,6 +338,8 @@ export default function BandejaPage() {
       categoria: "dineros",
       guia: item.guia,
       terminal: g?.terminalOrigen,
+      insumoId: item.id,
+      insumoTipo: "rce",
     });
     setNuevaRegistroAbierto(true);
   }
@@ -338,7 +347,7 @@ export default function BandejaPage() {
   function marcarFaltSinNovedad(id: string) {
     const idx = insumosFaltantes.findIndex((i) => i.id === id);
     if (idx !== -1) {
-      insumosFaltantes[idx].estadoRevision = "revisada_sin_novedad";
+      insumosFaltantes[idx].estadoRevision = "sin_novedad";
       insumosFaltantes[idx].revisadoPor = usuarioLogueado.nombre;
       insumosFaltantes[idx].fechaRevision = new Date().toISOString().split("T")[0];
     }
@@ -353,6 +362,8 @@ export default function BandejaPage() {
       guia: item.guia,
       terminal: item.terminal,
       codigoNovedad: item.codigoNovedad,
+      insumoId: item.id,
+      insumoTipo: "faltante",
     });
     setNuevaRegistroAbierto(true);
   }
@@ -504,7 +515,7 @@ export default function BandejaPage() {
 
               {tab === "rce" && (
                 <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-                  {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoRCE, string][]).map(([val, label]) => (
+                  {([["todas", "Todas"], ["pendiente", "Pendientes"], ["sin_novedad", "Sin novedad"], ["abierto", "Abierto"], ["cerrado", "Cerrado"]] as [FiltroEstadoRevision, string][]).map(([val, label]) => (
                     <button key={val} onClick={() => setFiltroEstadoRCE(val)}
                       className={`px-3 py-1.5 transition-colors ${filtroEstadoRCE === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
                       {label}
@@ -515,7 +526,7 @@ export default function BandejaPage() {
               {tab === "faltantes" && (
                 <>
                   <div className="flex rounded-lg border border-border overflow-hidden text-xs bg-card">
-                    {([["todas", "Todas"], ["pendiente", "Pendientes"], ["revisada_sin_novedad", "Revisadas"], ["con_novedad", "Con novedad"]] as [FiltroEstadoFalt, string][]).map(([val, label]) => (
+                    {([["todas", "Todas"], ["pendiente", "Pendientes"], ["sin_novedad", "Sin novedad"], ["abierto", "Abierto"], ["cerrado", "Cerrado"]] as [FiltroEstadoRevision, string][]).map(([val, label]) => (
                       <button key={val} onClick={() => setFiltroEstadoFalt(val)}
                         className={`px-3 py-1.5 transition-colors ${filtroEstadoFalt === val ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
                         {label}
@@ -523,13 +534,13 @@ export default function BandejaPage() {
                     ))}
                   </div>
                   <select
-                    value={filtroEstadoQlik}
-                    onChange={(e) => setFiltroEstadoQlik(e.target.value as FiltroEstadoQlik)}
+                    value={filtroCausal}
+                    onChange={(e) => setFiltroCausal(e.target.value as FiltroCausal)}
                     className={`text-xs border rounded-lg px-2.5 py-1.5 bg-card focus:outline-none focus:ring-2 focus:ring-ring ${
-                      filtroEstadoQlik !== "todas" ? "border-indigo-300 bg-indigo-50/50 text-indigo-700 font-medium" : "border-border text-muted-foreground"
+                      filtroCausal !== "todas" ? "border-indigo-300 bg-indigo-50/50 text-indigo-700 font-medium" : "border-border text-muted-foreground"
                     }`}
                   >
-                    {ESTADOS_QLIK_OPTIONS.map((o) => (
+                    {CAUSALES_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
@@ -540,7 +551,7 @@ export default function BandejaPage() {
         </div>
 
         {/* Pills de filtros activos */}
-        {(hayFiltrosGeo || !!dateRange?.from || filtroCliente !== "todos" || (tab === "faltantes" && filtroEstadoQlik !== "todas")) && (
+        {(hayFiltrosGeo || !!dateRange?.from || filtroCliente !== "todos" || (tab === "faltantes" && filtroCausal !== "todas")) && (
           <div className="flex flex-wrap gap-1.5 items-center">
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Filtros:</span>
             {dateRange?.from && (
@@ -577,13 +588,13 @@ export default function BandejaPage() {
                 </button>
               </span>
             )}
-            {tab === "faltantes" && filtroEstadoQlik !== "todas" && (
+            {tab === "faltantes" && filtroCausal !== "todas" && (
               <span className={`inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium border ${
-                filtroEstadoQlik === "solo_sg" ? "bg-red-100 text-red-700 border-red-200" : "bg-indigo-100 text-indigo-700 border-indigo-200"
+                filtroCausal === "solo_sg" ? "bg-red-100 text-red-700 border-red-200" : "bg-indigo-100 text-indigo-700 border-indigo-200"
               }`}>
-                {filtroEstadoQlik === "solo_sg" ? "Solo SG (100/101)" : (ESTADOS_QLIK_LABELS[filtroEstadoQlik] ?? filtroEstadoQlik)}
-                <button onClick={() => setFiltroEstadoQlik("todas")} className={`rounded-full p-0.5 transition-colors ml-0.5 ${
-                  filtroEstadoQlik === "solo_sg" ? "hover:bg-red-200" : "hover:bg-indigo-200"
+                {filtroCausal === "solo_sg" ? "Solo SG (100/101)" : (CAUSALES_LABELS[filtroCausal] ?? filtroCausal)}
+                <button onClick={() => setFiltroCausal("todas")} className={`rounded-full p-0.5 transition-colors ml-0.5 ${
+                  filtroCausal === "solo_sg" ? "hover:bg-red-200" : "hover:bg-indigo-200"
                 }`}>
                   <X className="w-3 h-3" />
                 </button>
@@ -607,7 +618,7 @@ export default function BandejaPage() {
                     <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Terminal destino</th>
                     <SortHeader field="fecha">Fecha</SortHeader>
                     <SortHeader field="dias" align="text-center">Días</SortHeader>
-                    <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Estado</th>
+                    <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Revisión</th>
                     <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground">Acciones</th>
                   </tr>
                 </thead>
@@ -643,7 +654,7 @@ export default function BandejaPage() {
                           <td className="px-3 py-2.5">{g?.terminalDestino ?? "—"}</td>
                           <td className="px-3 py-2.5 text-muted-foreground">{g?.fechaCreacion ?? "—"}</td>
                           <td className="px-3 py-2.5 text-center"><DiasBadge dias={dias} /></td>
-                          <td className="px-3 py-2.5 text-center"><EstadoRevisionBadge estado={item.estadoRevision} /></td>
+                          <td className="px-3 py-2.5 text-center"><EstadoRevisionBadge estado={item.estadoRevision} eventoId={item.eventoGenerado} /></td>
                           <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                             {item.estadoRevision === "pendiente" && (
                               <div className="flex items-center justify-end gap-1">
@@ -716,7 +727,7 @@ export default function BandejaPage() {
                     <SortHeader field="terminal_destino">Terminal destino</SortHeader>
                     <SortHeader field="fecha">Fecha novedad</SortHeader>
                     <SortHeader field="dias" align="text-center">Días</SortHeader>
-                    <SortHeader field="estado_qlik" align="text-center">Estado</SortHeader>
+                    <SortHeader field="estado_qlik" align="text-center">Causal</SortHeader>
                     <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Revisión</th>
                     <th className="text-right px-3 py-2.5 font-semibold text-muted-foreground">Acciones</th>
                   </tr>
@@ -750,8 +761,8 @@ export default function BandejaPage() {
                           <td className="px-3 py-2.5">{g?.terminalDestino ?? "—"}</td>
                           <td className="px-3 py-2.5 text-muted-foreground">{item.fechaNovedad}</td>
                           <td className="px-3 py-2.5 text-center"><DiasBadge dias={dias} /></td>
-                          <td className="px-3 py-2.5 text-center"><EstadoQlikBadge estado={item.estadoQlik} /></td>
-                          <td className="px-3 py-2.5 text-center"><EstadoRevisionBadge estado={item.estadoRevision} /></td>
+                          <td className="px-3 py-2.5 text-center"><CausalBadge causal={item.causal} /></td>
+                          <td className="px-3 py-2.5 text-center"><EstadoRevisionBadge estado={item.estadoRevision} eventoId={item.eventoGenerado} /></td>
                           <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                             {item.estadoRevision === "pendiente" && (
                               <div className="flex items-center justify-end gap-1">

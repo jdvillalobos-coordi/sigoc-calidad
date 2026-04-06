@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado } from "@/data/mockData";
+import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
@@ -121,6 +121,12 @@ export function RecordDetailDrawer() {
         estadoFlujo: nuevoFlujo,
         historial: [...eventos[idx].historial, { id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: usuarioLogueado.nombre, accion: `Cambió flujo de '${prevLabel}' a '${newLabel}'` }],
       });
+    }
+    if (nuevoFlujo === "cerrado") {
+      const rceIdx = insumosRCE.findIndex(i => i.eventoGenerado === ev!.id);
+      if (rceIdx !== -1) insumosRCE[rceIdx].estadoRevision = "cerrado";
+      const faltIdx = insumosFaltantes.findIndex(i => i.eventoGenerado === ev!.id);
+      if (faltIdx !== -1) insumosFaltantes[faltIdx].estadoRevision = "cerrado";
     }
     setLocalEventos([...eventos]);
     toast({ title: `Estado actualizado a "${newLabel}"` });

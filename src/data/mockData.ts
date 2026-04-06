@@ -2305,20 +2305,20 @@ export const insumosRCE: InsumoRCE[] = [
   { id: "RCE-007", guia: "20000002004", valorRecaudo: 2600000, estadoRevision: "pendiente", fechaAsignacion: "2026-03-20" },
   { id: "RCE-008", guia: "20000002005", valorRecaudo: 5100000, estadoRevision: "pendiente", fechaAsignacion: "2026-03-16" },
   // 4 revisadas sin novedad
-  { id: "RCE-009", guia: "19900293004", valorRecaudo: 1200000, estadoRevision: "revisada_sin_novedad", fechaAsignacion: "2026-03-10", revisadoPor: "Sandra Herrera", fechaRevision: "2026-03-11" },
-  { id: "RCE-010", guia: "20000001003", valorRecaudo: 1350000, estadoRevision: "revisada_sin_novedad", fechaAsignacion: "2026-03-11", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-12" },
-  { id: "RCE-011", guia: "20000001008", valorRecaudo: 1780000, estadoRevision: "revisada_sin_novedad", fechaAsignacion: "2026-03-12", revisadoPor: "Sandra Herrera", fechaRevision: "2026-03-13" },
-  { id: "RCE-012", guia: "20000001010", valorRecaudo: 3450000, estadoRevision: "revisada_sin_novedad", fechaAsignacion: "2026-03-08", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-09" },
+  { id: "RCE-009", guia: "19900293004", valorRecaudo: 1200000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-03-10", revisadoPor: "Sandra Herrera", fechaRevision: "2026-03-11" },
+  { id: "RCE-010", guia: "20000001003", valorRecaudo: 1350000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-03-11", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-12" },
+  { id: "RCE-011", guia: "20000001008", valorRecaudo: 1780000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-03-12", revisadoPor: "Sandra Herrera", fechaRevision: "2026-03-13" },
+  { id: "RCE-012", guia: "20000001010", valorRecaudo: 3450000, estadoRevision: "sin_novedad", fechaAsignacion: "2026-03-08", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-09" },
   // 3 con novedad (evento generado — dineros)
-  { id: "RCE-013", guia: "19900293005", valorRecaudo: 4500000, estadoRevision: "con_novedad", fechaAsignacion: "2026-03-05", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-06", eventoGenerado: "DIN-005" },
-  { id: "RCE-014", guia: "20000001001", valorRecaudo: 1650000, estadoRevision: "con_novedad", fechaAsignacion: "2026-03-03", revisadoPor: "Diego Ramírez", fechaRevision: "2026-03-04", eventoGenerado: "DIN-006" },
-  { id: "RCE-015", guia: "20000001015", valorRecaudo: 1500000, estadoRevision: "con_novedad", fechaAsignacion: "2026-03-10", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-11", eventoGenerado: "DIN-007" },
+  { id: "RCE-013", guia: "19900293005", valorRecaudo: 4500000, estadoRevision: "cerrado", fechaAsignacion: "2026-03-05", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-06", eventoGenerado: "DIN-005" },
+  { id: "RCE-014", guia: "20000001001", valorRecaudo: 1650000, estadoRevision: "cerrado", fechaAsignacion: "2026-03-03", revisadoPor: "Diego Ramírez", fechaRevision: "2026-03-04", eventoGenerado: "DIN-006" },
+  { id: "RCE-015", guia: "20000001015", valorRecaudo: 1500000, estadoRevision: "cerrado", fechaAsignacion: "2026-03-10", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-11", eventoGenerado: "DIN-007" },
 ];
 
 // ============================================================
 // INSUMOS BANDEJA — FALTANTES (novedades 100/300/400/403/529)
 // ============================================================
-export const ESTADOS_QLIK_LABELS: Record<string, string> = {
+export const CAUSALES_LABELS: Record<string, string> = {
   "2_solucion_no_ubicado_sin_100": "2. Solución No Ubicado Sin 100",
   "3_causal_pendientes": "3. Causal Pendientes",
   "4_causal_100_sin_400_previo": "4. Causal 100 sin 400 Previo",
@@ -2329,26 +2329,26 @@ export const ESTADOS_QLIK_LABELS: Record<string, string> = {
 
 export const insumosFaltantes: InsumoFaltante[] = [
   // 7 pendientes
-  { id: "FAL-001", guia: "20000002001", codigoNovedad: "100", estadoRevision: "pendiente", estadoQlik: "3_causal_pendientes", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-17", terminal: "Barranquilla", ciudad: "Barranquilla" },
-  { id: "FAL-002", guia: "20000002002", codigoNovedad: "400", estadoRevision: "pendiente", estadoQlik: "4_causal_100_sin_400_previo", checkpointOrigen: false, checkpointDestino: true, infoInterventorOps: "Revisado por Angélica Noguera — unidad no localizada en bodega destino", fechaNovedad: "2026-03-18", terminal: "Medellín", ciudad: "Medellín" },
-  { id: "FAL-003", guia: "20000002003", codigoNovedad: "300", estadoRevision: "pendiente", estadoQlik: "2_solucion_no_ubicado_sin_100", checkpointOrigen: true, checkpointDestino: true, fechaNovedad: "2026-03-19", terminal: "Bogotá", ciudad: "Bogotá" },
-  { id: "FAL-004", guia: "20000002004", codigoNovedad: "100", estadoRevision: "pendiente", estadoQlik: "3_causal_pendientes", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-19", terminal: "Cali", ciudad: "Cali" },
-  { id: "FAL-005", guia: "20000002005", codigoNovedad: "529", estadoRevision: "pendiente", estadoQlik: "5_causal_100_solucion_despacho_no_ubicado", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-16", terminal: "Bucaramanga", ciudad: "Bucaramanga" },
-  { id: "FAL-006", guia: "19900293001", codigoNovedad: "403", estadoRevision: "pendiente", estadoQlik: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: false, fechaNovedad: "2026-03-15", terminal: "Bogotá", ciudad: "Bogotá" },
-  { id: "FAL-007", guia: "19900293002", codigoNovedad: "100", estadoRevision: "pendiente", estadoQlik: "8_notificado", checkpointOrigen: true, checkpointDestino: true, infoInterventorOps: "Interventor Ops: unidad escaneada en origen, sin lectura en destino", fechaNovedad: "2026-03-14", terminal: "Medellín", ciudad: "Medellín" },
+  { id: "FAL-001", guia: "20000002001", codigoNovedad: "100", estadoRevision: "pendiente", causal: "3_causal_pendientes", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-17", terminal: "Barranquilla", ciudad: "Barranquilla" },
+  { id: "FAL-002", guia: "20000002002", codigoNovedad: "400", estadoRevision: "pendiente", causal: "4_causal_100_sin_400_previo", checkpointOrigen: false, checkpointDestino: true, infoInterventorOps: "Revisado por Angélica Noguera — unidad no localizada en bodega destino", fechaNovedad: "2026-03-18", terminal: "Medellín", ciudad: "Medellín" },
+  { id: "FAL-003", guia: "20000002003", codigoNovedad: "300", estadoRevision: "pendiente", causal: "2_solucion_no_ubicado_sin_100", checkpointOrigen: true, checkpointDestino: true, fechaNovedad: "2026-03-19", terminal: "Bogotá", ciudad: "Bogotá" },
+  { id: "FAL-004", guia: "20000002004", codigoNovedad: "100", estadoRevision: "pendiente", causal: "3_causal_pendientes", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-19", terminal: "Cali", ciudad: "Cali" },
+  { id: "FAL-005", guia: "20000002005", codigoNovedad: "529", estadoRevision: "pendiente", causal: "5_causal_100_solucion_despacho_no_ubicado", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-16", terminal: "Bucaramanga", ciudad: "Bucaramanga" },
+  { id: "FAL-006", guia: "19900293001", codigoNovedad: "403", estadoRevision: "pendiente", causal: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: false, fechaNovedad: "2026-03-15", terminal: "Bogotá", ciudad: "Bogotá" },
+  { id: "FAL-007", guia: "19900293002", codigoNovedad: "100", estadoRevision: "pendiente", causal: "8_notificado", checkpointOrigen: true, checkpointDestino: true, infoInterventorOps: "Interventor Ops: unidad escaneada en origen, sin lectura en destino", fechaNovedad: "2026-03-14", terminal: "Medellín", ciudad: "Medellín" },
   // 3 en investigación
-  { id: "FAL-008", guia: "19900293003", codigoNovedad: "400", estadoRevision: "en_investigacion", estadoQlik: "4_causal_100_sin_400_previo", checkpointOrigen: true, checkpointDestino: false, infoInterventorOps: "Ops confirma despacho, sin novedad en origen", fechaNovedad: "2026-03-10", terminal: "Cali", ciudad: "Cali", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-12" },
-  { id: "FAL-009", guia: "20000001013", codigoNovedad: "100", estadoRevision: "en_investigacion", estadoQlik: "3_causal_pendientes", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-09", terminal: "Barranquilla", ciudad: "Barranquilla", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-11" },
-  { id: "FAL-010", guia: "19900293005", codigoNovedad: "529", estadoRevision: "en_investigacion", estadoQlik: "5_causal_100_solucion_despacho_no_ubicado", checkpointOrigen: true, checkpointDestino: true, fechaNovedad: "2026-03-06", terminal: "Bucaramanga", ciudad: "Bucaramanga", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-08" },
+  { id: "FAL-008", guia: "19900293003", codigoNovedad: "400", estadoRevision: "abierto", causal: "4_causal_100_sin_400_previo", checkpointOrigen: true, checkpointDestino: false, infoInterventorOps: "Ops confirma despacho, sin novedad en origen", fechaNovedad: "2026-03-10", terminal: "Cali", ciudad: "Cali", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-12" },
+  { id: "FAL-009", guia: "20000001013", codigoNovedad: "100", estadoRevision: "abierto", causal: "3_causal_pendientes", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-09", terminal: "Barranquilla", ciudad: "Barranquilla", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-11" },
+  { id: "FAL-010", guia: "19900293005", codigoNovedad: "529", estadoRevision: "abierto", causal: "5_causal_100_solucion_despacho_no_ubicado", checkpointOrigen: true, checkpointDestino: true, fechaNovedad: "2026-03-06", terminal: "Bucaramanga", ciudad: "Bucaramanga", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-08" },
   // 3 revisadas sin novedad
-  { id: "FAL-011", guia: "20000001003", codigoNovedad: "403", estadoRevision: "revisada_sin_novedad", estadoQlik: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: false, fechaNovedad: "2026-03-10", terminal: "Pereira", ciudad: "Pereira", revisadoPor: "Diego Ramírez", fechaRevision: "2026-03-12" },
-  { id: "FAL-012", guia: "20000001008", codigoNovedad: "300", estadoRevision: "revisada_sin_novedad", estadoQlik: "2_solucion_no_ubicado_sin_100", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-08", terminal: "Cartagena", ciudad: "Cartagena", revisadoPor: "Sandra Herrera", fechaRevision: "2026-03-10" },
-  { id: "FAL-013", guia: "19900293004", codigoNovedad: "100", estadoRevision: "revisada_sin_novedad", estadoQlik: "8_notificado", checkpointOrigen: true, checkpointDestino: true, fechaNovedad: "2026-03-05", terminal: "Bogotá", ciudad: "Bogotá", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-07" },
+  { id: "FAL-011", guia: "20000001003", codigoNovedad: "403", estadoRevision: "sin_novedad", causal: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: false, fechaNovedad: "2026-03-10", terminal: "Pereira", ciudad: "Pereira", revisadoPor: "Diego Ramírez", fechaRevision: "2026-03-12" },
+  { id: "FAL-012", guia: "20000001008", codigoNovedad: "300", estadoRevision: "sin_novedad", causal: "2_solucion_no_ubicado_sin_100", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-08", terminal: "Cartagena", ciudad: "Cartagena", revisadoPor: "Sandra Herrera", fechaRevision: "2026-03-10" },
+  { id: "FAL-013", guia: "19900293004", codigoNovedad: "100", estadoRevision: "sin_novedad", causal: "8_notificado", checkpointOrigen: true, checkpointDestino: true, fechaNovedad: "2026-03-05", terminal: "Bogotá", ciudad: "Bogotá", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-07" },
   // 2 con novedad (evento generado — unidades)
-  { id: "FAL-014", guia: "20000001001", codigoNovedad: "300", estadoRevision: "con_novedad", estadoQlik: "3_causal_pendientes", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-02", terminal: "Bogotá", ciudad: "Bogotá", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-03", eventoGenerado: "UNI-004" },
-  { id: "FAL-015", guia: "20000001015", codigoNovedad: "400", estadoRevision: "con_novedad", estadoQlik: "4_causal_100_sin_400_previo", checkpointOrigen: true, checkpointDestino: false, infoInterventorOps: "Ops: última lectura en plataforma Medellín", fechaNovedad: "2026-03-11", terminal: "Medellín", ciudad: "Medellín", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-12", eventoGenerado: "UNI-007" },
-  { id: "FAL-016", guia: "19900293009", codigoNovedad: "101", estadoRevision: "pendiente", estadoQlik: "3_causal_pendientes", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-20", terminal: "Cali", ciudad: "Cali" },
-  { id: "FAL-017", guia: "20000001003", codigoNovedad: "101", estadoRevision: "en_investigacion", estadoQlik: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-18", terminal: "Bogotá", ciudad: "Bogotá" },
+  { id: "FAL-014", guia: "20000001001", codigoNovedad: "300", estadoRevision: "cerrado", causal: "3_causal_pendientes", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-02", terminal: "Bogotá", ciudad: "Bogotá", revisadoPor: "Jorge Castaño", fechaRevision: "2026-03-03", eventoGenerado: "UNI-004" },
+  { id: "FAL-015", guia: "20000001015", codigoNovedad: "400", estadoRevision: "cerrado", causal: "4_causal_100_sin_400_previo", checkpointOrigen: true, checkpointDestino: false, infoInterventorOps: "Ops: última lectura en plataforma Medellín", fechaNovedad: "2026-03-11", terminal: "Medellín", ciudad: "Medellín", revisadoPor: "Ana Martínez", fechaRevision: "2026-03-12", eventoGenerado: "UNI-007" },
+  { id: "FAL-016", guia: "19900293009", codigoNovedad: "101", estadoRevision: "pendiente", causal: "3_causal_pendientes", checkpointOrigen: true, checkpointDestino: false, fechaNovedad: "2026-03-20", terminal: "Cali", ciudad: "Cali" },
+  { id: "FAL-017", guia: "20000001003", codigoNovedad: "101", estadoRevision: "abierto", causal: "7_solucion_notificar_y_sin_notificar", checkpointOrigen: false, checkpointDestino: true, fechaNovedad: "2026-03-18", terminal: "Bogotá", ciudad: "Bogotá" },
 ];
 
 // ============================================================

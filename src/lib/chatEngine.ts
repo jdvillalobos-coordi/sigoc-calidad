@@ -342,9 +342,9 @@ function intentBandeja(text: string): QueryResult | null {
   if (!matchesAny(n, ["bandeja", "rce", "recaudo", "insumo", "faltantes pendientes"])) return null;
 
   const rcePend = insumosRCE.filter((r) => r.estadoRevision === "pendiente");
-  const rceNovedad = insumosRCE.filter((r) => r.estadoRevision === "con_novedad");
+  const rceNovedad = insumosRCE.filter((r) => r.estadoRevision === "cerrado");
   const falPend = insumosFaltantes.filter((f) => f.estadoRevision === "pendiente");
-  const falInvest = insumosFaltantes.filter((f) => f.estadoRevision === "en_investigacion");
+  const falInvest = insumosFaltantes.filter((f) => f.estadoRevision === "abierto");
 
   const valorRCEPend = rcePend.reduce((acc, r) => acc + r.valorRecaudo, 0);
 
