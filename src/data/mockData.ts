@@ -1988,6 +1988,18 @@ export function getPersonaPorCedula(cedula: string): Persona | undefined {
   return personas.find((p) => p.cedula === cedula);
 }
 
+export function buscarPersonas(query: string, limit = 5): Persona[] {
+  if (!query || query.length < 2) return [];
+  const q = query.toLowerCase();
+  return personas
+    .filter(p => p.cedula && (
+      p.cedula.toLowerCase().includes(q) ||
+      p.nombre.toLowerCase().includes(q) ||
+      p.id.toLowerCase().includes(q)
+    ))
+    .slice(0, limit);
+}
+
 export function getVehiculo(id: string): Vehiculo | undefined {
   return vehiculos.find((v) => v.id === id);
 }

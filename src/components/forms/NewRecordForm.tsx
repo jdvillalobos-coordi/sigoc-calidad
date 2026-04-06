@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { guias, terminales, getGuia, getPersonaPorCedula, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS, insumosRCE, insumosFaltantes, getMonedaPorTerminal } from "@/data/mockData";
+import { guias, terminales, getGuia, getPersonaPorCedula, buscarPersonas, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS, insumosRCE, insumosFaltantes, getMonedaPorTerminal } from "@/data/mockData";
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import type { CategoriaEvento, CategoriaLesiva, FormPrefill, Persona, Evento } from "@/types";
@@ -82,6 +82,68 @@ const FUENTES: Record<CategoriaEvento, string> = {
   disciplinarios:     "SuccessFactors / Gestión Humana",
   evidencias:         "Auditoría IA Evidencias",
 };
+
+function PersonaSearchField({ value, persona, onChange, onSelect, onClear }: {
+  value: string;
+  persona: Persona | null;
+  onChange: (val: string) => void;
+  onSelect: (p: Persona) => void;
+  onClear: () => void;
+}) {
+  const [focused, setFocused] = useState(false);
+  const sugerencias = buscarPersonas(value, 6);
+  const showSugerencias = focused && value.length >= 2 && !persona && sugerencias.length > 0;
+
+  return (
+    <div className="relative">
+      {persona ? (
+        <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2">
+          <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-blue-900">{persona.nombre}</span>
+            <span className="text-[11px] text-blue-700">· ID {persona.cedula}</span>
+            <span className="text-[11px] text-blue-700">· {persona.cargo}</span>
+            <span className="text-[11px] text-blue-700">· {persona.terminal}</span>
+          </div>
+          <button type="button" onClick={onClear} className="text-blue-400 hover:text-blue-600 text-xs flex-shrink-0">✕</button>
+        </div>
+      ) : (
+        <>
+          <input
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Buscar por nombre o cédula..."
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 200)}
+          />
+          {showSugerencias && (
+            <div className="absolute z-20 left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+              {sugerencias.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center gap-2"
+                  onMouseDown={(e) => { e.preventDefault(); onSelect(p); }}
+                >
+                  <div className="w-6 h-6 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                    {p.nombre.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium">{p.nombre}</div>
+                    <div className="text-[10px] text-muted-foreground">ID {p.cedula} · {p.cargo} · {p.terminal}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {value.length >= 3 && !focused && sugerencias.length === 0 && (
+            <span className="text-xs text-amber-600 mt-0.5 block">No se encontró "{value}" — verifica el ID o nombre</span>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 interface GuiaData { terminal: string; ciudad: string; cliente: string; nit: string; valor: number; }
 
@@ -180,7 +242,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const puedeCrear = !!(
     categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion
     && (esVehiculo ? placaInput : true)
-    && (personaOpcional || cedulas.some(c => c.length >= 3))
+    && (personaOpcional || Object.keys(cedulasPersona).length > 0)
     && (categoria === "pqr" ? (terminalDestino && ciudadDestino && equipoRecogida) : true)
   );
 
@@ -192,7 +254,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     if (!terminal) camposFaltantes.push("Terminal");
     if (!descripcion) camposFaltantes.push("Descripción");
     if (esVehiculo && !placaInput) camposFaltantes.push("Placa del vehículo");
-    if (!personaOpcional && !cedulas.some(c => c.length >= 3)) camposFaltantes.push("Persona responsable");
+    if (!personaOpcional && Object.keys(cedulasPersona).length === 0) camposFaltantes.push("Persona responsable");
     if (categoria === "pqr" && !terminalDestino) camposFaltantes.push("Terminal destino");
     if (categoria === "pqr" && !ciudadDestino) camposFaltantes.push("Ciudad destino");
     if (categoria === "pqr" && !equipoRecogida) camposFaltantes.push("Equipo recogida");
@@ -517,27 +579,20 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </label>
                 <div className="space-y-2">
                   {cedulas.map((ced, i) => (
-                    <div key={i}>
-                      <input
-                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                        placeholder="ID empleado"
-                        value={ced}
-                        onChange={(e) => setCedulas((prev) => prev.map((x, j) => j === i ? e.target.value : x))}
-                        onBlur={() => validarCedula(i, ced)}
-                      />
-                      {cedulasPersona[i] && (
-                        <div className="mt-1.5">
-                          <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-blue-900">{cedulasPersona[i].nombre}</span>
-                            <span className="text-[11px] text-blue-700">· {cedulasPersona[i].cargo}</span>
-                            <span className="text-[11px] text-blue-700">· {cedulasPersona[i].terminal}</span>
-                          </div>
-                        </div>
-                      )}
-                      {ced.length >= 3 && !cedulasPersona[i] && (
-                        <span className="text-xs text-muted-foreground mt-0.5 block">Persona no encontrada</span>
-                      )}
-                    </div>
+                    <PersonaSearchField
+                      key={i}
+                      value={ced}
+                      persona={cedulasPersona[i] ?? null}
+                      onChange={(val) => setCedulas((prev) => prev.map((x, j) => j === i ? val : x))}
+                      onSelect={(p) => {
+                        setCedulas((prev) => prev.map((x, j) => j === i ? p.cedula : x));
+                        setCedulasPersona((prev) => ({ ...prev, [i]: p }));
+                      }}
+                      onClear={() => {
+                        setCedulas((prev) => prev.map((x, j) => j === i ? "" : x));
+                        setCedulasPersona((prev) => { const n = { ...prev }; delete n[i]; return n; });
+                      }}
+                    />
                   ))}
                   <button onClick={() => setCedulas((prev) => [...prev, ""])} className="text-xs text-primary flex items-center gap-1 hover:underline">
                     <Plus className="w-3 h-3" /> Agregar persona
@@ -740,7 +795,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     {primerPersona && (<>
                       <span className="text-muted-foreground">{categoria === "dineros" ? "Persona presente:" : categoria === "pqr" ? "Persona relacionada:" : "Persona responsable:"}</span>
                       <span className="font-medium">
-                        {primerPersona.nombre} (ID {primerPersona.cedula})
+                        {primerPersona.nombre} (ID {primerPersona.cedula}){Object.keys(cedulasPersona).length > 1 ? ` +${Object.keys(cedulasPersona).length - 1} más` : ""}
                       </span>
                     </>)}
                     {placaAdicionalData && (<>
