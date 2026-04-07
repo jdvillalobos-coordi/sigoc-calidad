@@ -634,6 +634,7 @@ export function RecordDetailDrawer() {
                 rows={2}
                 placeholder="Observaciones de la resolución (opcional)..."
               />
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={confirmarResolucion}

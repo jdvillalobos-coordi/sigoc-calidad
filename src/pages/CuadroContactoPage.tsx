@@ -129,7 +129,9 @@ export default function CuadroContactoPage() {
     } else {
       lista = lista.filter(p => p?.ultimaDecision?.decision !== "desvinculacion");
       if (filtroDecision !== "todas") {
-        if (filtroDecision === "sin_decision") {
+        if (filtroDecision === "con_lesiva") {
+          lista = lista.filter(p => (p?.lesivas ?? 0) > 0);
+        } else if (filtroDecision === "sin_decision") {
           lista = lista.filter(p => !p?.ultimaDecision);
         } else {
           lista = lista.filter(p => p?.ultimaDecision?.decision === filtroDecision);
@@ -368,6 +370,7 @@ export default function CuadroContactoPage() {
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     { value: "todas", label: "Todas" },
+                    { value: "con_lesiva", label: "🚫 Con actividad lesiva" },
                     { value: "sin_decision", label: "Sin decisión" },
                     { value: "proceso_disciplinario", label: "Proceso disc." },
                     { value: "suspension_temporal", label: "Suspensión" },
