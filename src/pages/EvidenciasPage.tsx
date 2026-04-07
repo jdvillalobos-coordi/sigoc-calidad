@@ -50,7 +50,9 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
   const esMia = ev.asignadoA?.id === usuarioLogueado.id;
   const sinAsignar = !ev.asignadoA;
   const deOtro = !!ev.asignadoA && !esMia;
-  const generaEvento = veredicto === "falso_positivo";
+  const generaEvento =
+    veredicto === "falso_positivo" ||
+    (veredicto === "confirma" && ev.resultadoIA === "no_cumple");
 
   function tomar(e: React.MouseEvent) {
     e.stopPropagation();
@@ -337,7 +339,7 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-700 font-medium">
-                      Al guardar el veredicto se creará un evento automáticamente en la categoría Evidencias, vinculado al operador.
+                      Error del operador confirmado. Al guardar se creará un evento automáticamente vinculado al operador.
                     </p>
                   </div>
                 </div>
