@@ -183,6 +183,8 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
             <button onClick={tomar} className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap">
               Tomar
             </button>
+          ) : (
+            <span className="text-[11px] text-muted-foreground">—</span>
           )}
         </div>
         <div className="flex justify-center">
