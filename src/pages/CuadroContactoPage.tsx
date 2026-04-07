@@ -55,10 +55,9 @@ export default function CuadroContactoPage() {
   const [calOpen, setCalOpen]     = React.useState(false);
   const [ccBusqueda, setCcBusqueda] = React.useState("");
   const [sortDir, setSortDir]     = React.useState<"desc" | "asc">("desc");
-  const [subTabPersonas, setSubTabPersonas] = React.useState<"activos" | "desvinculados">("activos");
+  const [subTabPersonas, setSubTabPersonas] = React.useState<"activos" | "con_lesiva" | "desvinculados">("activos");
   const [subTabVehiculos, setSubTabVehiculos] = React.useState<"activos" | "bloqueados">("activos");
   const [vehBusqueda, setVehBusqueda] = React.useState("");
-  const [filtroDecision, setFiltroDecision] = React.useState<string>("todas");
 
   const filtrados = React.useMemo(() => {
     return eventos.filter((e) => {
@@ -126,24 +125,17 @@ export default function CuadroContactoPage() {
     let lista = cuadroContacto;
     if (subTabPersonas === "desvinculados") {
       lista = lista.filter(p => p?.ultimaDecision?.decision === "desvinculacion");
+    } else if (subTabPersonas === "con_lesiva") {
+      lista = lista.filter(p => p?.ultimaDecision?.decision !== "desvinculacion" && (p?.lesivas ?? 0) > 0);
     } else {
       lista = lista.filter(p => p?.ultimaDecision?.decision !== "desvinculacion");
-      if (filtroDecision !== "todas") {
-        if (filtroDecision === "con_lesiva") {
-          lista = lista.filter(p => (p?.lesivas ?? 0) > 0);
-        } else if (filtroDecision === "sin_decision") {
-          lista = lista.filter(p => !p?.ultimaDecision);
-        } else {
-          lista = lista.filter(p => p?.ultimaDecision?.decision === filtroDecision);
-        }
-      }
     }
     if (ccBusqueda) {
       const q = ccBusqueda.toLowerCase();
       lista = lista.filter((p) => p?.nombre.toLowerCase().includes(q) || p?.cedula.toLowerCase().includes(q) || p?.terminal.toLowerCase().includes(q));
     }
     return lista;
-  }, [cuadroContacto, ccBusqueda, filtroDecision, subTabPersonas]);
+  }, [cuadroContacto, ccBusqueda, subTabPersonas]);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -316,29 +308,35 @@ export default function CuadroContactoPage() {
 
           {/* Personas */}
           {tab === "personas" && (() => {
-            const totalActivos = cuadroContacto.filter(p => p?.ultimaDecision?.decision !== "desvinculacion").length;
+            const noDesvinculados = cuadroContacto.filter(p => p?.ultimaDecision?.decision !== "desvinculacion");
+            const totalActivos = noDesvinculados.length;
+            const totalConLesiva = noDesvinculados.filter(p => (p?.lesivas ?? 0) > 0).length;
             const totalDesvinculados = cuadroContacto.filter(p => p?.ultimaDecision?.decision === "desvinculacion").length;
             return (
             <div>
-              {/* Sub-tabs Activos / Desvinculados */}
               <div className="flex border-b border-border">
                 <button
-                  onClick={() => { setSubTabPersonas("activos"); setFiltroDecision("todas"); }}
+                  onClick={() => setSubTabPersonas("activos")}
                   className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors relative ${
-                    subTabPersonas === "activos"
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground"
+                    subTabPersonas === "activos" ? "text-primary" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Activos ({totalActivos})
                   {subTabPersonas === "activos" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />}
                 </button>
                 <button
-                  onClick={() => { setSubTabPersonas("desvinculados"); setFiltroDecision("todas"); }}
+                  onClick={() => setSubTabPersonas("con_lesiva")}
                   className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors relative ${
-                    subTabPersonas === "desvinculados"
-                      ? "text-red-600"
-                      : "text-muted-foreground hover:text-foreground"
+                    subTabPersonas === "con_lesiva" ? "text-amber-600" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Con Actividad Lesiva ({totalConLesiva})
+                  {subTabPersonas === "con_lesiva" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-t" />}
+                </button>
+                <button
+                  onClick={() => setSubTabPersonas("desvinculados")}
+                  className={`flex-1 px-4 py-2.5 text-xs font-semibold transition-colors relative ${
+                    subTabPersonas === "desvinculados" ? "text-red-600" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   Desvinculados ({totalDesvinculados})
@@ -346,7 +344,7 @@ export default function CuadroContactoPage() {
                 </button>
               </div>
 
-              <div className="px-4 py-3 border-b border-border space-y-2">
+              <div className="px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -366,38 +364,14 @@ export default function CuadroContactoPage() {
                   </button>
                   <span className="text-[11px] text-muted-foreground">{cuadroFiltrado.length} personas</span>
                 </div>
-                {subTabPersonas === "activos" && (
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { value: "todas", label: "Todas" },
-                    { value: "con_lesiva", label: "🚫 Con actividad lesiva" },
-                    { value: "sin_decision", label: "Sin decisión" },
-                    { value: "proceso_disciplinario", label: "Proceso disc." },
-                    { value: "suspension_temporal", label: "Suspensión" },
-                    { value: "llamado_atencion_escrito", label: "Llamado escrito" },
-                    { value: "llamado_atencion_verbal", label: "Llamado verbal" },
-                    { value: "caso_insuficiente", label: "Sin acción" },
-                  ].map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setFiltroDecision(opt.value)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-medium border transition-colors ${
-                        filtroDecision === opt.value
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-card text-muted-foreground border-border hover:text-foreground"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                )}
               </div>
 
               <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
                 {cuadroFiltrado.length === 0 ? (
                   <p className="text-center py-8 text-muted-foreground text-xs">
-                    {subTabPersonas === "desvinculados" ? "No hay personas desvinculadas" : "Sin personas con los filtros aplicados"}
+                    {subTabPersonas === "desvinculados" ? "No hay personas desvinculadas"
+                      : subTabPersonas === "con_lesiva" ? "No hay personas con actividad lesiva"
+                      : "Sin personas en el período seleccionado"}
                   </p>
                 ) : cuadroFiltrado.map((p) => {
                   if (!p) return null;
@@ -405,16 +379,20 @@ export default function CuadroContactoPage() {
                     <button key={p.id} onClick={() => abrirPersona(p.id)}
                       className="flex items-center gap-3 px-4 py-2.5 w-full text-left hover:bg-muted/30 transition-colors">
                       <div className={`w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center flex-shrink-0 ${
-                        subTabPersonas === "desvinculados" ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
+                        subTabPersonas === "desvinculados" ? "bg-red-100 text-red-600"
+                        : subTabPersonas === "con_lesiva" ? "bg-amber-100 text-amber-700"
+                        : "bg-primary/10 text-primary"
                       }`}>
                         {p.nombre.split(" ").slice(0, 2).map((n) => n[0]).join("")}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className={`text-xs font-semibold truncate block ${subTabPersonas === "desvinculados" ? "text-muted-foreground" : "text-foreground"}`}>{p.nombre}</span>
+                        <span className={`text-xs font-semibold truncate block ${
+                          subTabPersonas === "desvinculados" ? "text-muted-foreground" : "text-foreground"
+                        }`}>{p.nombre}</span>
                         <span className="text-[10px] text-muted-foreground">{p.cargo} · {p.terminal}</span>
                         {subTabPersonas === "desvinculados" && p.ultimaDecision && (
                           <span className="text-[10px] text-red-500 block">
-                            Desvinculado el {p.ultimaDecision.fecha}{p.ultimaDecision.observacion ? ` — ${p.ultimaDecision.observacion}` : ""}
+                            Desvinculado el {p.ultimaDecision.fecha}
                           </span>
                         )}
                       </div>
