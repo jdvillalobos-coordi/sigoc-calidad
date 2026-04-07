@@ -1876,8 +1876,8 @@ export function Persona360Drawer() {
             </div>
           )}
 
-          {/* CTA resolución sobre persona */}
-          {totalEv >= 1 && (
+          {/* CTA resolución sobre persona — ocultar si ya fue desvinculado */}
+          {totalEv >= 1 && (() => { const _ud = getDecisionesPersona(persona.id).sort((a, b) => b.fecha.localeCompare(a.fecha))[0]; return !_ud || _ud.decision !== "desvinculacion"; })() && (
             <div className="border border-amber-300 bg-amber-50 rounded-xl p-4 flex items-center justify-between gap-3">
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-900">
