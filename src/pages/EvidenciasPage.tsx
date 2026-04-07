@@ -179,6 +179,13 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
               </div>
               <span className="text-[11px] text-foreground whitespace-nowrap">{ev.asignadoA.nombre.split(" ").slice(0, 2).join(" ")}</span>
             </div>
+          ) : ev.revisadoPor ? (
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                {ev.revisadoPor.split(" ").map(n => n[0]).slice(0, 2).join("")}
+              </div>
+              <span className="text-[11px] text-foreground whitespace-nowrap">{ev.revisadoPor.split(" ").slice(0, 2).join(" ")}</span>
+            </div>
           ) : !ev.veredictoOperador ? (
             <button onClick={tomar} className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap">
               Tomar
