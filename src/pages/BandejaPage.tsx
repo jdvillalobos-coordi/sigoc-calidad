@@ -54,7 +54,10 @@ function diasDesde(fecha: string): number {
   return Math.max(0, Math.floor(diff / 86_400_000));
 }
 
-function DiasBadge({ dias }: { dias: number }) {
+function DiasBadge({ dias, pendiente }: { dias: number; pendiente?: boolean }) {
+  if (pendiente && dias > 3) {
+    return <span className="text-xs text-destructive font-semibold">⏰ {dias}d</span>;
+  }
   return <span className="text-xs text-muted-foreground">{dias}d</span>;
 }
 
@@ -581,10 +584,11 @@ export default function BandejaPage() {
                     const g = getGuia(item.guia);
                     const dias = diasDesde(item.fechaAsignacion);
                     const isExpanded = expandedRow === item.id;
+                    const vencido = item.estadoRevision === "pendiente" && dias > 3;
                     return (
                       <React.Fragment key={item.id}>
                         <tr
-                          className={`hover:bg-muted/30 transition-colors cursor-pointer ${isExpanded ? "bg-muted/20" : ""}`}
+                          className={`hover:bg-muted/30 transition-colors cursor-pointer ${vencido ? "bg-red-50" : ""} ${isExpanded ? "bg-muted/20" : ""}`}
                           onClick={() => toggleRow(item.id)}
                         >
                           <td className="px-3 py-2.5">
@@ -605,7 +609,7 @@ export default function BandejaPage() {
                           <td className="px-3 py-2.5">{g?.terminalOrigen ?? "—"}</td>
                           <td className="px-3 py-2.5">{g?.terminalDestino ?? "—"}</td>
                           <td className="px-3 py-2.5 text-muted-foreground">{g?.fechaCreacion ?? "—"}</td>
-                          <td className="px-3 py-2.5 text-center"><DiasBadge dias={dias} /></td>
+                          <td className="px-3 py-2.5 text-center"><DiasBadge dias={dias} pendiente={item.estadoRevision === "pendiente"} /></td>
                           <td className="px-3 py-2.5 text-center"><EstadoRevisionBadge estado={item.estadoRevision} eventoId={item.eventoGenerado} /></td>
                           <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
                             {item.estadoRevision === "pendiente" && (
@@ -698,10 +702,11 @@ export default function BandejaPage() {
                     const g = getGuia(item.guia);
                     const dias = diasDesde(item.fechaNovedad);
                     const isExpanded = expandedRow === item.id;
+                    const vencido = item.estadoRevision === "pendiente" && dias > 3;
                     return (
                       <React.Fragment key={item.id}>
                         <tr
-                          className={`hover:bg-muted/30 transition-colors cursor-pointer ${isExpanded ? "bg-muted/20" : ""}`}
+                          className={`hover:bg-muted/30 transition-colors cursor-pointer ${vencido ? "bg-red-50" : ""} ${isExpanded ? "bg-muted/20" : ""}`}
                           onClick={() => toggleRow(item.id)}
                         >
                           <td className="px-3 py-2.5">
@@ -719,7 +724,7 @@ export default function BandejaPage() {
                           <td className="px-3 py-2.5">{g?.terminalOrigen ?? item.terminal}</td>
                           <td className="px-3 py-2.5">{g?.terminalDestino ?? "—"}</td>
                           <td className="px-3 py-2.5 text-muted-foreground">{item.fechaNovedad}</td>
-                          <td className="px-3 py-2.5 text-center"><DiasBadge dias={dias} /></td>
+                          <td className="px-3 py-2.5 text-center"><DiasBadge dias={dias} pendiente={item.estadoRevision === "pendiente"} /></td>
                           <td className="px-3 py-2.5 text-center"><CausalBadge causal={item.causal} /></td>
                           <td className="px-3 py-2.5 text-center"><EstadoRevisionBadge estado={item.estadoRevision} eventoId={item.eventoGenerado} /></td>
                           <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
