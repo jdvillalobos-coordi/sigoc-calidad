@@ -179,6 +179,8 @@ function EvidenciaRow({ ev, onUpdate }: { ev: Evidencia; onUpdate: () => void })
               </div>
               <span className="text-[11px] text-foreground whitespace-nowrap">{ev.asignadoA.nombre.split(" ").slice(0, 2).join(" ")}</span>
             </div>
+          ) : ev.veredictoOperador ? (
+            <span className="text-[11px] text-muted-foreground">—</span>
           ) : (
             <button onClick={tomar} className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors whitespace-nowrap">
               Tomar
