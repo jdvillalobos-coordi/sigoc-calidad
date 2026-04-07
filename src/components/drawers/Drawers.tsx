@@ -1964,7 +1964,9 @@ export function Persona360Drawer() {
             );
           })()}
 
-          {/* Acción: Actividad Lesiva */}
+          {/* Acción: Actividad Lesiva — ocultar si ya está desvinculado */}
+          {(() => { const _dl = getDecisionesPersona(persona.id).sort((a, b) => b.fecha.localeCompare(a.fecha))[0]; return !_dl || _dl.decision !== "desvinculacion"; })() && (
+          <>
           <button
             onClick={() => setLesivaOpen(!lesivaOpen)}
             className="w-full text-left px-3 py-2.5 border border-red-200 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
@@ -1973,7 +1975,6 @@ export function Persona360Drawer() {
             <div className="text-[10px] text-red-600/70 mt-0.5">Registrar actividad lesiva asociada a esta persona</div>
           </button>
 
-          {/* Mini-form: Actividad Lesiva */}
           {lesivaOpen && (
             <div className="border border-red-200 bg-red-50/50 rounded-xl p-4 space-y-3">
               <h4 className="text-sm font-semibold text-red-800">Registrar Actividad Lesiva</h4>
@@ -2048,6 +2049,8 @@ export function Persona360Drawer() {
                 </button>
               </div>
             </div>
+          )}
+          </>
           )}
 
           {/* Timeline unificada */}
