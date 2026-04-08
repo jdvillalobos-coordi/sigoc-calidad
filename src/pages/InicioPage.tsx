@@ -76,8 +76,13 @@ export default function InicioPage() {
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {/* Trabajo general */}
+        <div>
+          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+            <FolderOpen className="w-4 h-4 text-primary" /> Trabajo general
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 -mt-3">
           {[
             { label: "Insumos pendientes",  value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente").length, sub: "guías por revisar hoy", icon: Inbox, color: "amber", onClick: () => setPaginaActiva("bandeja") },
             { label: "Eventos abiertos",    value: abiertos.length,        sub: `de ${eventos.length} totales`, icon: FolderOpen, color: "default", onClick: () => irARegistros({ soloAbiertos: true, etiqueta: "Eventos abiertos" }) },
