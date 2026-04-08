@@ -2743,7 +2743,7 @@ export function getDecisionesPersona(personaId: string): DecisionPersona[] {
 // ============================================================
 // PERSISTENCIA EN LOCALSTORAGE
 // ============================================================
-const STORAGE_KEY = "sigoc_data_v1";
+const STORAGE_KEY = "sigoc_data_v2";
 
 interface PersistedData {
   eventos: Evento[];
