@@ -21,11 +21,10 @@ const PAGE_SIZES: { value: PageSize; label: string }[] = [
 
 type TabId = "rce" | "faltantes" | "evidencias";
 type FiltroEstadoRevision = "todas" | EstadoRevisionInsumo;
-type FiltroCausal = "todas" | "solo_sg" | CausalFaltante;
+type FiltroCausal = "todas" | CausalFaltante;
 
 const CAUSALES_OPTIONS: { value: FiltroCausal; label: string }[] = [
   { value: "todas", label: "Todas las causales" },
-  { value: "solo_sg", label: "Solo SG (100/101)" },
   { value: "2_solucion_no_ubicado_sin_100", label: "Sol. No Ubicado Sin 100" },
   { value: "3_causal_pendientes", label: "Causal Pendientes" },
   { value: "4_causal_100_sin_400_previo", label: "Causal 100 sin 400" },
@@ -228,9 +227,8 @@ export default function BandejaPage() {
 
   const faltFiltered = useMemo(() => {
     return faltData.filter((i) => {
-      if (filtroCausal === "solo_sg" && i.codigoNovedad !== "100" && i.codigoNovedad !== "101") return false;
       if (filtroEstadoFalt !== "todas" && i.estadoRevision !== filtroEstadoFalt) return false;
-      if (filtroCausal !== "todas" && filtroCausal !== "solo_sg" && i.causal !== filtroCausal) return false;
+      if (filtroCausal !== "todas" && i.causal !== filtroCausal) return false;
       if (!matchFecha(i.fechaNovedad)) return false;
       if (!matchTerminal(i.terminal)) return false;
       if (filtroCliente !== "todos") {
@@ -549,7 +547,7 @@ export default function BandejaPage() {
             )}
             {tab === "faltantes" && filtroCausal !== "todas" && (
               <span className="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border border-border">
-                {filtroCausal === "solo_sg" ? "Solo SG (100/101)" : (CAUSALES_LABELS[filtroCausal] ?? filtroCausal)}
+                {CAUSALES_LABELS[filtroCausal] ?? filtroCausal}
                 <button onClick={() => setFiltroCausal("todas")} className="hover:bg-muted-foreground/20 rounded-full p-0.5 transition-colors ml-0.5">
                   <X className="w-3 h-3" />
                 </button>
@@ -684,7 +682,6 @@ export default function BandejaPage() {
                     <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground w-8"></th>
                     <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Guía</th>
                     <SortHeader field="cliente">Cliente</SortHeader>
-                    <SortHeader field="novedad" align="text-center">Novedad</SortHeader>
                     <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Checkpoint</th>
                     <SortHeader field="terminal_origen">Terminal origen</SortHeader>
                     <SortHeader field="terminal_destino">Terminal destino</SortHeader>
@@ -697,7 +694,7 @@ export default function BandejaPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {faltVisible.length === 0 ? (
-                    <tr><td colSpan={12} className="text-center py-8 text-muted-foreground">Sin guías faltantes en este filtro</td></tr>
+                    <tr><td colSpan={11} className="text-center py-8 text-muted-foreground">Sin guías faltantes en este filtro</td></tr>
                   ) : faltVisible.map((item) => {
                     const g = getGuia(item.guia);
                     const dias = diasDesde(item.fechaNovedad);
@@ -719,7 +716,6 @@ export default function BandejaPage() {
                             <div className="font-medium truncate max-w-[160px]">{g?.nombreCliente ?? "—"}</div>
                             <div className="text-[10px] text-muted-foreground">{g?.nitCliente ?? ""}</div>
                           </td>
-                          <td className="px-3 py-2.5 text-center"><NovedadBadge codigo={item.codigoNovedad} /></td>
                           <td className="px-3 py-2.5 text-center"><CheckpointBadge origen={item.checkpointOrigen} destino={item.checkpointDestino} /></td>
                           <td className="px-3 py-2.5">{g?.terminalOrigen ?? item.terminal}</td>
                           <td className="px-3 py-2.5">{g?.terminalDestino ?? "—"}</td>
@@ -751,7 +747,7 @@ export default function BandejaPage() {
                         </tr>
                         {isExpanded && (
                           <tr>
-                            <td colSpan={12} className="p-0">
+                            <td colSpan={11} className="p-0">
                               {(item.estadoRevision === "abierto" || item.estadoRevision === "cerrado") && item.eventoGenerado ? (
                                 <div className="px-6 py-4 bg-muted/20 border-t border-border">
                                   <span className="text-xs text-muted-foreground mr-2">Evento asociado:</span>
