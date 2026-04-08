@@ -16,6 +16,7 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
   { value: "listas_vinculantes",label: "📋 Listas" },
   { value: "pqr",               label: "📞 PQR" },
   { value: "disciplinarios",    label: "⚖️ Disciplinarios" },
+  { value: "eventos_seguridad", label: "🛡️ Seguridad" },
   { value: "evidencias",        label: "📸 Evidencias" },
 ];
 
@@ -106,8 +107,8 @@ export default function CuadroContactoPage() {
   const cuadroContacto = React.useMemo(() => {
     return personas.map((p) => {
       const evsPeriodo = filtrados.filter((e) =>
-        e.personasResponsables.some((pv) => pv.personaId === p.id) ||
-        e.personasParticipantes.some((pv) => pv.personaId === p.id)
+        (e.personasResponsables ?? []).some((pv) => pv.personaId === p.id) ||
+        (e.personasParticipantes ?? []).some((pv) => pv.personaId === p.id)
       );
       const tieneEventosEnPeriodo = evsPeriodo.length > 0;
       if (!tieneEventosEnPeriodo) return null;

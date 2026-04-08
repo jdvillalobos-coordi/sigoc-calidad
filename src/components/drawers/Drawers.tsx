@@ -798,13 +798,13 @@ export function RecordDetailDrawer() {
               ))}
 
               {/* Persona(s) vinculada(s) inline en el grid */}
-              {[...ev.personasResponsables, ...ev.personasParticipantes].length > 0 && (
+              {[...(ev.personasResponsables ?? []), ...(ev.personasParticipantes ?? [])].length > 0 && (
                 <div className="col-span-2 border-t border-border/50 pt-2 mt-1">
                   <div className="text-xs text-muted-foreground mb-1">
                     {ev.categoria === "dineros" ? "Persona(s) presente(s)" : "Persona(s) responsable(s)"}
                   </div>
                   <div className="space-y-1">
-                    {[...ev.personasResponsables, ...ev.personasParticipantes].map((pv) => {
+                    {[...(ev.personasResponsables ?? []), ...(ev.personasParticipantes ?? [])].map((pv) => {
                       const p = getPersona(pv.personaId);
                       return (
                         <div
@@ -874,8 +874,8 @@ export function RecordDetailDrawer() {
             )}
           </section>
 
-          {/* Gestión de Seguridad — solo para dineros/unidades */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
+          {/* Gestión de Seguridad — dineros/unidades/eventos_seguridad */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
                 🛡️ Gestión de Seguridad
@@ -896,6 +896,7 @@ export function RecordDetailDrawer() {
                     <option value="Seguimiento a la entrega y RCE">Seguimiento a la entrega y RCE</option>
                     <option value="Seguimiento a la devolución">Seguimiento a la devolución</option>
                     <option value="Investigación de Faltante">Investigación de Faltante</option>
+                    <option value="Investigación de Seguridad">Investigación de Seguridad</option>
                     <option value="Investigación (Guía anulada)">Investigación (Guía anulada)</option>
                     <option value="Proceso Denuncia">Proceso Denuncia</option>
                     <option value="Reporte Acta de Aprehensión">Reporte Acta de Aprehensión</option>
@@ -921,18 +922,34 @@ export function RecordDetailDrawer() {
                     className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Sin asignar</option>
-                    <option value="Demora legalización reexpedidor">Demora legalización reexpedidor</option>
-                    <option value="Demora anulación RCE">Demora anulación RCE</option>
-                    <option value="Pendiente devolución al remitente">Pendiente devolución al remitente</option>
-                    <option value="Pendiente inventario unidad">Pendiente inventario unidad</option>
-                    <option value="RCE mal liquidado">RCE mal liquidado</option>
-                    <option value="RCE pagado, no se refleja en el sistema">RCE pagado, no se refleja en el sistema</option>
-                    <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
-                    <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
+                    {ev.tipoEvento === "Seguimiento RCE" ? (
+                      <>
+                        <option value="Demora legalización reexpedidor">Demora legalización reexpedidor</option>
+                        <option value="Demora anulación RCE">Demora anulación RCE</option>
+                        <option value="Pendiente devolución al remitente">Pendiente devolución al remitente</option>
+                        <option value="Pendiente inventario unidad">Pendiente inventario unidad</option>
+                        <option value="RCE mal liquidado">RCE mal liquidado</option>
+                        <option value="RCE pagado, no se refleja en el sistema">RCE pagado, no se refleja en el sistema</option>
+                        <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
+                        <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
+                        <option value="N/A">N/A</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Demora legalización reexpedidor">Demora legalización reexpedidor</option>
+                        <option value="Demora anulación RCE">Demora anulación RCE</option>
+                        <option value="Pendiente devolución al remitente">Pendiente devolución al remitente</option>
+                        <option value="Pendiente inventario unidad">Pendiente inventario unidad</option>
+                        <option value="RCE mal liquidado">RCE mal liquidado</option>
+                        <option value="RCE pagado, no se refleja en el sistema">RCE pagado, no se refleja en el sistema</option>
+                        <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
+                        <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
+                      </>
+                    )}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estado (Gestión SG)</label>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estado de la investigación</label>
                   <select
                     value={ev.estadoGestionSG ?? ""}
                     onChange={(e) => {
@@ -942,19 +959,21 @@ export function RecordDetailDrawer() {
                     className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="">Sin asignar</option>
-                    <option value="Asignada">Asignada</option>
-                    <option value="En proceso">En proceso</option>
-                    <option value="En proceso (NyS)">En proceso (NyS)</option>
-                    <option value="Parcial">Parcial</option>
-                    <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
-                    <option value="RCE / Entrega Efectiva">RCE / Entrega Efectiva</option>
-                    <option value="Devolución Efectiva">Devolución Efectiva</option>
-                    <option value="Hurto">Hurto</option>
-                    <option value="Pérdida">Pérdida</option>
-                    <option value="Aprehensión">Aprehensión</option>
-                    <option value="Incautación">Incautación</option>
-                    <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
-                    <option value="Cierre Investig.">Cierre Investigación</option>
+                    <optgroup label="Parcial">
+                      <option value="Asignada">Asignada</option>
+                      <option value="En proceso">En proceso</option>
+                      <option value="En proceso (NyS)">En proceso (NyS)</option>
+                      <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
+                    </optgroup>
+                    <optgroup label="Cierre Investigación">
+                      <option value="RCE / Entrega Efectiva">RCE / Entrega Efectiva</option>
+                      <option value="Devolución Efectiva">Devolución Efectiva</option>
+                      <option value="Hurto">Hurto</option>
+                      <option value="Pérdida">Pérdida</option>
+                      <option value="Aprehensión">Aprehensión</option>
+                      <option value="Incautación">Incautación</option>
+                      <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
+                    </optgroup>
                   </select>
                 </div>
               </div>
@@ -1003,7 +1022,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Hallazgos de investigación — dineros/unidades/listas_vinculantes, solo editable */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes") && ev.estadoFlujo !== "cerrado" && (
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
                 Hallazgos de investigación
@@ -1119,7 +1138,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Hallazgos de investigación — read-only para cerrados */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes") && ev.estadoFlujo === "cerrado" &&
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo === "cerrado" &&
             (ev.unidadesFaltantes || ev.contenidoMercancia || ev.lugarLatitud || ev.lugarLongitud || ev.personasResponsablesHechos || ev.registroWorkflow || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-2">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
@@ -1139,7 +1158,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Causa raíz y cierre — para unidades y dineros */}
-          {(ev.categoria === "unidades" || ev.categoria === "dineros") && ev.estadoFlujo !== "cerrado" && (
+          {(ev.categoria === "unidades" || ev.categoria === "dineros" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-purple-200 bg-purple-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
                 🔎 Investigación y cierre
@@ -1341,7 +1360,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Causa raíz y cierre — read-only si cerrado */}
-          {(ev.categoria === "unidades" || ev.categoria === "dineros") && ev.estadoFlujo === "cerrado" && (ev.causaRaiz || ev.grupoCierre) && (
+          {(ev.categoria === "unidades" || ev.categoria === "dineros" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo === "cerrado" && (ev.causaRaiz || ev.grupoCierre) && (
             <section className="bg-muted/40 rounded-xl p-4">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">🔎 Investigación y cierre</h3>
               <div className="grid grid-cols-3 gap-3 text-xs">
@@ -1353,13 +1372,13 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Gestión SG — vista read-only si cerrado */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo === "cerrado" && (ev.intervencionSeguridad || ev.desviacionesIdentificadas || ev.estadoGestionSG) && (
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo === "cerrado" && (ev.intervencionSeguridad || ev.desviacionesIdentificadas || ev.estadoGestionSG) && (
             <section className="bg-muted/40 rounded-xl p-4">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">🛡️ Gestión de Seguridad</h3>
               <div className="grid grid-cols-3 gap-3 text-xs">
                 {ev.intervencionSeguridad && <div><div className="text-muted-foreground mb-0.5">Intervención</div><div className="font-medium">{ev.intervencionSeguridad}</div></div>}
                 {ev.desviacionesIdentificadas && <div><div className="text-muted-foreground mb-0.5">Desviaciones</div><div className="font-medium">{ev.desviacionesIdentificadas}</div></div>}
-                {ev.estadoGestionSG && <div><div className="text-muted-foreground mb-0.5">Estado SG</div><div className="font-medium">{ev.estadoGestionSG}</div></div>}
+                {ev.estadoGestionSG && <div><div className="text-muted-foreground mb-0.5">Estado de la investigación</div><div className="font-medium">{ev.estadoGestionSG}</div></div>}
               </div>
             </section>
           )}
@@ -1379,11 +1398,11 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Personas responsables */}
-          {ev.personasResponsables.length > 0 && (
+          {(ev.personasResponsables ?? []).length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold mb-3">Personas responsables ({ev.personasResponsables.length})</h3>
+              <h3 className="text-sm font-semibold mb-3">Personas responsables ({(ev.personasResponsables ?? []).length})</h3>
               <div className="space-y-2">
-                {ev.personasResponsables.map((pv) => {
+                {(ev.personasResponsables ?? []).map((pv) => {
                   const p = getPersona(pv.personaId);
                   if (!p) return null;
                   return (
@@ -1405,11 +1424,11 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Personas participantes */}
-          {ev.personasParticipantes.length > 0 && (
+          {(ev.personasParticipantes ?? []).length > 0 && (
             <section>
-              <h3 className="text-sm font-semibold mb-3">Personas participantes ({ev.personasParticipantes.length})</h3>
+              <h3 className="text-sm font-semibold mb-3">Personas participantes ({(ev.personasParticipantes ?? []).length})</h3>
               <div className="space-y-2">
-                {ev.personasParticipantes.map((pv) => {
+                {(ev.personasParticipantes ?? []).map((pv) => {
                   const p = getPersona(pv.personaId);
                   if (!p) return null;
                   return (
@@ -1782,8 +1801,8 @@ export function Persona360Drawer() {
   if (!persona) return null;
 
   const evPersona = eventos.filter((e) =>
-    e.personasResponsables.some((pv) => pv.personaId === persona.id) ||
-    e.personasParticipantes.some((pv) => pv.personaId === persona.id)
+    (e.personasResponsables ?? []).some((pv) => pv.personaId === persona.id) ||
+    (e.personasParticipantes ?? []).some((pv) => pv.personaId === persona.id)
   );
   const estudios = estudiosSeguridad.filter((e) => e.personaId === persona.id);
   const alertasPersona = alertasIA.filter(a =>
@@ -2448,7 +2467,7 @@ export function Terminal360Drawer() {
 
   const conteoPersonas: Record<string, number> = {};
   evTerminal.forEach((e) => {
-    [...e.personasResponsables, ...e.personasParticipantes].forEach((pv) => {
+    [...(e.personasResponsables ?? []), ...(e.personasParticipantes ?? [])].forEach((pv) => {
       conteoPersonas[pv.personaId] = (conteoPersonas[pv.personaId] ?? 0) + 1;
     });
   });
@@ -2645,8 +2664,8 @@ export function ResolucionAcumulativaPanel() {
   if (!persona) return null;
 
   const evPersona = eventos.filter(e =>
-    e.personasResponsables.some(pv => pv.personaId === persona.id) ||
-    e.personasParticipantes.some(pv => pv.personaId === persona.id)
+    (e.personasResponsables ?? []).some(pv => pv.personaId === persona.id) ||
+    (e.personasParticipantes ?? []).some(pv => pv.personaId === persona.id)
   );
 
   const evSorted = [...evPersona].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());

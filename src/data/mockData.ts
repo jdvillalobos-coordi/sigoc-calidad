@@ -1800,6 +1800,134 @@ export const eventos: Evento[] = [
     ],
     diasAbierto: 0,
   },
+
+  // ══════════════════════════════════
+  // EVENTOS DE SEGURIDAD (5)
+  // ══════════════════════════════════
+  {
+    id: "SEG-001",
+    categoria: "eventos_seguridad",
+    tipoEvento: "Accidente de tránsito",
+    tipoEntidad: "empleado",
+    estado: "abierto",
+    estadoFlujo: "abierto",
+    terminal: "Bogotá",
+    ciudad: "Bogotá",
+    fecha: "2026-03-10",
+    descripcionHechos: "Vehículo de reparto sufrió colisión lateral en la Av. NQS con calle 72. Sin heridos graves, daños materiales menores.",
+    guias: ["19900293001"],
+    personasResponsables: [{ personaId: "1036452781", cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya", rol: "responsable" }],
+    personasParticipantes: [],
+    vehiculosVinculados: [{ vehiculoId: "ABC-123" }],
+    asignadoA: { id: "u-jorge", nombre: "Jorge Castaño", cargo: "Interventor de Faltantes" },
+    usuarioRegistro: "u-ana",
+    perfilUsuario: "Analista de Seguridad",
+    terminalUsuario: "Bogotá",
+    fechaRegistro: "2026-03-10",
+    anotaciones: [],
+    historial: [{ id: "h-seg1", fecha: "2026-03-10", usuarioNombre: "Ana Martínez", accion: "Evento creado" }],
+    diasAbierto: 14,
+  },
+  {
+    id: "SEG-002",
+    categoria: "eventos_seguridad",
+    tipoEvento: "Extorsión",
+    tipoEntidad: "empleado",
+    estado: "abierto",
+    estadoFlujo: "escalado",
+    terminal: "Medellín",
+    ciudad: "Medellín",
+    fecha: "2026-03-05",
+    descripcionHechos: "Conductor reporta llamadas amenazantes solicitando dinero para permitir tránsito por zona rural del oriente antioqueño.",
+    personasResponsables: [{ personaId: "71234567", cedula: "71234567", nombre: "Edgar Mauricio Salcedo Ruiz", rol: "responsable" }],
+    personasParticipantes: [],
+    escaladoA: { id: "u-nicolas", nombre: "Nicolás Ríos Castaño", cargo: "Contralor Nacional de Calidad" },
+    escaladoPor: { id: "u-jorge", nombre: "Jorge Castaño" },
+    fechaEscalamiento: "2026-03-07",
+    motivoEscalamiento: "Caso de seguridad física requiere intervención de contraloría y autoridades.",
+    asignadoA: { id: "u-jorge", nombre: "Jorge Castaño", cargo: "Interventor de Faltantes" },
+    usuarioRegistro: "u-jorge",
+    perfilUsuario: "Interventor de Faltantes",
+    terminalUsuario: "Medellín",
+    fechaRegistro: "2026-03-05",
+    anotaciones: [
+      { id: "a-seg2", autorId: "u-jorge", autorNombre: "Jorge Castaño", autorRol: "Interventor", fecha: "2026-03-06T14:00:00", texto: "Se alerta a la policía local y se reasigna la ruta del conductor.", tipo: "hallazgo" },
+    ],
+    historial: [{ id: "h-seg2", fecha: "2026-03-05", usuarioNombre: "Jorge Castaño", accion: "Evento creado" }],
+    diasAbierto: 19,
+  },
+  {
+    id: "SEG-003",
+    categoria: "eventos_seguridad",
+    tipoEvento: "Hurto de Combustible",
+    tipoEntidad: "empleado",
+    estado: "cerrado",
+    estadoFlujo: "cerrado",
+    terminal: "Cali",
+    ciudad: "Cali",
+    fecha: "2026-02-20",
+    descripcionHechos: "Se detecta consumo anómalo de combustible en vehículo de ruta Cali-Buenaventura. Conductor reconoce desvío de 40 galones.",
+    valorAfectacion: 680000,
+    personasResponsables: [{ personaId: "31987654", cedula: "31987654", nombre: "Julián Esteban Torres Díaz", rol: "responsable" }],
+    personasParticipantes: [],
+    vehiculosVinculados: [{ vehiculoId: "DEF-456" }],
+    asignadoA: { id: "u-ana", nombre: "Ana Martínez", cargo: "Analista de Calidad" },
+    usuarioRegistro: "u-ana",
+    perfilUsuario: "Analista de Calidad",
+    terminalUsuario: "Nacional",
+    fechaRegistro: "2026-02-20",
+    anotaciones: [],
+    historial: [
+      { id: "h-seg3a", fecha: "2026-02-20", usuarioNombre: "Ana Martínez", accion: "Evento creado" },
+      { id: "h-seg3b", fecha: "2026-03-01", usuarioNombre: "Ana Martínez", accion: "Caso cerrado — conductor desvinculado" },
+    ],
+    diasAbierto: 9,
+  },
+  {
+    id: "SEG-004",
+    categoria: "eventos_seguridad",
+    tipoEvento: "Intrusión",
+    tipoEntidad: "empleado",
+    estado: "abierto",
+    estadoFlujo: "abierto",
+    terminal: "Barranquilla",
+    ciudad: "Barranquilla",
+    fecha: "2026-03-18",
+    descripcionHechos: "Cámaras de CCTV detectan ingreso no autorizado al patio de carga en horario nocturno. No se reportan faltantes pero se evidencia manipulación de sellos.",
+    personasResponsables: [],
+    personasParticipantes: [],
+    asignadoA: { id: "u-jorge", nombre: "Jorge Castaño", cargo: "Interventor de Faltantes" },
+    usuarioRegistro: "u-jorge",
+    perfilUsuario: "Interventor de Faltantes",
+    terminalUsuario: "Barranquilla",
+    fechaRegistro: "2026-03-18",
+    anotaciones: [],
+    historial: [{ id: "h-seg4", fecha: "2026-03-18", usuarioNombre: "Jorge Castaño", accion: "Evento creado" }],
+    diasAbierto: 6,
+  },
+  {
+    id: "SEG-005",
+    categoria: "eventos_seguridad",
+    tipoEvento: "Suplantación",
+    tipoEntidad: "empleado",
+    estado: "abierto",
+    estadoFlujo: "abierto",
+    terminal: "CDMX Norte",
+    ciudad: "Ciudad de México",
+    fecha: "2026-04-01",
+    descripcionHechos: "Se detecta que una persona se presentó con credencial falsa para retirar mercancía en nombre de un cliente. Guía fue entregada antes de verificar identidad.",
+    guias: ["MX-80001"],
+    personasResponsables: [],
+    personasParticipantes: [],
+    asignadoA: { id: "u-ana", nombre: "Ana Martínez", cargo: "Analista de Calidad" },
+    usuarioRegistro: "u-ana",
+    perfilUsuario: "Analista de Calidad",
+    terminalUsuario: "Nacional",
+    fechaRegistro: "2026-04-01",
+    anotaciones: [],
+    historial: [{ id: "h-seg5", fecha: "2026-04-01", usuarioNombre: "Ana Martínez", accion: "Evento creado" }],
+    diasAbierto: 3,
+  },
 ];
 
 // ============================================================
@@ -2081,8 +2209,8 @@ export function getGuia(numero: string): Guia | undefined {
 export function getEventosPorPersona(personaId: string): Evento[] {
   return eventos.filter(
     (e) =>
-      e.personasResponsables.some((p) => p.personaId === personaId) ||
-      e.personasParticipantes.some((p) => p.personaId === personaId)
+      (e.personasResponsables ?? []).some((p) => p.personaId === personaId) ||
+      (e.personasParticipantes ?? []).some((p) => p.personaId === personaId)
   );
 }
 
@@ -2118,10 +2246,10 @@ export function getEventosRelacionados(eventoId: string): Evento[] {
     });
   }
   // Por personas responsables compartidas
-  ev.personasResponsables.forEach((pr) => {
+  (ev.personasResponsables ?? []).forEach((pr) => {
     eventos.forEach((e) => {
       if (e.id !== eventoId && !resultado.find((x) => x.id === e.id)) {
-        if (e.personasResponsables.some((p) => p.personaId === pr.personaId)) {
+        if ((e.personasResponsables ?? []).some((p) => p.personaId === pr.personaId)) {
           resultado.push(e);
         }
       }
@@ -2557,12 +2685,27 @@ export const CATEGORIAS_LESIVAS: Record<CategoriaLesiva, { label: string; subcat
   antecedentes: {
     label: "Antecedentes",
     subcategorias: [
-      "Hurto simple", "Hurto agravado", "Hurto calificado",
-      "Estafa", "Falsedad de documentos", "Homicidio",
-      "Porte de armas o elementos cortantes", "Proceso contra patrimonio público",
-      "Violencia intrafamiliar", "Inasistencia alimentaria",
-      "Violencia contra servidor público", "Tráfico de estupefacientes",
-      "Proceso laboral", "Infracción de tránsito",
+      "Abuso carnal abusivo con menor de edad",
+      "Desmovilizado por las Farc / autodefensas",
+      "Estafa",
+      "Falsedad de documentos",
+      "Fraude procesal",
+      "Homicidio",
+      "Hurto simple",
+      "Hurto agravado",
+      "Hurto calificado",
+      "Infracción de tránsito para Conductores",
+      "Medida de seguridad",
+      "Porte de armas, elementos cortantes, punzantes o semejantes",
+      "Proceso contra el patrimonio público",
+      "Proceso violencia intrafamiliar",
+      "Proceso inasistencia alimentaria",
+      "Procesos civiles con embargo de muebles y bienes",
+      "Proceso por sumas de dinero",
+      "Violencia contra servidor público",
+      "Traficar, consumir, portar, distribuir, ofrecer o comercializar estupefacientes",
+      "Proceso laboral",
+      "Demanda laboral contra empresa (como demandante)",
     ],
   },
   suplantacion: {
@@ -2580,11 +2723,11 @@ export const CATEGORIAS_LESIVAS: Record<CategoriaLesiva, { label: string; subcat
   },
   hurto_dinero: {
     label: "Hurto de Dinero",
-    subcategorias: ["Hurto simple", "Hurto agravado"],
+    subcategorias: ["Hurto Simple", "Hurto agravado"],
   },
   hurto_vehiculos: {
     label: "Hurto Vehículos",
-    subcategorias: ["Gemeleo", "Piratería terrestre", "Autorobo", "Falso servicio", "Falsa denuncia"],
+    subcategorias: ["Gemeleo", "Piratería Terrestre", "Autorobo", "Falso servicio", "Falsa denuncia"],
   },
   entrega: {
     label: "Entrega",
@@ -2592,15 +2735,28 @@ export const CATEGORIAS_LESIVAS: Record<CategoriaLesiva, { label: string; subcat
   },
   infraccion_transito: {
     label: "Infracción de tránsito",
-    subcategorias: ["Comparendo", "Suspensión de licencia", "Retención de licencia"],
+    subcategorias: ["Comparendo, suspensión de la licencia, retención de la licencia"],
   },
   siplaft: {
     label: "SIPLAFT",
-    subcategorias: ["Lavado de activos", "Financiación del terrorismo", "Proliferación de armas de destrucción masiva"],
+    subcategorias: [
+      "Lavado de Activos",
+      "Financiación del Terrorismo",
+      "Financiamiento de la Proliferación de Armas de Destrucción Masiva",
+      "Lavado de Activos, Financiación del Terrorismo, Financiamiento de la Proliferación de Armas de Destrucción Masiva",
+    ],
   },
   fuga_informacion: {
     label: "Fuga de información",
     subcategorias: ["Ocultar información para favorecer a un líder"],
+  },
+  extranjero: {
+    label: "Extranjero",
+    subcategorias: ["No cuenta con CC, solo permiso permanente"],
+  },
+  entrevista_seguridad: {
+    label: "Entrevista de Seguridad",
+    subcategorias: ["Pertenece / perteneció a sindicato"],
   },
   delincuencia_comun: {
     label: "Delincuencia común",
@@ -2743,7 +2899,7 @@ export function getDecisionesPersona(personaId: string): DecisionPersona[] {
 // ============================================================
 // PERSISTENCIA EN LOCALSTORAGE
 // ============================================================
-const STORAGE_KEY = "sigoc_data_v2";
+const STORAGE_KEY = "sigoc_data_v4";
 
 interface PersistedData {
   eventos: Evento[];

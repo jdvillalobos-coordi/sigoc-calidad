@@ -20,6 +20,7 @@ const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
   { value: "listas_vinculantes", label: "📋 Listas Vinculantes" },
   { value: "pqr",                label: "📞 PQR" },
   { value: "disciplinarios",     label: "⚖️ Disciplinarios" },
+  { value: "eventos_seguridad", label: "🛡️ Eventos Seguridad" },
   { value: "evidencias",         label: "📸 Evidencias" },
 ];
 
@@ -169,7 +170,7 @@ export default function RegistrosPage() {
     })
     .filter((e) => {
       if (!q) return true;
-      const allPersonaNames = [...e.personasResponsables, ...e.personasParticipantes]
+      const allPersonaNames = [...(e.personasResponsables ?? []), ...(e.personasParticipantes ?? [])]
         .map(p => `${p.nombre} ${p.cedula}`.toLowerCase());
       return (
         e.id.toLowerCase().includes(q) ||
@@ -368,7 +369,7 @@ export default function RegistrosPage() {
               <tbody className="divide-y divide-border">
 
                 {paged.map((e) => {
-                  const responsable = e.personasResponsables[0];
+                  const responsable = (e.personasResponsables ?? [])[0];
                   return (
                     <tr key={e.id}
                       onClick={() => abrirRegistro(e.id)}

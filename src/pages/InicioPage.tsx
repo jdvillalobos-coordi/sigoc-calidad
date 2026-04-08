@@ -125,6 +125,7 @@ const CAT_CARDS: { key: string; label: string; icon: string; border: string; bg:
   { key: "listas_vinculantes",label: "Listas Vinculantes", icon: "📋", border: "border-purple-200", bg: "bg-purple-50", bar: "bg-purple-500" },
   { key: "pqr",               label: "PQR",                icon: "📞", border: "border-cyan-200",   bg: "bg-cyan-50",   bar: "bg-cyan-500" },
   { key: "disciplinarios",    label: "Disciplinarios",     icon: "⚖️", border: "border-red-200",    bg: "bg-red-50",    bar: "bg-red-500" },
+  { key: "eventos_seguridad", label: "Eventos Seguridad",  icon: "🛡️", border: "border-orange-200", bg: "bg-orange-50", bar: "bg-orange-500" },
   { key: "evidencias",        label: "Evidencias",         icon: "📸", border: "border-green-200",  bg: "bg-green-50",  bar: "bg-green-500" },
 ];
 

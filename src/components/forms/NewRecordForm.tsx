@@ -12,6 +12,7 @@ const CATEGORIAS = [
   { id: "listas_vinculantes" as CategoriaEvento, icon: "📋", label: "Listas Vinculantes", desc: "Antecedentes, denuncias, vínculos externos (Truora)" },
   { id: "pqr" as CategoriaEvento, icon: "📞", label: "PQR", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
   { id: "disciplinarios" as CategoriaEvento, icon: "⚖️", label: "Disciplinarios", desc: "Faltas laborales: llegadas tarde, desacatos, llamados de atención" },
+  { id: "eventos_seguridad" as CategoriaEvento, icon: "🛡️", label: "Eventos de Seguridad", desc: "Accidentes, hurtos, extorsión y otros eventos de seguridad" },
   { id: "evidencias" as CategoriaEvento, icon: "📸", label: "Evidencias", desc: "Falsa evidencia de entrega o intento de entrega" },
 ] as const;
 
@@ -20,29 +21,29 @@ const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[]
   unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 101", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
   listas_vinculantes: [
     { grupo: "Investigación", opciones: ["Denuncia penal", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] },
-    { grupo: "Eventos de seguridad", opciones: [
-      "Accidente de tránsito",
-      "Activo CM Hurto / Pérdida (Sede)",
-      "Aéreo",
-      "Afectaciones a la seguridad híbrida",
-      "Bloqueo de vías",
-      "Descuelgue",
-      "Extorsión",
-      "Falla del Servidor (Plataforma GPS)",
-      "Fraude en la Documentación",
-      "Fuga de Información",
-      "Homicidio",
-      "Hurto de Combustible",
-      "Inhibidores de Señal (GSM, GPRS, GPS)",
-      "Intrusión",
-      "Lesiones Personales",
-      "Sabotaje",
-      "Secuestro",
-      "Suplantación",
-      "Terrorismo",
-      "Vandalismo",
-    ] },
   ],
+  eventos_seguridad: [{ opciones: [
+    "Accidente de tránsito",
+    "Activo CM Hurto / Pérdida (Sede)",
+    "Aéreo",
+    "Afectaciones a la seguridad híbrida",
+    "Bloqueo de vías",
+    "Descuelgue",
+    "Extorsión",
+    "Falla del Servidor (Plataforma GPS)",
+    "Fraude en la Documentación",
+    "Fuga de Información",
+    "Homicidio",
+    "Hurto de Combustible",
+    "Inhibidores de Señal (GSM, GPRS, GPS)",
+    "Intrusión",
+    "Lesiones Personales",
+    "Sabotaje",
+    "Secuestro",
+    "Suplantación",
+    "Terrorismo",
+    "Vandalismo",
+  ] }],
   pqr: [{ opciones: [
     "Alerta NYS no atendida",
     "Certificación de entrega - mala entrega",
@@ -81,6 +82,7 @@ const FUENTES: Record<CategoriaEvento, string> = {
   pqr:                "Reporte cliente / Agente CAL",
   disciplinarios:     "SuccessFactors / Gestión Humana",
   evidencias:         "Auditoría IA Evidencias",
+  eventos_seguridad:  "Gestión de Seguridad",
 };
 
 function PersonaSearchField({ value, persona, onChange, onSelect, onClear }: {
@@ -103,6 +105,9 @@ function PersonaSearchField({ value, persona, onChange, onSelect, onClear }: {
             <span className="text-[11px] text-blue-700">· ID {persona.cedula}</span>
             <span className="text-[11px] text-blue-700">· {persona.cargo}</span>
             <span className="text-[11px] text-blue-700">· {persona.terminal}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${persona.tipo === "empleado" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+              {persona.tipo === "empleado" ? "Empleado CM" : "Tercero"}
+            </span>
           </div>
           <button type="button" onClick={onClear} className="text-blue-400 hover:text-blue-600 text-xs flex-shrink-0">✕</button>
         </div>
@@ -191,6 +196,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [placaAdicional, setPlacaAdicional] = useState("");
   const [placaAdicionalData, setPlacaAdicionalData] = useState<{ placa: string; tipo: string; conductorId: string; estado: string } | null>(null);
   const [placaAdicionalError, setPlacaAdicionalError] = useState(false);
+  const [direccion, setDireccion] = useState("");
+  const [contenidoMercancia, setContenidoMercancia] = useState("");
   const [eventoCreado, setEventoCreado] = useState<string | null>(null);
 
   function buscarGuia(idx: number, num: string) {
@@ -237,12 +244,13 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   }
 
   const esVehiculo = tipoEntidad === "Vehículo";
-  const mostrarPlacaAdicional = !esVehiculo && (categoria === "dineros" || categoria === "unidades" || categoria === "listas_vinculantes");
-  const personaOpcional = esVehiculo || categoria === "pqr" || categoria === "listas_vinculantes" || categoria === "evidencias";
+  const hideTipoEntidad = categoria === "dineros" || categoria === "unidades" || categoria === "eventos_seguridad";
+  const mostrarPlacaAdicional = !esVehiculo && categoria === "listas_vinculantes";
+  const personaOpcional = esVehiculo || categoria === "pqr" || categoria === "listas_vinculantes" || categoria === "evidencias" || categoria === "eventos_seguridad" || categoria === "unidades";
   const puedeCrear = !!(
-    categoria && tipoEvento && tipoEntidad && terminal && fecha && descripcion
+    categoria && tipoEvento && (hideTipoEntidad || tipoEntidad) && terminal && fecha && descripcion
     && (esVehiculo ? placaInput : true)
-    && (personaOpcional || Object.keys(cedulasPersona).length > 0)
+    && (personaOpcional || hideTipoEntidad || Object.keys(cedulasPersona).length > 0)
     && (categoria === "pqr" ? (terminalDestino && ciudadDestino && equipoRecogida) : true)
   );
 
@@ -250,7 +258,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const camposFaltantes: string[] = [];
   if (intentoCrear && !puedeCrear) {
     if (!tipoEvento) camposFaltantes.push("Tipo de evento");
-    if (!tipoEntidad) camposFaltantes.push("Tipo de entidad");
+    if (!hideTipoEntidad && !tipoEntidad) camposFaltantes.push("Tipo de entidad");
     if (!terminal) camposFaltantes.push("Terminal");
     if (!fecha) camposFaltantes.push("Fecha");
     if (!descripcion) camposFaltantes.push("Descripción");
@@ -300,6 +308,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setPlacaAdicional("");
     setPlacaAdicionalData(null);
     setPlacaAdicionalError(false);
+    setDireccion("");
+    setContenidoMercancia("");
     setIntentoCrear(false);
     setEventoCreado(null);
   }
@@ -336,7 +346,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       estado: "abierto",
       categoria: categoria!,
       tipoEvento,
-      tipoEntidad: tipoEntidadMap[tipoEntidad] ?? "empleado",
+      tipoEntidad: tipoEntidadMap[tipoEntidad] || "empleado",
       fecha,
       terminal,
       ciudad,
@@ -351,6 +361,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       valorAfectacion: valorAfectacion ? Number(valorAfectacion) : undefined,
       valorDinero: categoria === "dineros" && valorAfectacion ? Number(valorAfectacion) : undefined,
       codigoNovedad: categoria === "unidades" ? codigoNovedad || undefined : undefined,
+      direccion: categoria === "listas_vinculantes" ? direccion || undefined : undefined,
+      contenidoMercancia: categoria === "unidades" ? contenidoMercancia || undefined : undefined,
       nitCliente: nitCliente || undefined,
       nombreCliente: nombreCliente || undefined,
       rolSolicitante: rolSolicitante as Evento["rolSolicitante"] || undefined,
@@ -462,13 +474,15 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               </div>
 
               {/* Tipo de entidad */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de entidad *</label>
-                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={tipoEntidad} onChange={(e) => setTipoEntidad(e.target.value)}>
-                  <option value="">Seleccionar...</option>
-                  {["Empleado CM", "Aliado Goo", "Aliado Droop", "Contratista", "Tercero (persona jurídica)", "Vehículo", "Delincuencia", "Remitente", "Destinatario"].map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
+              {!hideTipoEntidad && (
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de entidad *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={tipoEntidad} onChange={(e) => setTipoEntidad(e.target.value)}>
+                    <option value="">Seleccionar...</option>
+                    {["Empleado CM", "Aliado Goo", "Aliado Droop", "Contratista", "Tercero (persona jurídica)", "Vehículo", "Delincuencia", "Remitente", "Destinatario"].map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              )}
 
               {/* Terminal y Fecha */}
               <div className="grid grid-cols-2 gap-3">
@@ -538,6 +552,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               )}
 
               {/* Guías (opcional para vehículos, normal para otros) */}
+              {categoria !== "eventos_seguridad" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   Guía(s){esVehiculo ? "" : ""}
@@ -572,8 +587,10 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     : "Opcional — dejar vacío si el evento no está asociado a una guía"}
                 </p>
               </div>
+              )}
 
               {/* Personas responsables (opcional para vehículos) */}
+              {categoria !== "unidades" && categoria !== "eventos_seguridad" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   {categoria === "dineros" ? "Persona(s) presente(s) en el evento" : categoria === "pqr" ? "Persona(s) relacionada(s)" : "Persona(s) responsable(s)"}{personaOpcional ? "" : " *"}
@@ -601,6 +618,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </div>
                 {personaOpcional && <p className="text-xs text-muted-foreground/70 mt-1">{esVehiculo ? "Opcional — puedes asociar el conductor u otra persona si aplica" : "Opcional — puedes vincular una persona si aplica"}</p>}
               </div>
+              )}
 
               {/* Descripción */}
               <div>
@@ -615,6 +633,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               </div>
 
               {/* Valor de afectación */}
+              {categoria !== "listas_vinculantes" && categoria !== "eventos_seguridad" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   {categoria === "dineros" ? "Valor del dinero" : categoria === "unidades" ? "Valor declarado de unidades" : "Valor estimado de afectación"}
@@ -627,14 +646,15 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                   onChange={(e) => setValorAfectacion(e.target.value)}
                 />
               </div>
+              )}
 
-              {/* Campos específicos por categoría */}
+              {/* Contenido de la mercancía (solo unidades) */}
               {categoria === "unidades" && (
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Código novedad</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={codigoNovedad} onChange={(e) => setCodigoNovedad(e.target.value)}>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Contenido de la mercancía</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={contenidoMercancia} onChange={(e) => setContenidoMercancia(e.target.value)}>
                     <option value="">Seleccionar...</option>
-                    {["100", "101", "300", "400", "403", "529"].map((c) => <option key={c} value={c}>{c}</option>)}
+                    {["Accesorios", "Bancos", "Bisutería", "Calzado Marroquinería", "Cliente no declara contenido", "Confección", "Cosméticos", "Documentos", "Libros", "Licor", "Línea Blanca", "Loterías", "MQP", "Notarías", "Medicamentos", "Productos para el hogar", "Publicidad", "Repuestos", "Tecnología"].map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               )}
@@ -669,6 +689,16 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                       </select>
                     </div>
                   )}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Dirección</label>
+                    <input
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="Dirección del remitente/destinatario"
+                      value={direccion}
+                      onChange={(e) => setDireccion(e.target.value)}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">Aplica para Remitentes / Destinatarios</p>
+                  </div>
                 </div>
               )}
 
@@ -779,8 +809,10 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <span className="font-medium">{CATEGORIAS.find(c => c.id === categoria)?.label}</span>
                     <span className="text-muted-foreground">Tipo:</span>
                     <span className="font-medium">{tipoEvento}</span>
+                    {tipoEntidad && (<>
                     <span className="text-muted-foreground">Entidad:</span>
                     <span className="font-medium">{tipoEntidad}</span>
+                    </>)}
                     <span className="text-muted-foreground">Fecha:</span>
                     <span className="font-medium">{fecha}</span>
                     {guiaInputs[0] && (<>

@@ -8,7 +8,8 @@ export type CategoriaEvento =
   | "listas_vinculantes"
   | "pqr"
   | "disciplinarios"
-  | "evidencias";
+  | "evidencias"
+  | "eventos_seguridad";
 
 export type EstadoEvento = "abierto" | "cerrado";
 
@@ -203,6 +204,11 @@ export interface Evento {
   // Disciplinarios:
   gravedadFalta?: "leve" | "grave" | "gravisima";
   decisionGH?: string;
+  // Eventos de Seguridad:
+  activoCM?: string;
+  clasificacionActivo?: string;
+  equipoPersonaPresente?: string;
+  equipoPersonaResponsable?: string;
 
   // === FLUJO DE TRABAJO ===
   estadoFlujo: EstadoFlujo;
@@ -248,6 +254,8 @@ export type CategoriaLesiva =
   | "infraccion_transito"
   | "siplaft"
   | "fuga_informacion"
+  | "extranjero"
+  | "entrevista_seguridad"
   | "delincuencia_comun";
 
 export interface ActividadLesiva {
