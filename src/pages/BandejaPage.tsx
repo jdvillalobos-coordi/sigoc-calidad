@@ -682,6 +682,7 @@ export default function BandejaPage() {
                     <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground w-8"></th>
                     <th className="text-left px-3 py-2.5 font-semibold text-muted-foreground">Guía</th>
                     <SortHeader field="cliente">Cliente</SortHeader>
+                    <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Novedad</th>
                     <th className="text-center px-3 py-2.5 font-semibold text-muted-foreground">Checkpoint</th>
                     <SortHeader field="terminal_origen">Terminal origen</SortHeader>
                     <SortHeader field="terminal_destino">Terminal destino</SortHeader>
@@ -694,7 +695,7 @@ export default function BandejaPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {faltVisible.length === 0 ? (
-                    <tr><td colSpan={11} className="text-center py-8 text-muted-foreground">Sin guías faltantes en este filtro</td></tr>
+                    <tr><td colSpan={12} className="text-center py-8 text-muted-foreground">Sin guías faltantes en este filtro</td></tr>
                   ) : faltVisible.map((item) => {
                     const g = getGuia(item.guia);
                     const dias = diasDesde(item.fechaNovedad);
@@ -716,6 +717,7 @@ export default function BandejaPage() {
                             <div className="font-medium truncate max-w-[160px]">{g?.nombreCliente ?? "—"}</div>
                             <div className="text-[10px] text-muted-foreground">{g?.nitCliente ?? ""}</div>
                           </td>
+                          <td className="px-3 py-2.5 text-center"><NovedadBadge codigo={item.codigoNovedad} /></td>
                           <td className="px-3 py-2.5 text-center"><CheckpointBadge origen={item.checkpointOrigen} destino={item.checkpointDestino} /></td>
                           <td className="px-3 py-2.5">{g?.terminalOrigen ?? item.terminal}</td>
                           <td className="px-3 py-2.5">{g?.terminalDestino ?? "—"}</td>
@@ -747,7 +749,7 @@ export default function BandejaPage() {
                         </tr>
                         {isExpanded && (
                           <tr>
-                            <td colSpan={11} className="p-0">
+                            <td colSpan={12} className="p-0">
                               {(item.estadoRevision === "abierto" || item.estadoRevision === "cerrado") && item.eventoGenerado ? (
                                 <div className="px-6 py-4 bg-muted/20 border-t border-border">
                                   <span className="text-xs text-muted-foreground mr-2">Evento asociado:</span>
