@@ -2,7 +2,8 @@ import React from "react";
 import { eventos, alertasIA, guias, insumosRCE, insumosFaltantes, usuarioLogueado } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
-import { FolderOpen, Clock, Bot, Inbox, Briefcase, ArrowUpRight, Check, CalendarDays, X, BarChart3 } from "lucide-react";
+import { FolderOpen, Clock, Bot, Inbox, Briefcase, ArrowUpRight, Check, CalendarDays, X, BarChart3, Timer } from "lucide-react";
+import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
 import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,6 +23,7 @@ export default function InicioPage() {
   const cerradosTotal  = React.useMemo(() => eventos.filter((e) => e.estadoFlujo === "cerrado"), [dataVersion]);
   const escaladosTotal = React.useMemo(() => eventos.filter((e) => e.estadoFlujo === "escalado"), [dataVersion]);
   const vencidos       = React.useMemo(() => eventos.filter((e) => e.diasAbierto > 30 && e.estado === "abierto"), [dataVersion]);
+  const sinAsignarSla  = React.useMemo(() => eventos.filter(eventoSinAsignarSlaCritico).length, [dataVersion]);
   const nuevasIA       = alertasIA.filter((a) => a.estado === "nueva");
   const criticas       = nuevasIA.filter((a) => a.severidad === "critica");
 
@@ -87,6 +89,7 @@ export default function InicioPage() {
             { label: "Insumos pendientes",  value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente").length, sub: "guías por revisar hoy", icon: Inbox, color: "amber", onClick: () => setPaginaActiva("bandeja") },
             { label: "Eventos abiertos",    value: abiertos.length,        sub: `de ${eventos.length} totales`, icon: FolderOpen, color: "default", onClick: () => irARegistros({ soloAbiertos: true, etiqueta: "Eventos abiertos" }) },
             { label: "Eventos cerrados",    value: cerradosTotal.length,   sub: "totales", icon: Check, color: "green", onClick: () => irARegistros({ soloCerrados: true, etiqueta: "Eventos cerrados" }) },
+            { label: "Sin asignar >24 h",   value: sinAsignarSla,           sub: sinAsignarSla > 0 ? "SLA sin responsable" : "al día", icon: Timer, color: sinAsignarSla > 0 ? "red" : "default", onClick: () => irARegistros({ soloSinAsignar24h: true, etiqueta: "Sin asignar >24 h" }) },
             { label: "Vencidos >30d",       value: vencidos.length,         sub: vencidos.length > 0 ? "urgente" : "al día", icon: Clock, color: vencidos.length > 0 ? "red" : "default", onClick: () => irARegistros({ soloVencidos: true, etiqueta: "Vencidos >30d" }) },
             { label: "Escalados activos",   value: escaladosTotal.length,   sub: escaladosTotal.length > 0 ? "requieren atención" : "sin escalados", icon: ArrowUpRight, color: escaladosTotal.length > 0 ? "amber" : "default", onClick: () => irARegistros({ estadoFlujo: "escalado", etiqueta: "Escalados activos" }) },
             { label: "Alertas IA activas",  value: nuevasIA.length,         sub: criticas.length > 0 ? `${criticas.length} críticas` : "sin críticas", icon: Bot, color: criticas.length > 0 ? "red" : "blue", onClick: () => setPaginaActiva("ia") },

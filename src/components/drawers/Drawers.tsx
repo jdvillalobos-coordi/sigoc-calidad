@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getVehiculoPorPlaca, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona, buscarPersonas } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
+import { eventoSinAsignarSlaCritico, horasSinResponsableOperativo } from "@/lib/evento-sla";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV, Persona, PersonaVinculada } from "@/types";
@@ -481,6 +482,16 @@ export function RecordDetailDrawer() {
                 Sin asignar
               </span>
             )}
+            {eventoSinAsignarSlaCritico(ev) && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive bg-destructive/10 border border-destructive/25 px-2 py-1 rounded-full">
+                <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                SLA: más de 24 h sin responsable
+                {(() => {
+                  const h = horasSinResponsableOperativo(ev);
+                  return h != null ? ` (~${Math.floor(h)} h)` : "";
+                })()}
+              </span>
+            )}
             {!ev.asignadoA && ev.estadoFlujo === "abierto" && (
               <button
                 onClick={() => {
@@ -755,11 +766,11 @@ export function RecordDetailDrawer() {
               {[
                 ["Categoría", categoriaConfig[ev.categoria].label],
                 ["Tipo de evento", ev.tipoEvento],
-                ["Tipo entidad", ev.tipoEntidad],
-                ["Terminal", ev.terminal],
+                [ev.categoria === "pqr" ? "Quién presenta (tipo entidad)" : "Tipo entidad", ev.tipoEntidad],
+                [ev.categoria === "pqr" ? "Terminal origen" : "Terminal", ev.terminal],
                 ["Ciudad", ev.ciudad],
                 ...(ev.regional ? [["Regional", ev.regional]] : []),
-                ["Fecha", formatDate(ev.fecha)],
+                [ev.categoria === "pqr" ? "Fecha radicación" : "Fecha", formatDate(ev.fecha)],
                 ...(ev.hora ? [["Hora", ev.hora]] : []),
                 ["Días abierto", `${ev.diasAbierto} días`],
                 ...(ev.fuenteExterna ? [["Fuente", ev.fuenteExterna]] : []),
@@ -776,16 +787,16 @@ export function RecordDetailDrawer() {
                 ...(ev.tipoPoblacionDestino ? [["Tipo pob. destino", ev.tipoPoblacionDestino === "directa_domestica" ? "Directa/Doméstica" : "Reexpedición"]] : []),
                 ...(ev.equipoRecogida ? [["Equipo recogida", ev.equipoRecogida]] : []),
                 ...(ev.equipoEntrega ? [["Equipo entrega", ev.equipoEntrega]] : []),
-                ...(ev.equipoTenencia != null ? [["Equipo tenencia", `${ev.equipoTenencia} unidad(es)`]] : []),
+                ...(ev.pqrIdRecogida ? [["N° I.D recogida", ev.pqrIdRecogida]] : []),
                 ...(ev.categoriaLesivaEvento ? [["Categoría lesiva", ev.categoriaLesivaEvento]] : []),
                 ...(ev.subcategoriaLesivaEvento ? [["Subcategoría lesiva", ev.subcategoriaLesivaEvento]] : []),
                 ...(ev.resultadoIA ? [["Resultado IA", ev.resultadoIA === "cumple" ? "Cumple" : "No cumple"]] : []),
                 ...(ev.veredictoOperador ? [["Veredicto auditor", ev.veredictoOperador === "confirma" ? "Confirmado" : ev.veredictoOperador === "falso_negativo" ? "Falso negativo" : "Falso positivo"]] : []),
                 ...(ev.direccion ? [["Dirección", ev.direccion]] : []),
-              ].map(([l, v]) => (
-                <div key={l}>
+              ].map(([l, v], rowIdx) => (
+                <div key={`${l}-${rowIdx}`}>
                   <div className="text-xs text-muted-foreground mb-0.5">{l}</div>
-                  {l === "Terminal" ? (
+                  {(l === "Terminal" || l === "Terminal origen") ? (
                     <button onClick={() => abrirTerminal(v!)} className="text-sm font-medium text-coordinadora-blue hover:underline">{v}</button>
                   ) : l === "Días abierto" ? (
                     <div className="text-sm font-medium flex items-center gap-1">
@@ -826,12 +837,15 @@ export function RecordDetailDrawer() {
                 </div>
               )}
 
-              {/* Guía(s) vinculada(s) inline en el grid */}
-              {ev.guias && ev.guias.length > 0 && (
+              {/* Guía(s) o I.D recogida */}
+              {((ev.guias && ev.guias.length > 0) || ev.pqrIdRecogida) && (
                 <div className="col-span-2 border-t border-border/50 pt-2 mt-1">
-                  <div className="text-xs text-muted-foreground mb-1">Guía(s)</div>
+                  <div className="text-xs text-muted-foreground mb-1">{ev.pqrIdRecogida && (!ev.guias?.length) ? "Identificador (recogida)" : "Guía(s)"}</div>
                   <div className="flex flex-wrap gap-1.5">
-                    {ev.guias.map((g) => (
+                    {ev.pqrIdRecogida && (!ev.guias?.length) && (
+                      <span className="text-sm font-mono font-medium bg-primary/5 text-foreground px-2 py-0.5 rounded">I.D {ev.pqrIdRecogida}</span>
+                    )}
+                    {(ev.guias ?? []).map((g) => (
                       <span key={g} className="text-sm font-mono font-medium bg-primary/5 text-foreground px-2 py-0.5 rounded">
                         {g}
                       </span>
@@ -864,6 +878,48 @@ export function RecordDetailDrawer() {
               <p className="text-sm leading-relaxed">{ev.descripcionHechos}</p>
             </div>
 
+            {ev.categoria === "pqr" && ev.estadoFlujo !== "cerrado" && (
+              <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
+                <h3 className="text-sm font-semibold text-violet-900 mb-0.5">Investigación PQR — equipo tenencia</h3>
+                <p className="text-[11px] text-violet-800/85 mb-3">
+                  Unidades de tenencia: lo diligencia el agente senior al cierre de la investigación (no en el registro inicial).
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-xs text-muted-foreground">Unidades:</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="h-8 w-8 rounded-lg border border-border bg-background text-lg font-bold hover:bg-muted"
+                      onClick={() => {
+                        const i = eventos.findIndex((x) => x.id === ev.id);
+                        if (i === -1) return;
+                        const cur = eventos[i].equipoTenencia ?? 0;
+                        const next = Math.max(0, cur - 1);
+                        if (next === 0) delete eventos[i].equipoTenencia;
+                        else eventos[i].equipoTenencia = next;
+                        setLocalEventos([...eventos]);
+                      }}
+                    >
+                      −
+                    </button>
+                    <span className="min-w-[2rem] text-center text-base font-bold tabular-nums">{ev.equipoTenencia ?? 0}</span>
+                    <button
+                      type="button"
+                      className="h-8 w-8 rounded-lg border border-border bg-background text-lg font-bold hover:bg-muted"
+                      onClick={() => {
+                        const i = eventos.findIndex((x) => x.id === ev.id);
+                        if (i === -1) return;
+                        const cur = eventos[i].equipoTenencia ?? 0;
+                        eventos[i].equipoTenencia = cur + 1;
+                        setLocalEventos([...eventos]);
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Justificación del auditor de evidencias */}
             {ev.justificacionOperador && (

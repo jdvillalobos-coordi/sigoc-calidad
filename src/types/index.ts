@@ -182,7 +182,10 @@ export interface Evento {
   tipoPoblacionDestino?: "directa_domestica" | "reexpedicion";
   equipoRecogida?: string;
   equipoEntrega?: string;
+  /** Unidades de tenencia — diligenciado tras investigación (agente senior), no en el alta. */
   equipoTenencia?: number;
+  /** N° I.D de recogida (8 dígitos) cuando no aplica guía de entrega. */
+  pqrIdRecogida?: string;
   // Gestión de Seguridad (RCE / Faltantes):
   intervencionSeguridad?: string;
   desviacionesIdentificadas?: string;

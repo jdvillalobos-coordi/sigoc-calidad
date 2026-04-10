@@ -7,6 +7,8 @@ export interface RegistrosNavFiltro {
   soloAbiertos?: boolean;
   soloCerrados?: boolean;
   soloVencidos?: boolean;
+  /** Eventos sin analista (ni escalado) con más de 24 h desde registro */
+  soloSinAsignar24h?: boolean;
   soloMios?: boolean;
   soloEscaladosAMi?: boolean;
   etiqueta?: string;

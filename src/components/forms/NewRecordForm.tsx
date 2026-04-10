@@ -5,6 +5,7 @@ import { guias, terminales, getGuia, getPersonaPorCedula, buscarPersonas, getVeh
 import { formatCurrency } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
 import type { CategoriaEvento, CategoriaLesiva, FormPrefill, Persona, Evento } from "@/types";
+import { pqrReferenciaEsRecogida } from "@/lib/pqr-referencia";
 
 const CATEGORIAS = [
   { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
@@ -190,7 +191,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [tipoPoblacionDestino, setTipoPoblacionDestino] = useState("");
   const [equipoRecogida, setEquipoRecogida] = useState("");
   const [equipoEntrega, setEquipoEntrega] = useState("");
-  const [equipoTenencia, setEquipoTenencia] = useState(1);
+  const [pqrIdRecogida, setPqrIdRecogida] = useState("");
   const [categoriaLesiva, setCategoriaLesiva] = useState("");
   const [subcategoriaLesiva, setSubcategoriaLesiva] = useState("");
   const [placaAdicional, setPlacaAdicional] = useState("");
@@ -244,6 +245,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   }
 
   const esVehiculo = tipoEntidad === "Vehículo";
+  const esPqrRecogida = categoria === "pqr" && pqrReferenciaEsRecogida(tipoEvento);
   const hideTipoEntidad = categoria === "dineros" || categoria === "unidades" || categoria === "eventos_seguridad";
   const mostrarPlacaAdicional = !esVehiculo && categoria === "listas_vinculantes";
   const personaOpcional = esVehiculo || categoria === "pqr" || categoria === "listas_vinculantes" || categoria === "evidencias" || categoria === "eventos_seguridad" || categoria === "unidades";
@@ -251,7 +253,10 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     categoria && tipoEvento && (hideTipoEntidad || tipoEntidad) && terminal && fecha && descripcion
     && (esVehiculo ? placaInput : true)
     && (personaOpcional || hideTipoEntidad || Object.keys(cedulasPersona).length > 0)
-    && (categoria === "pqr" ? (terminalDestino && ciudadDestino && equipoRecogida) : true)
+    && (categoria === "pqr"
+      ? (terminalDestino && ciudadDestino && equipoRecogida && tipoPoblacionOrigen && tipoPoblacionDestino
+        && (esPqrRecogida ? /^\d{8}$/.test(pqrIdRecogida.trim()) : /^\d{11}$/.test((guiaInputs[0] ?? "").trim())))
+      : true)
   );
 
   const [intentoCrear, setIntentoCrear] = useState(false);
@@ -267,6 +272,10 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     if (categoria === "pqr" && !terminalDestino) camposFaltantes.push("Terminal destino");
     if (categoria === "pqr" && !ciudadDestino) camposFaltantes.push("Ciudad destino");
     if (categoria === "pqr" && !equipoRecogida) camposFaltantes.push("Equipo recogida");
+    if (categoria === "pqr" && !tipoPoblacionOrigen) camposFaltantes.push("Tipo población origen");
+    if (categoria === "pqr" && !tipoPoblacionDestino) camposFaltantes.push("Tipo población destino");
+    if (categoria === "pqr" && esPqrRecogida && !/^\d{8}$/.test(pqrIdRecogida.trim())) camposFaltantes.push("N° I.D recogida (8 dígitos)");
+    if (categoria === "pqr" && !esPqrRecogida && !/^\d{11}$/.test((guiaInputs[0] ?? "").trim())) camposFaltantes.push("N° guía (11 dígitos)");
   }
 
   const primerPersona = Object.values(cedulasPersona)[0];
@@ -302,7 +311,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setTipoPoblacionDestino("");
     setEquipoRecogida("");
     setEquipoEntrega("");
-    setEquipoTenencia(1);
+    setPqrIdRecogida("");
     setCategoriaLesiva("");
     setSubcategoriaLesiva("");
     setPlacaAdicional("");
@@ -318,6 +327,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     const prefix = categoria!.slice(0, 3).toUpperCase();
     const id = `${prefix}-${String(Math.floor(Math.random() * 900) + 100)}`;
     const hoy = new Date().toISOString().split("T")[0];
+    const fechaRegistroIso = new Date().toISOString();
 
     const tipoEntidadMap: Record<string, Evento["tipoEntidad"]> = {
       "Empleado CM":              "empleado",
@@ -332,7 +342,11 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     };
 
     const guiaPrincipal = guiaInputs[0] ? getGuia(guiaInputs[0]) : null;
-    const ciudad = guiaPrincipal?.ciudadOrigen ?? terminal;
+    const esRecogidaPqr = categoria === "pqr" && pqrReferenciaEsRecogida(tipoEvento);
+    const ciudad =
+      categoria === "pqr"
+        ? (ciudadDestino || guiaPrincipal?.ciudadOrigen || terminal)
+        : (guiaPrincipal?.ciudadOrigen ?? terminal);
 
     const personasVinculadas = Object.values(cedulasPersona).map((p) => ({
       personaId: p.id,
@@ -350,7 +364,11 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       fecha,
       terminal,
       ciudad,
-      guias: guiaInputs.filter(Boolean),
+      guias:
+        categoria === "pqr"
+          ? (esRecogidaPqr ? [] : guiaInputs.filter(Boolean).slice(0, 1))
+          : guiaInputs.filter(Boolean).slice(0, 1),
+      pqrIdRecogida: categoria === "pqr" && esRecogidaPqr ? pqrIdRecogida.trim() : undefined,
       personasResponsables: categoria === "dineros" ? [] : personasVinculadas,
       personasParticipantes: categoria === "dineros" ? personasVinculadas : [],
       vehiculosVinculados: [
@@ -358,7 +376,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
         ...(placaAdicionalData ? [{ vehiculoId: placaAdicionalData.placa }] : []),
       ],
       descripcionHechos: descripcion,
-      valorAfectacion: valorAfectacion ? Number(valorAfectacion) : undefined,
+      valorAfectacion: categoria !== "pqr" && valorAfectacion ? Number(valorAfectacion) : undefined,
       valorDinero: categoria === "dineros" && valorAfectacion ? Number(valorAfectacion) : undefined,
       codigoNovedad: categoria === "unidades" ? codigoNovedad || undefined : undefined,
       direccion: categoria === "listas_vinculantes" ? direccion || undefined : undefined,
@@ -376,7 +394,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       tipoPoblacionDestino: categoria === "pqr" ? tipoPoblacionDestino as Evento["tipoPoblacionDestino"] || undefined : undefined,
       equipoRecogida: categoria === "pqr" ? equipoRecogida || undefined : undefined,
       equipoEntrega: categoria === "pqr" ? equipoEntrega || undefined : undefined,
-      equipoTenencia: categoria === "pqr" ? equipoTenencia : undefined,
       fuenteExterna: FUENTES[categoria!],
       estadoFlujo: "abierto",
       asignadoA: categoria === "pqr" ? undefined : {
@@ -387,7 +404,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       usuarioRegistro: usuarioLogueado.id,
       perfilUsuario: usuarioLogueado.cargo,
       terminalUsuario: usuarioLogueado.terminal,
-      fechaRegistro: hoy,
+      fechaRegistro: fechaRegistroIso,
       anotaciones: [],
       historial: [
         {
@@ -425,7 +442,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
         <div className="border-b border-border px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {categoria && !eventoCreado && <button onClick={() => { setCategoria(null); setTipoEvento(""); setTipoEntidad(""); }} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
+              {categoria && !eventoCreado && <button onClick={() => { setCategoria(null); setTipoEvento(""); setTipoEntidad(""); setPqrIdRecogida(""); }} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
               <h2 className="font-bold text-base">
                 {eventoCreado ? `Evento ${eventoCreado} creado` : categoria ? `Nuevo evento — ${CATEGORIAS.find(c => c.id === categoria)?.label}` : "Nuevo evento"}
               </h2>
@@ -476,7 +493,12 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               {/* Tipo de entidad */}
               {!hideTipoEntidad && (
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de entidad *</label>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    {categoria === "pqr" ? "Quién presenta el caso (tipo de entidad) *" : "Tipo de entidad *"}
+                  </label>
+                  {categoria === "pqr" && (
+                    <p className="text-[10px] text-muted-foreground mb-1">Indica el tipo de quien asume o presenta la responsabilidad del reporte.</p>
+                  )}
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={tipoEntidad} onChange={(e) => setTipoEntidad(e.target.value)}>
                     <option value="">Seleccionar...</option>
                     {["Empleado CM", "Aliado Goo", "Aliado Droop", "Contratista", "Tercero (persona jurídica)", "Vehículo", "Delincuencia", "Remitente", "Destinatario"].map((o) => <option key={o} value={o}>{o}</option>)}
@@ -487,17 +509,86 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               {/* Terminal y Fecha */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal *</label>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    {categoria === "pqr" ? "Terminal origen *" : "Terminal *"}
+                  </label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminal} onChange={(e) => setTerminal(e.target.value)}>
                     <option value="">Seleccionar...</option>
                     {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fecha *</label>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                    {categoria === "pqr" ? "Fecha de radicación *" : "Fecha *"}
+                  </label>
                   <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={fecha} onChange={(e) => setFecha(e.target.value)} />
                 </div>
               </div>
+
+              {categoria === "pqr" && (
+                <div className="space-y-3 rounded-lg border border-primary/15 bg-primary/[0.03] p-3">
+                  <p className="text-[10px] font-medium text-muted-foreground">Ubicación y equipos (tras origen y radicación)</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal destino *</label>
+                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminalDestino} onChange={(e) => setTerminalDestino(e.target.value)}>
+                        <option value="">Seleccionar...</option>
+                        {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Ciudad destino *</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Ciudad destino" value={ciudadDestino} onChange={(e) => setCiudadDestino(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo población origen *</label>
+                      <div className="flex gap-2">
+                        {[["directa_domestica", "Directa/Doméstica"], ["reexpedicion", "Reexpedición"]].map(([v, l]) => (
+                          <button key={v} type="button" onClick={() => setTipoPoblacionOrigen(v)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${tipoPoblacionOrigen === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo población destino *</label>
+                      <div className="flex gap-2">
+                        {[["directa_domestica", "Directa/Doméstica"], ["reexpedicion", "Reexpedición"]].map(([v, l]) => (
+                          <button key={v} type="button" onClick={() => setTipoPoblacionDestino(v)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${tipoPoblacionDestino === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo recogida *</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-BOG-045" value={equipoRecogida} onChange={(e) => setEquipoRecogida(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo entrega</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-MDE-012 (opcional)" value={equipoEntrega} onChange={(e) => setEquipoEntrega(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">NIT Cliente</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="900234567" value={nitCliente} onChange={(e) => setNitCliente(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nombre Cliente</label>
+                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Razón social" value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Rol solicitante</label>
+                    <div className="flex gap-2">
+                      {["remitente", "destinatario", "tercero"].map((r) => (
+                        <button key={r} type="button" onClick={() => setRolSolicitante(r)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors ${rolSolicitante === r ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{r}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Placa del vehículo (solo si entidad es Vehículo) */}
               {esVehiculo && (
@@ -551,41 +642,69 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </div>
               )}
 
-              {/* Guías (opcional para vehículos, normal para otros) */}
+              {/* Guía o I.D (un solo referente por evento; PQR según tipo) */}
               {categoria !== "eventos_seguridad" && (
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                  Guía(s){esVehiculo ? "" : ""}
-                </label>
-                <div className="space-y-2">
-                  {guiaInputs.map((g, i) => (
-                    <div key={i}>
-                      <input
-                        className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring ${guiaErrors[i] ? "border-red-400" : "border-border"}`}
-                        placeholder="19900293001"
-                        value={g}
-                        onChange={(e) => setGuiaInputs((prev) => prev.map((x, j) => j === i ? e.target.value : x))}
-                        onBlur={() => g && buscarGuia(i, g)}
-                      />
-                      {guiaErrors[i] && <p className="text-xs text-red-500 mt-0.5">Guía no encontrada — completa datos manualmente</p>}
-                      {guiasData[i] && (
-                        <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2">
-                          {[["Terminal", guiasData[i].terminal], ["Cliente", guiasData[i].cliente], ["Valor", (() => { const m = getMonedaPorTerminal(guiasData[i].terminal); return formatCurrency(guiasData[i].valor, m.currency, m.locale); })()]].map(([l, v]) => (
-                            <span key={l} className="text-xs bg-white border border-blue-200 rounded px-1.5 py-0.5 text-blue-700">{l}: {v}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <button onClick={() => setGuiaInputs((prev) => [...prev, ""])} className="text-xs text-primary flex items-center gap-1 hover:underline">
-                    <Plus className="w-3 h-3" /> Agregar otra guía
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground/70 mt-1">
-                  {esVehiculo
-                    ? "Opcional — no todos los eventos de vehículos están asociados a una guía"
-                    : "Opcional — dejar vacío si el evento no está asociado a una guía"}
-                </p>
+                {categoria === "pqr" && esPqrRecogida ? (
+                  <>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">N° I.D recogida (8 dígitos) *</label>
+                    <input
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="12345678"
+                      inputMode="numeric"
+                      maxLength={8}
+                      value={pqrIdRecogida}
+                      onChange={(e) => setPqrIdRecogida(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                    />
+                    <p className="text-xs text-muted-foreground/70 mt-1">Tipología de recogida: identifica el caso con el número de I.D (8 dígitos), sin guía de entrega.</p>
+                  </>
+                ) : categoria === "pqr" && !esPqrRecogida ? (
+                  <>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">N° guía (11 dígitos) *</label>
+                    <input
+                      className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring ${guiaErrors[0] ? "border-red-400" : "border-border"}`}
+                      placeholder="20000001002"
+                      inputMode="numeric"
+                      maxLength={11}
+                      value={guiaInputs[0] ?? ""}
+                      onChange={(e) => setGuiaInputs([e.target.value.replace(/\D/g, "").slice(0, 11)])}
+                      onBlur={() => guiaInputs[0] && buscarGuia(0, guiaInputs[0])}
+                    />
+                    {guiaErrors[0] && <p className="text-xs text-red-500 mt-0.5">Guía no encontrada — verifica el número</p>}
+                    {guiasData[0] && (
+                      <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2">
+                        {[["Terminal", guiasData[0].terminal], ["Cliente", guiasData[0].cliente], ["Valor", (() => { const m = getMonedaPorTerminal(guiasData[0].terminal); return formatCurrency(guiasData[0].valor, m.currency, m.locale); })()]].map(([l, v]) => (
+                          <span key={l} className="text-xs bg-white border border-blue-200 rounded px-1.5 py-0.5 text-blue-700">{l}: {v}</span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground/70 mt-1">Un evento corresponde a una sola guía.</p>
+                  </>
+                ) : (
+                  <>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">N° guía</label>
+                    <input
+                      className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring ${guiaErrors[0] ? "border-red-400" : "border-border"}`}
+                      placeholder="19900293001"
+                      value={guiaInputs[0] ?? ""}
+                      onChange={(e) => setGuiaInputs([e.target.value])}
+                      onBlur={() => guiaInputs[0] && buscarGuia(0, guiaInputs[0])}
+                    />
+                    {guiaErrors[0] && <p className="text-xs text-red-500 mt-0.5">Guía no encontrada — completa datos manualmente</p>}
+                    {guiasData[0] && (
+                      <div className="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2">
+                        {[["Terminal", guiasData[0].terminal], ["Cliente", guiasData[0].cliente], ["Valor", (() => { const m = getMonedaPorTerminal(guiasData[0].terminal); return formatCurrency(guiasData[0].valor, m.currency, m.locale); })()]].map(([l, v]) => (
+                          <span key={l} className="text-xs bg-white border border-blue-200 rounded px-1.5 py-0.5 text-blue-700">{l}: {v}</span>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      {esVehiculo
+                        ? "Opcional — un solo número de guía por evento"
+                        : "Opcional — dejar vacío si no aplica; una guía por evento"}
+                    </p>
+                  </>
+                )}
               </div>
               )}
 
@@ -632,8 +751,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 />
               </div>
 
-              {/* Valor de afectación */}
-              {categoria !== "listas_vinculantes" && categoria !== "eventos_seguridad" && (
+              {/* Valor de afectación (no aplica en alta PQR) */}
+              {categoria !== "listas_vinculantes" && categoria !== "eventos_seguridad" && categoria !== "pqr" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   {categoria === "dineros" ? "Valor del dinero" : categoria === "unidades" ? "Valor declarado de unidades" : "Valor estimado de afectación"}
@@ -702,78 +821,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </div>
               )}
 
-              {categoria === "pqr" && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal destino *</label>
-                      <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminalDestino} onChange={(e) => setTerminalDestino(e.target.value)}>
-                        <option value="">Seleccionar...</option>
-                        {terminales.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Ciudad destino *</label>
-                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Ciudad destino" value={ciudadDestino} onChange={(e) => setCiudadDestino(e.target.value)} />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo población origen *</label>
-                      <div className="flex gap-2">
-                        {[["directa_domestica", "Directa/Doméstica"], ["reexpedicion", "Reexpedición"]].map(([v, l]) => (
-                          <button key={v} onClick={() => setTipoPoblacionOrigen(v)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${tipoPoblacionOrigen === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo población destino *</label>
-                      <div className="flex gap-2">
-                        {[["directa_domestica", "Directa/Doméstica"], ["reexpedicion", "Reexpedición"]].map(([v, l]) => (
-                          <button key={v} onClick={() => setTipoPoblacionDestino(v)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium transition-colors ${tipoPoblacionDestino === v ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{l}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo recogida *</label>
-                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-BOG-045" value={equipoRecogida} onChange={(e) => setEquipoRecogida(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo entrega</label>
-                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-MDE-012 (opcional)" value={equipoEntrega} onChange={(e) => setEquipoEntrega(e.target.value)} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo tenencia (unidades) *</label>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setEquipoTenencia(Math.max(1, equipoTenencia - 1))} className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors">−</button>
-                      <span className="text-lg font-bold w-8 text-center">{equipoTenencia}</span>
-                      <button onClick={() => setEquipoTenencia(equipoTenencia + 1)} className="w-8 h-8 rounded-lg border border-border flex items-center justify-center text-lg font-bold hover:bg-muted transition-colors">+</button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">NIT Cliente</label>
-                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="900234567" value={nitCliente} onChange={(e) => setNitCliente(e.target.value)} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Nombre Cliente</label>
-                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Razón social" value={nombreCliente} onChange={(e) => setNombreCliente(e.target.value)} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Rol solicitante</label>
-                    <div className="flex gap-2">
-                      {["remitente", "destinatario", "tercero"].map((r) => (
-                        <button key={r} onClick={() => setRolSolicitante(r)} className={`flex-1 py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors ${rolSolicitante === r ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{r}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {categoria === "disciplinarios" && (
                 <div className="space-y-3">
                   <div>
@@ -813,13 +860,17 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <span className="text-muted-foreground">Entidad:</span>
                     <span className="font-medium">{tipoEntidad}</span>
                     </>)}
-                    <span className="text-muted-foreground">Fecha:</span>
+                    <span className="text-muted-foreground">{categoria === "pqr" ? "Fecha radicación:" : "Fecha:"}</span>
                     <span className="font-medium">{fecha}</span>
-                    {guiaInputs[0] && (<>
+                    {categoria === "pqr" && esPqrRecogida && pqrIdRecogida && (<>
+                      <span className="text-muted-foreground">N° I.D recogida:</span>
+                      <span className="font-medium font-mono">{pqrIdRecogida}</span>
+                    </>)}
+                    {((categoria === "pqr" && !esPqrRecogida) || categoria !== "pqr") && guiaInputs[0] && (<>
                       <span className="text-muted-foreground">Guía:</span>
                       <span className="font-medium font-mono">{guiaInputs[0]}</span>
                     </>)}
-                    <span className="text-muted-foreground">Terminal:</span>
+                    <span className="text-muted-foreground">{categoria === "pqr" ? "Terminal origen:" : "Terminal:"}</span>
                     <span className="font-medium">{terminal}</span>
                     {esVehiculo && placaData && (<>
                       <span className="text-muted-foreground">Vehículo:</span>

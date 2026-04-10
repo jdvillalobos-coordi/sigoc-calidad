@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT, usuarioLogueado } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge } from "@/lib/utils-app";
+import { eventoSinAsignarSlaCritico, horasSinResponsableOperativo } from "@/lib/evento-sla";
 import { useApp } from "@/context/AppContext";
 import { Plus, ChevronUp, ChevronDown, CalendarDays, X } from "lucide-react";
 import type { CategoriaEvento } from "@/types";
@@ -95,6 +96,7 @@ export default function RegistrosPage() {
   const [soloCerrados, setSoloCerrados]       = useState(false);
   const [soloEscaladosAMi, setSoloEscaladosAMi] = useState(false);
   const [soloVencidos, setSoloVencidos]       = useState(false);
+  const [soloSinAsignar24h, setSoloSinAsignar24h] = useState(false);
   const [navEtiqueta, setNavEtiqueta]         = useState<string | null>(null);
   const [paisFiltro, setPaisFiltro]           = useState("todos");
   const [regionalFiltro, setRegionalFiltro]   = useState("todos");
@@ -117,6 +119,7 @@ export default function RegistrosPage() {
     if (f.soloCerrados)       setSoloCerrados(true);
     if (f.soloEscaladosAMi)   setSoloEscaladosAMi(true);
     if (f.soloVencidos)       setSoloVencidos(true);
+    if (f.soloSinAsignar24h)  setSoloSinAsignar24h(true);
     if (f.etiqueta)           setNavEtiqueta(f.etiqueta);
     setPage(1);
     setRegistrosNavFiltro(null); // consume el filtro
@@ -156,6 +159,7 @@ export default function RegistrosPage() {
     .filter((e) => !soloCerrados || e.estadoFlujo === "cerrado")
     .filter((e) => !soloEscaladosAMi || (e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado"))
     .filter((e) => !soloVencidos || (e.diasAbierto > 30 && e.estado === "abierto"))
+    .filter((e) => !soloSinAsignar24h || eventoSinAsignarSlaCritico(e))
     .filter((e) => {
       if (terminalFiltro  !== "todos") return e.terminal === terminalFiltro;
       if (regionalFiltro  !== "todos") return (REGIONALES_FLAT[regionalFiltro] ?? []).includes(e.terminal);
@@ -190,7 +194,7 @@ export default function RegistrosPage() {
       else                                  cmp = a.id.localeCompare(b.id);
       return sortDir === "asc" ? cmp : -cmp;
     })
-  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir, dataVersion]);
+  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, soloSinAsignar24h, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir, dataVersion]);
 
   const effectivePerPage = perPage === "all" ? filtered.length : perPage;
   const pages = effectivePerPage > 0 ? Math.ceil(filtered.length / effectivePerPage) : 1;
@@ -207,7 +211,7 @@ export default function RegistrosPage() {
     return sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
   }
 
-  const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloCerrados || soloEscaladosAMi || soloVencidos || estadoFiltro !== "todos";
+  const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloCerrados || soloEscaladosAMi || soloVencidos || soloSinAsignar24h || estadoFiltro !== "todos";
   const hayFiltrosActivos = hayFiltrosNav || categoriaFiltro !== "todos" || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || !!dateRange?.from || !!q;
   const totalVisible = filtered.length;
 
@@ -216,7 +220,7 @@ export default function RegistrosPage() {
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setAsignadoFiltro("todos");
     setDateRange(undefined); setBusquedaQuery(""); setEstadoFiltro("todos");
     setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false); setSoloEscaladosAMi(false);
-    setSoloVencidos(false); setNavEtiqueta(null); setPage(1);
+    setSoloVencidos(false); setSoloSinAsignar24h(false); setNavEtiqueta(null); setPage(1);
   }
 
   return (
@@ -239,6 +243,7 @@ export default function RegistrosPage() {
                   setSoloCerrados(false);
                   setSoloEscaladosAMi(false);
                   setSoloVencidos(false);
+                  setSoloSinAsignar24h(false);
                   setNavEtiqueta(null);
                   if (c.value !== "todos") setEstadoFiltro("todos");
                   setPage(1);
@@ -312,7 +317,7 @@ export default function RegistrosPage() {
             {navEtiqueta && (
               <FilterPill label={navEtiqueta} onRemove={() => {
                 setNavEtiqueta(null); setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false);
-                setSoloEscaladosAMi(false); setSoloVencidos(false); setEstadoFiltro("todos"); setPage(1);
+                setSoloEscaladosAMi(false); setSoloVencidos(false); setSoloSinAsignar24h(false); setEstadoFiltro("todos"); setPage(1);
               }} />
             )}
             {categoriaFiltro !== "todos" && (
@@ -326,6 +331,9 @@ export default function RegistrosPage() {
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
             {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${asignadoFiltro === "sin_asignar" ? "Sin asignar" : asignadosUnicos.find(a => a.id === asignadoFiltro)?.nombre ?? asignadoFiltro}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
+            {soloSinAsignar24h && !navEtiqueta && (
+              <FilterPill label="Sin asignar >24 h (SLA)" onRemove={() => { setSoloSinAsignar24h(false); setPage(1); }} />
+            )}
             {dateRange?.from && (
               <FilterPill
                 label={`Fechas: ${format(dateRange.from, "dd MMM", { locale: es })}${dateRange.to ? ` – ${format(dateRange.to, "dd MMM", { locale: es })}` : ""}`}
@@ -360,9 +368,15 @@ export default function RegistrosPage() {
                     onClick={() => toggleSort("fecha")}>
                     <span className="flex items-center gap-1">Fecha <SortIcon field="fecha" /></span>
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-16"
-                    onClick={() => toggleSort("diasAbierto")}>
-                    <span className="flex items-center gap-1">Días <SortIcon field="diasAbierto" /></span>
+                  <th
+                    className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-[5.5rem]"
+                    title="Días abiertos; si aplica, alerta SLA sin responsable asignado (>24 h)"
+                    onClick={() => toggleSort("diasAbierto")}
+                  >
+                    <span className="flex flex-col leading-tight">
+                      <span className="flex items-center gap-1">Días <SortIcon field="diasAbierto" /></span>
+                      <span className="text-[9px] font-normal text-muted-foreground/80">SLA</span>
+                    </span>
                   </th>
                 </tr>
               </thead>
@@ -370,10 +384,11 @@ export default function RegistrosPage() {
 
                 {paged.map((e) => {
                   const responsable = (e.personasResponsables ?? [])[0];
+                  const slaSinAsignar = eventoSinAsignarSlaCritico(e);
                   return (
                     <tr key={e.id}
                       onClick={() => abrirRegistro(e.id)}
-                      className="cursor-pointer transition-colors bg-card hover:bg-muted/40">
+                      className={`cursor-pointer transition-colors hover:bg-muted/40 ${slaSinAsignar ? "bg-red-50/90" : "bg-card"}`}>
                       <td className="px-4 py-3">
                         <CategoriaBadge categoria={e.categoria} />
                       </td>
@@ -412,20 +427,35 @@ export default function RegistrosPage() {
                               <span className="text-xs text-foreground truncate max-w-[110px]">{e.asignadoA.nombre.split(" ").slice(0, 2).join(" ")}</span>
                             </div>
                           )
-                          : <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">⚠ Sin asignar</span>
+                          : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border text-amber-800 bg-amber-50 border-amber-200">
+                              Sin asignar
+                            </span>
+                          )
                         }
                       </td>
                       <td className="px-4 py-3"><EstadoBadge estado={e.estado} /></td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {format(parseISO(e.fecha), "dd MMM yy", { locale: es })}
                       </td>
-                      <td className="px-4 py-3 text-xs">
-                        {e.estado !== "cerrado" && e.diasAbierto > 30
-                          ? <span className="text-destructive font-semibold">🔴 {e.diasAbierto}d</span>
-                          : e.estado !== "cerrado" && e.diasAbierto > 3
-                          ? <span className="text-amber-600 font-medium">⏰ {e.diasAbierto}d</span>
-                          : <span className="text-muted-foreground">{e.diasAbierto}d</span>
-                        }
+                      <td className="px-4 py-3 text-xs align-top">
+                        {slaSinAsignar ? (
+                          <div className="flex flex-col gap-0.5 min-w-[4.5rem]">
+                            <span className="inline-flex w-fit items-center rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+                              SLA +24 h
+                            </span>
+                            <span className="text-[10px] font-medium text-destructive/90 tabular-nums">
+                              {Math.floor(horasSinResponsableOperativo(e) ?? 0)} h sin responsable
+                            </span>
+                            <span className="text-[10px] text-muted-foreground tabular-nums">{e.diasAbierto}d abierto</span>
+                          </div>
+                        ) : e.estado !== "cerrado" && e.diasAbierto > 30 ? (
+                          <span className="text-destructive font-semibold">🔴 {e.diasAbierto}d</span>
+                        ) : e.estado !== "cerrado" && e.diasAbierto > 3 ? (
+                          <span className="text-amber-600 font-medium">⏰ {e.diasAbierto}d</span>
+                        ) : (
+                          <span className="text-muted-foreground">{e.diasAbierto}d</span>
+                        )}
                       </td>
                     </tr>
                   );
