@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { eventos, terminales, PAISES_REGIONALES, REGIONALES_FLAT, usuarioLogueado } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge } from "@/lib/utils-app";
-import { eventoSinAsignarSlaCritico, horasSinResponsableOperativo } from "@/lib/evento-sla";
+import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
 import { useApp } from "@/context/AppContext";
 import { Plus, ChevronUp, ChevronDown, CalendarDays, X } from "lucide-react";
 import type { CategoriaEvento } from "@/types";
@@ -332,7 +332,7 @@ export default function RegistrosPage() {
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
             {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${asignadoFiltro === "sin_asignar" ? "Sin asignar" : asignadosUnicos.find(a => a.id === asignadoFiltro)?.nombre ?? asignadoFiltro}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
             {soloSinAsignar24h && !navEtiqueta && (
-              <FilterPill label="Sin asignar >24 h (SLA)" onRemove={() => { setSoloSinAsignar24h(false); setPage(1); }} />
+              <FilterPill label="Sin asignar >24 h" onRemove={() => { setSoloSinAsignar24h(false); setPage(1); }} />
             )}
             {dateRange?.from && (
               <FilterPill
@@ -369,14 +369,11 @@ export default function RegistrosPage() {
                     <span className="flex items-center gap-1">Fecha <SortIcon field="fecha" /></span>
                   </th>
                   <th
-                    className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-[5.5rem]"
-                    title="Días abiertos; si aplica, alerta SLA sin responsable asignado (>24 h)"
+                    className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-20"
+                    title="Días en estado abierto; se marca si lleva más de 24 h sin persona asignada"
                     onClick={() => toggleSort("diasAbierto")}
                   >
-                    <span className="flex flex-col leading-tight">
-                      <span className="flex items-center gap-1">Días <SortIcon field="diasAbierto" /></span>
-                      <span className="text-[9px] font-normal text-muted-foreground/80">SLA</span>
-                    </span>
+                    <span className="flex items-center gap-1">Días <SortIcon field="diasAbierto" /></span>
                   </th>
                 </tr>
               </thead>
@@ -438,16 +435,11 @@ export default function RegistrosPage() {
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
                         {format(parseISO(e.fecha), "dd MMM yy", { locale: es })}
                       </td>
-                      <td className="px-4 py-3 text-xs align-top">
+                      <td className="px-4 py-3 text-xs">
                         {slaSinAsignar ? (
-                          <div className="flex flex-col gap-0.5 min-w-[4.5rem]">
-                            <span className="inline-flex w-fit items-center rounded border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
-                              SLA +24 h
-                            </span>
-                            <span className="text-[10px] font-medium text-destructive/90 tabular-nums">
-                              {Math.floor(horasSinResponsableOperativo(e) ?? 0)} h sin responsable
-                            </span>
-                            <span className="text-[10px] text-muted-foreground tabular-nums">{e.diasAbierto}d abierto</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-muted-foreground tabular-nums">{e.diasAbierto}d</span>
+                            <span className="text-[10px] font-medium text-destructive leading-tight">+24 h sin asignar</span>
                           </div>
                         ) : e.estado !== "cerrado" && e.diasAbierto > 30 ? (
                           <span className="text-destructive font-semibold">🔴 {e.diasAbierto}d</span>

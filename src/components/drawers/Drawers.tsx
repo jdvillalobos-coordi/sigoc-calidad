@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getVehiculoPorPlaca, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona, buscarPersonas } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
-import { eventoSinAsignarSlaCritico, horasSinResponsableOperativo } from "@/lib/evento-sla";
+import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV, Persona, PersonaVinculada } from "@/types";
@@ -485,11 +485,7 @@ export function RecordDetailDrawer() {
             {eventoSinAsignarSlaCritico(ev) && (
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive bg-destructive/10 border border-destructive/25 px-2 py-1 rounded-full">
                 <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                SLA: más de 24 h sin responsable
-                {(() => {
-                  const h = horasSinResponsableOperativo(ev);
-                  return h != null ? ` (~${Math.floor(h)} h)` : "";
-                })()}
+                Más de 24 h sin asignar
               </span>
             )}
             {!ev.asignadoA && ev.estadoFlujo === "abierto" && (
