@@ -2315,9 +2315,11 @@ export function getMonedaPorTerminal(terminal?: string): { currency: string; loc
 // ============================================================
 
 export const evidencias: Evidencia[] = [
+  // ── Tipo "ia" (analizadas por modelo IA) ─────────────────────────
   // 4 cumple — 2 revisadas, 2 pendientes
   {
     id: "EV-001",
+    tipo: "ia",
     guia: "20000001002",
     terminal: "Bogotá",
     tipoEvidencia: "entrega",
@@ -2336,6 +2338,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-002",
+    tipo: "ia",
     guia: "20000001003",
     terminal: "Medellín",
     tipoEvidencia: "entrega",
@@ -2353,6 +2356,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-003",
+    tipo: "ia",
     guia: "19900293002",
     terminal: "Cali",
     tipoEvidencia: "entrega",
@@ -2368,6 +2372,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-004",
+    tipo: "ia",
     guia: "20000001005",
     terminal: "Pereira",
     tipoEvidencia: "intento_entrega",
@@ -2383,6 +2388,7 @@ export const evidencias: Evidencia[] = [
   // 4 no_cumple — 2 revisadas (1 confirma, 1 falso_negativo), 2 pendientes
   {
     id: "EV-005",
+    tipo: "ia",
     guia: "19900293001",
     terminal: "Barranquilla",
     tipoEvidencia: "entrega",
@@ -2401,6 +2407,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-006",
+    tipo: "ia",
     guia: "20000001010",
     terminal: "Bogotá",
     tipoEvidencia: "entrega",
@@ -2420,6 +2427,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-007",
+    tipo: "ia",
     guia: "20000001004",
     terminal: "Barranquilla",
     tipoEvidencia: "intento_entrega",
@@ -2434,6 +2442,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-008",
+    tipo: "ia",
     guia: "19900293003",
     terminal: "Barranquilla",
     tipoEvidencia: "entrega",
@@ -2449,6 +2458,7 @@ export const evidencias: Evidencia[] = [
   // 2 cumple pero operador marcó falso_positivo (IA aprobó pero foto es inválida)
   {
     id: "EV-009",
+    tipo: "ia",
     guia: "20000001013",
     terminal: "Barranquilla",
     tipoEvidencia: "entrega",
@@ -2468,6 +2478,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-010",
+    tipo: "ia",
     guia: "20000001007",
     terminal: "Bucaramanga",
     tipoEvidencia: "intento_entrega",
@@ -2486,6 +2497,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-011",
+    tipo: "ia",
     guia: "20000001014",
     terminal: "Medellín",
     tipoEvidencia: "intento_entrega",
@@ -2500,6 +2512,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-012",
+    tipo: "ia",
     guia: "20000001016",
     terminal: "Bogotá",
     tipoEvidencia: "intento_entrega",
@@ -2515,6 +2528,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-013",
+    tipo: "ia",
     guia: "20000001017",
     terminal: "Cali",
     tipoEvidencia: "intento_entrega",
@@ -2529,6 +2543,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-014",
+    tipo: "ia",
     guia: "20000001018",
     terminal: "Barranquilla",
     tipoEvidencia: "intento_entrega",
@@ -2543,6 +2558,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-015",
+    tipo: "ia",
     guia: "20000001019",
     terminal: "Pereira",
     tipoEvidencia: "intento_entrega",
@@ -2558,6 +2574,7 @@ export const evidencias: Evidencia[] = [
   },
   {
     id: "EV-016",
+    tipo: "ia",
     guia: "20000001020",
     terminal: "Bucaramanga",
     tipoEvidencia: "intento_entrega",
@@ -2568,6 +2585,78 @@ export const evidencias: Evidencia[] = [
     ],
     operadorCedula: "1040567890",
     operadorNombre: "Jesús María Cantillo",
+    operadorCargo: "Operador",
+  },
+
+  // ── Tipo "entrega" (foto de entrega rutinaria, sin IA) ───────────
+  {
+    id: "EV-E001",
+    tipo: "entrega",
+    guia: "20000001008",
+    terminal: "Bogotá",
+    tipoEvidencia: "entrega",
+    fecha: "2026-04-10",
+    fotosUrls: ["https://sigo.coordinadora.com/evidencias/20000001008/foto1.jpg"],
+    operadorCedula: "1020304050",
+    operadorNombre: "Juan David Ospina",
+    operadorCargo: "Operador",
+    veredictoOperador: "cumple",
+    fechaRevision: "2026-04-10",
+    revisadoPor: "Ana Martínez",
+  },
+  {
+    id: "EV-E002",
+    tipo: "entrega",
+    guia: "20000001009",
+    terminal: "Medellín",
+    tipoEvidencia: "entrega",
+    fecha: "2026-04-11",
+    fotosUrls: ["https://sigo.coordinadora.com/evidencias/20000001009/foto1.jpg"],
+    operadorCedula: "10405060",
+    operadorNombre: "Andrés Molina Ríos",
+    operadorCargo: "Operador",
+    veredictoOperador: "no_cumple",
+    justificacionOperador: "La foto no corresponde al domicilio del destinatario registrado.",
+    fechaRevision: "2026-04-11",
+    revisadoPor: "Sandra Herrera",
+  },
+  {
+    id: "EV-E003",
+    tipo: "entrega",
+    guia: "20000001011",
+    terminal: "Cali",
+    tipoEvidencia: "entrega",
+    fecha: "2026-04-12",
+    fotosUrls: ["https://sigo.coordinadora.com/evidencias/20000001011/foto1.jpg"],
+    operadorCedula: "94812345",
+    operadorNombre: "Luis Ernesto Palacios",
+    operadorCargo: "Operador",
+  },
+  {
+    id: "EV-E004",
+    tipo: "entrega",
+    guia: "20000001012",
+    terminal: "Barranquilla",
+    tipoEvidencia: "entrega",
+    fecha: "2026-04-13",
+    fotosUrls: [
+      "https://sigo.coordinadora.com/evidencias/20000001012/foto1.jpg",
+      "https://sigo.coordinadora.com/evidencias/20000001012/foto2.jpg",
+    ],
+    operadorCedula: "1040567890",
+    operadorNombre: "Jesús María Cantillo",
+    operadorCargo: "Operador",
+  },
+  {
+    id: "EV-E005",
+    tipo: "entrega",
+    guia: "20000001015",
+    terminal: "Bucaramanga",
+    tipoEvidencia: "entrega",
+    fecha: "2026-04-14",
+    fotosUrls: ["https://sigo.coordinadora.com/evidencias/20000001015/foto1.jpg"],
+    operadorCedula: "91234567",
+    operadorNombre: "Ricardo Fabián Torres",
     operadorCargo: "Operador",
   },
 ];

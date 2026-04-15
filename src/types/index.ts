@@ -370,7 +370,13 @@ export interface Evidencia {
   guia: string;
   terminal: string;
   tipoEvidencia: "entrega" | "intento_entrega";
-  resultadoIA: "cumple" | "no_cumple";
+  /**
+   * "ia"      → foto analizada por el modelo de IA; el auditor confirma/refuta.
+   * "entrega" → foto de entrega rutinaria; sin análisis IA; el auditor decide directamente.
+   */
+  tipo: "ia" | "entrega";
+  /** Solo presente para tipo "ia". */
+  resultadoIA?: "cumple" | "no_cumple";
   fecha: string;
   // Links a las fotografías almacenadas (no imágenes embebidas)
   fotosUrls?: string[];
@@ -378,7 +384,11 @@ export interface Evidencia {
   operadorCedula?: string;
   operadorNombre?: string;
   operadorCargo?: string;
-  veredictoOperador?: "confirma" | "falso_negativo" | "falso_positivo";
+  /**
+   * tipo "ia":      "confirma" | "falso_negativo" | "falso_positivo"
+   * tipo "entrega": "cumple"   | "no_cumple"
+   */
+  veredictoOperador?: "confirma" | "falso_negativo" | "falso_positivo" | "cumple" | "no_cumple";
   justificacionOperador?: string;
   fechaRevision?: string;
   revisadoPor?: string;
