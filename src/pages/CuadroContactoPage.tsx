@@ -14,7 +14,7 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
   { value: "dineros",           label: "💰 Dineros" },
   { value: "unidades",          label: "📦 Unidades" },
   { value: "listas_vinculantes",label: "📋 Listas" },
-  { value: "pqr",               label: "📞 PQR" },
+  { value: "pqr",               label: "📞 Solicitudes Postventa" },
   { value: "disciplinarios",    label: "⚖️ Disciplinarios" },
   { value: "eventos_seguridad", label: "🛡️ Seguridad" },
   { value: "evidencias",        label: "📸 Evidencias" },

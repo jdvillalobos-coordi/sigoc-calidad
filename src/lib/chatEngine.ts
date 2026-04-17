@@ -269,7 +269,7 @@ function intentBuscarCategoria(text: string): QueryResult | null {
   const filtrados = eventos.filter((e) => e.categoria === cat);
   const abiertos = filtrados.filter((e) => e.estado === "abierto");
   const valorTotal = filtrados.reduce((acc, e) => acc + (e.valorAfectacion || 0), 0);
-  const catLabel = { dineros: "Dineros", unidades: "Unidades", listas_vinculantes: "Listas Vinculantes", pqr: "PQR", disciplinarios: "Disciplinarios" }[cat!] || cat;
+  const catLabel = { dineros: "Dineros", unidades: "Unidades", listas_vinculantes: "Listas Vinculantes", pqr: "Solicitudes Postventa", disciplinarios: "Disciplinarios" }[cat!] || cat;
 
   return {
     content: `**Categoría ${catLabel}:** ${filtrados.length} eventos total (${abiertos.length} abiertos)\nValor total de afectación: ${formatCurrency(valorTotal)}\n\n**Eventos abiertos:**\n${abiertos.slice(0, 6).map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}`,

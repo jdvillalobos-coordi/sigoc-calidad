@@ -19,7 +19,7 @@ const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
   { value: "dineros",            label: "💰 Dineros" },
   { value: "unidades",           label: "📦 Unidades" },
   { value: "listas_vinculantes", label: "📋 Listas Vinculantes" },
-  { value: "pqr",                label: "📞 PQR" },
+  { value: "pqr",                label: "📞 Solicitudes Postventa" },
   { value: "disciplinarios",     label: "⚖️ Disciplinarios" },
   { value: "eventos_seguridad", label: "🛡️ Eventos Seguridad" },
   { value: "evidencias",         label: "📸 Evidencias" },

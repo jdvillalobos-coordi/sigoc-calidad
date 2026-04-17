@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, ChevronLeft, Plus } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { guias, terminales, getGuia, getPersonaPorCedula, buscarPersonas, getVehiculoPorPlaca, usuarioLogueado, eventos, CATEGORIAS_LESIVAS, insumosRCE, insumosFaltantes, getMonedaPorTerminal } from "@/data/mockData";
@@ -11,7 +11,7 @@ const CATEGORIAS = [
   { id: "dineros" as CategoriaEvento, icon: "💰", label: "Dineros", desc: "Hurtos, faltantes o desviaciones de recaudos y dineros" },
   { id: "unidades" as CategoriaEvento, icon: "📦", label: "Unidades", desc: "Faltantes de mercancía, novedades código 100" },
   { id: "listas_vinculantes" as CategoriaEvento, icon: "📋", label: "Listas Vinculantes", desc: "Antecedentes, denuncias, vínculos externos (Truora)" },
-  { id: "pqr" as CategoriaEvento, icon: "📞", label: "PQR", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
+  { id: "pqr" as CategoriaEvento, icon: "📞", label: "Solicitudes Postventa", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
   { id: "disciplinarios" as CategoriaEvento, icon: "⚖️", label: "Disciplinarios", desc: "Faltas laborales: llegadas tarde, desacatos, llamados de atención" },
   { id: "eventos_seguridad" as CategoriaEvento, icon: "🛡️", label: "Eventos de Seguridad", desc: "Accidentes, hurtos, extorsión y otros eventos de seguridad" },
   { id: "evidencias" as CategoriaEvento, icon: "📸", label: "Evidencias", desc: "Falsa evidencia de entrega o intento de entrega" },
@@ -186,12 +186,14 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [gravedadFalta, setGravedadFalta] = useState("");
   const [decisionGH, setDecisionGH] = useState("");
   const [terminalDestino, setTerminalDestino] = useState("");
+  const [ciudadOrigen, setCiudadOrigen] = useState("");
   const [ciudadDestino, setCiudadDestino] = useState("");
   const [tipoPoblacionOrigen, setTipoPoblacionOrigen] = useState("");
   const [tipoPoblacionDestino, setTipoPoblacionDestino] = useState("");
   const [equipoRecogida, setEquipoRecogida] = useState("");
-  const [equipoEntrega, setEquipoEntrega] = useState("");
+  const [equipoEntrega, setEquipoEntrega] = useState("0");
   const [pqrIdRecogida, setPqrIdRecogida] = useState("");
+  const [adjuntos, setAdjuntos] = useState<string[]>([]);
   const [categoriaLesiva, setCategoriaLesiva] = useState("");
   const [subcategoriaLesiva, setSubcategoriaLesiva] = useState("");
   const [placaAdicional, setPlacaAdicional] = useState("");
@@ -208,6 +210,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       if (idx === 0) {
         setTerminal(g.terminalOrigen);
         if (categoria === "pqr") {
+          setCiudadOrigen(g.ciudadOrigen);
           setTerminalDestino(g.terminalDestino);
           setCiudadDestino(g.ciudadDestino);
           setNitCliente(g.nitCliente);
@@ -246,15 +249,23 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
 
   const esVehiculo = tipoEntidad === "Vehículo";
   const esPqrRecogida = categoria === "pqr" && pqrReferenciaEsRecogida(tipoEvento);
-  const hideTipoEntidad = categoria === "dineros" || categoria === "unidades" || categoria === "eventos_seguridad";
+  const esIncumplimientoRecogidas = categoria === "pqr" && /incumplimiento.*recogida/i.test(tipoEvento);
+  // Para PQR ya no se pide tipo de entidad (se deriva del Rol solicitante).
+  const hideTipoEntidad = categoria === "dineros" || categoria === "unidades" || categoria === "eventos_seguridad" || categoria === "pqr";
   const mostrarPlacaAdicional = !esVehiculo && categoria === "listas_vinculantes";
   const personaOpcional = esVehiculo || categoria === "pqr" || categoria === "listas_vinculantes" || categoria === "evidencias" || categoria === "eventos_seguridad" || categoria === "unidades";
+
+  // Si se elige "Incumplimiento recogidas", equipo recogida se fija a 0 por defecto y se bloquea.
+  useEffect(() => {
+    if (esIncumplimientoRecogidas) setEquipoRecogida("0");
+  }, [esIncumplimientoRecogidas]);
+
   const puedeCrear = !!(
     categoria && tipoEvento && (hideTipoEntidad || tipoEntidad) && terminal && fecha && descripcion
     && (esVehiculo ? placaInput : true)
     && (personaOpcional || hideTipoEntidad || Object.keys(cedulasPersona).length > 0)
     && (categoria === "pqr"
-      ? (terminalDestino && ciudadDestino && equipoRecogida && tipoPoblacionOrigen && tipoPoblacionDestino
+      ? (terminalDestino && ciudadOrigen && ciudadDestino && equipoRecogida && equipoEntrega && tipoPoblacionOrigen && tipoPoblacionDestino && rolSolicitante
         && (esPqrRecogida ? /^\d{8}$/.test(pqrIdRecogida.trim()) : /^\d{11}$/.test((guiaInputs[0] ?? "").trim())))
       : true)
   );
@@ -269,11 +280,14 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     if (!descripcion) camposFaltantes.push("Descripción");
     if (esVehiculo && !placaInput) camposFaltantes.push("Placa del vehículo");
     if (!personaOpcional && Object.keys(cedulasPersona).length === 0) camposFaltantes.push("Persona responsable");
+    if (categoria === "pqr" && !ciudadOrigen) camposFaltantes.push("Ciudad origen");
     if (categoria === "pqr" && !terminalDestino) camposFaltantes.push("Terminal destino");
     if (categoria === "pqr" && !ciudadDestino) camposFaltantes.push("Ciudad destino");
     if (categoria === "pqr" && !equipoRecogida) camposFaltantes.push("Equipo recogida");
+    if (categoria === "pqr" && !equipoEntrega) camposFaltantes.push("Equipo tenencia o Entrega");
     if (categoria === "pqr" && !tipoPoblacionOrigen) camposFaltantes.push("Tipo población origen");
     if (categoria === "pqr" && !tipoPoblacionDestino) camposFaltantes.push("Tipo población destino");
+    if (categoria === "pqr" && !rolSolicitante) camposFaltantes.push("Rol solicitante");
     if (categoria === "pqr" && esPqrRecogida && !/^\d{8}$/.test(pqrIdRecogida.trim())) camposFaltantes.push("N° I.D recogida (8 dígitos)");
     if (categoria === "pqr" && !esPqrRecogida && !/^\d{11}$/.test((guiaInputs[0] ?? "").trim())) camposFaltantes.push("N° guía (11 dígitos)");
   }
@@ -306,12 +320,14 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setGravedadFalta("");
     setDecisionGH("");
     setTerminalDestino("");
+    setCiudadOrigen("");
     setCiudadDestino("");
     setTipoPoblacionOrigen("");
     setTipoPoblacionDestino("");
     setEquipoRecogida("");
-    setEquipoEntrega("");
+    setEquipoEntrega("0");
     setPqrIdRecogida("");
+    setAdjuntos([]);
     setCategoriaLesiva("");
     setSubcategoriaLesiva("");
     setPlacaAdicional("");
@@ -345,8 +361,15 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     const esRecogidaPqr = categoria === "pqr" && pqrReferenciaEsRecogida(tipoEvento);
     const ciudad =
       categoria === "pqr"
-        ? (ciudadDestino || guiaPrincipal?.ciudadOrigen || terminal)
+        ? (ciudadOrigen || guiaPrincipal?.ciudadOrigen || terminal)
         : (guiaPrincipal?.ciudadOrigen ?? terminal);
+
+    // Para PQR la entidad se deriva del Rol solicitante; el resto usa el selector
+    const tipoEntidadPqr: Evento["tipoEntidad"] | undefined =
+      rolSolicitante === "remitente" ? "remitente"
+      : rolSolicitante === "destinatario" ? "destinatario"
+      : rolSolicitante === "tercero" ? "tercero"
+      : undefined;
 
     const personasVinculadas = Object.values(cedulasPersona).map((p) => ({
       personaId: p.id,
@@ -360,7 +383,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       estado: "abierto",
       categoria: categoria!,
       tipoEvento,
-      tipoEntidad: tipoEntidadMap[tipoEntidad] || "empleado",
+      tipoEntidad: (categoria === "pqr" ? (tipoEntidadPqr ?? "tercero") : (tipoEntidadMap[tipoEntidad] || "empleado")),
       fecha,
       terminal,
       ciudad,
@@ -394,6 +417,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       tipoPoblacionDestino: categoria === "pqr" ? tipoPoblacionDestino as Evento["tipoPoblacionDestino"] || undefined : undefined,
       equipoRecogida: categoria === "pqr" ? equipoRecogida || undefined : undefined,
       equipoEntrega: categoria === "pqr" ? equipoEntrega || undefined : undefined,
+      soportesAdjuntos: adjuntos.length > 0 ? adjuntos : undefined,
       fuenteExterna: FUENTES[categoria!],
       estadoFlujo: "abierto",
       asignadoA: categoria === "pqr" ? undefined : {
@@ -444,7 +468,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
             <div className="flex items-center gap-3">
               {categoria && !eventoCreado && <button onClick={() => { setCategoria(null); setTipoEvento(""); setTipoEntidad(""); setPqrIdRecogida(""); }} className="p-1 rounded hover:bg-muted transition-colors"><ChevronLeft className="w-4 h-4" /></button>}
               <h2 className="font-bold text-base">
-                {eventoCreado ? `Evento ${eventoCreado} creado` : categoria ? `Nuevo evento — ${CATEGORIAS.find(c => c.id === categoria)?.label}` : "Nuevo evento"}
+                {eventoCreado ? `Registro ${eventoCreado} creado` : categoria ? `Nuevo registro — ${CATEGORIAS.find(c => c.id === categoria)?.label}` : "Nuevo registro"}
               </h2>
             </div>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors"><X className="w-5 h-5 text-muted-foreground" /></button>
@@ -452,7 +476,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
           {categoria && !eventoCreado && (
             <p className="text-xs text-muted-foreground mt-2">
               {categoria === "pqr"
-                ? <>Este evento quedará <span className="font-semibold text-foreground">sin asignar</span> para que un interventor de calidad lo tome · Estado: <span className="font-semibold text-foreground">Abierto</span></>
+                ? <>Este registro quedará <span className="font-semibold text-foreground">sin asignar</span> para que un Agente de SPL lo tome · Estado: <span className="font-semibold text-foreground">Abierto</span></>
                 : <>Este evento se asignará automáticamente a <span className="font-semibold text-foreground">{usuarioLogueado.nombre}</span> · Estado: <span className="font-semibold text-foreground">Abierto</span></>
               }
             </p>
@@ -490,15 +514,10 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </select>
               </div>
 
-              {/* Tipo de entidad */}
+              {/* Tipo de entidad (oculto para PQR: se deriva del rol solicitante) */}
               {!hideTipoEntidad && (
                 <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                    {categoria === "pqr" ? "Quién presenta el caso (tipo de entidad) *" : "Tipo de entidad *"}
-                  </label>
-                  {categoria === "pqr" && (
-                    <p className="text-[10px] text-muted-foreground mb-1">Indica el tipo de quien asume o presenta la responsabilidad del reporte.</p>
-                  )}
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo de entidad *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={tipoEntidad} onChange={(e) => setTipoEntidad(e.target.value)}>
                     <option value="">Seleccionar...</option>
                     {["Empleado CM", "Aliado Goo", "Aliado Droop", "Contratista", "Tercero (persona jurídica)", "Vehículo", "Delincuencia", "Remitente", "Destinatario"].map((o) => <option key={o} value={o}>{o}</option>)}
@@ -506,24 +525,47 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </div>
               )}
 
-              {/* Terminal y Fecha */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                    {categoria === "pqr" ? "Terminal origen *" : "Terminal *"}
-                  </label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminal} onChange={(e) => setTerminal(e.target.value)}>
-                    <option value="">Seleccionar...</option>
-                    {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+              {/* Terminal origen + Ciudad origen + Fecha */}
+              {categoria === "pqr" ? (
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal origen *</label>
+                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminal} onChange={(e) => setTerminal(e.target.value)}>
+                      <option value="">Seleccionar...</option>
+                      {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Ciudad origen *</label>
+                    <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Ciudad origen" value={ciudadOrigen} onChange={(e) => setCiudadOrigen(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fecha de radicación *</label>
+                    <input
+                      type="date"
+                      readOnly
+                      disabled
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-muted/50 text-muted-foreground cursor-not-allowed"
+                      value={fecha}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Fecha actual del sistema (no editable)</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                    {categoria === "pqr" ? "Fecha de radicación *" : "Fecha *"}
-                  </label>
-                  <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Terminal *</label>
+                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={terminal} onChange={(e) => setTerminal(e.target.value)}>
+                      <option value="">Seleccionar...</option>
+                      {terminales.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1 block">Fecha *</label>
+                    <input type="date" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {categoria === "pqr" && (
                 <div className="space-y-3 rounded-lg border border-primary/15 bg-primary/[0.03] p-3">
@@ -562,11 +604,25 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo recogida *</label>
-                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-BOG-045" value={equipoRecogida} onChange={(e) => setEquipoRecogida(e.target.value)} />
+                      <input
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:bg-muted/50 disabled:text-muted-foreground disabled:cursor-not-allowed"
+                        placeholder={esIncumplimientoRecogidas ? "0" : "EQ-BOG-045"}
+                        value={equipoRecogida}
+                        disabled={esIncumplimientoRecogidas}
+                        onChange={(e) => setEquipoRecogida(e.target.value)}
+                      />
+                      {esIncumplimientoRecogidas && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">En "Incumplimiento recogidas" no hay equipo asignado (se fija en 0).</p>
+                      )}
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo entrega</label>
-                      <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="EQ-MDE-012 (opcional)" value={equipoEntrega} onChange={(e) => setEquipoEntrega(e.target.value)} />
+                      <label className="text-xs font-semibold text-muted-foreground mb-1 block">Equipo tenencia o Entrega *</label>
+                      <input
+                        className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        placeholder="0"
+                        value={equipoEntrega}
+                        onChange={(e) => setEquipoEntrega(e.target.value)}
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -741,7 +797,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
 
               {/* Descripción */}
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descripción de los hechos *</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descripción *</label>
                 <textarea
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   rows={4}
@@ -749,6 +805,41 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
                 />
+              </div>
+
+              {/* Adjuntar imágenes o PDF (hasta 5, opcional) */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                  Adjuntar imágenes o PDF <span className="font-normal text-muted-foreground">(opcional, máx. 5)</span>
+                </label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  disabled={adjuntos.length >= 5}
+                  className="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/15"
+                  onChange={(e) => {
+                    const nuevos = Array.from(e.target.files ?? []).map((f) => f.name);
+                    setAdjuntos((prev) => [...prev, ...nuevos].slice(0, 5));
+                    e.target.value = "";
+                  }}
+                />
+                {adjuntos.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {adjuntos.map((n, i) => (
+                      <div key={i} className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/40 text-xs">
+                        <span className="flex-1 truncate">{n}</span>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-red-500"
+                          onClick={() => setAdjuntos((prev) => prev.filter((_, j) => j !== i))}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Valor de afectación (no aplica en alta PQR) */}
@@ -872,6 +963,18 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     </>)}
                     <span className="text-muted-foreground">{categoria === "pqr" ? "Terminal origen:" : "Terminal:"}</span>
                     <span className="font-medium">{terminal}</span>
+                    {categoria === "pqr" && ciudadOrigen && (<>
+                      <span className="text-muted-foreground">Ciudad origen:</span>
+                      <span className="font-medium">{ciudadOrigen}</span>
+                    </>)}
+                    {categoria === "pqr" && rolSolicitante && (<>
+                      <span className="text-muted-foreground">Rol solicitante:</span>
+                      <span className="font-medium capitalize">{rolSolicitante}</span>
+                    </>)}
+                    {adjuntos.length > 0 && (<>
+                      <span className="text-muted-foreground">Adjuntos:</span>
+                      <span className="font-medium">{adjuntos.length} archivo{adjuntos.length > 1 ? "s" : ""}</span>
+                    </>)}
                     {esVehiculo && placaData && (<>
                       <span className="text-muted-foreground">Vehículo:</span>
                       <span className="font-medium">{placaData.placa} ({placaData.tipo})</span>
@@ -906,7 +1009,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     </>)}
                     {categoria === "pqr" && (<>
                       <span className="text-muted-foreground">Asignación:</span>
-                      <span className="font-medium text-amber-600">Sin asignar — pendiente de interventor</span>
+                      <span className="font-medium text-amber-600">Sin asignar — pendiente de Agente de SPL</span>
                     </>)}
                     <span className="text-muted-foreground">Estado:</span>
                     <span className="font-medium">Abierto</span>
