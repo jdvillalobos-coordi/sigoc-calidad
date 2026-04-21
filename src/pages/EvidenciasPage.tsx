@@ -519,7 +519,7 @@ export function EvidenciasPanel({ filtroTerminalExt, fechaDesde, fechaHasta }: {
         >
           <option value="todos">Tipo: Todas</option>
           <option value="ia">Entrega fallida</option>
-          <option value="entrega">Entrega</option>
+          <option value="entrega">Entrega efectiva</option>
         </select>
         <select
           value={filtroResultado}
