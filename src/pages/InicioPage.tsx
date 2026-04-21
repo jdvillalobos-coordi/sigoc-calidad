@@ -1,8 +1,8 @@
 import React from "react";
-import { eventos, alertasIA, guias, insumosRCE, insumosFaltantes, usuarioLogueado } from "@/data/mockData";
+import { eventos, alertasIA, guias, evidencias, usuarioLogueado } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
-import { FolderOpen, Clock, Bot, Inbox, Briefcase, ArrowUpRight, Check, CalendarDays, X, BarChart3, Timer } from "lucide-react";
+import { FolderOpen, Clock, Bot, Camera, Briefcase, ArrowUpRight, Check, CalendarDays, X, BarChart3, Timer } from "lucide-react";
 import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
 import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -86,7 +86,7 @@ export default function InicioPage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 -mt-3">
           {[
-            { label: "Insumos pendientes",  value: insumosRCE.filter(i => i.estadoRevision === "pendiente").length + insumosFaltantes.filter(i => i.estadoRevision === "pendiente").length, sub: "guías por revisar hoy", icon: Inbox, color: "amber", onClick: () => setPaginaActiva("bandeja") },
+            { label: "Evidencias pendientes",  value: evidencias.filter(e => !e.veredictoOperador).length, sub: "fotos por auditar", icon: Camera, color: "amber", onClick: () => setPaginaActiva("analisis_evidencias") },
             { label: "Eventos abiertos",    value: abiertos.length,        sub: `de ${eventos.length} totales`, icon: FolderOpen, color: "default", onClick: () => irARegistros({ soloAbiertos: true, etiqueta: "Eventos abiertos" }) },
             { label: "Eventos cerrados",    value: cerradosTotal.length,   sub: "totales", icon: Check, color: "green", onClick: () => irARegistros({ soloCerrados: true, etiqueta: "Eventos cerrados" }) },
             { label: "Sin asignar >24 h",   value: sinAsignarSla,           sub: sinAsignarSla > 0 ? "Requieren asignación" : "al día", icon: Timer, color: sinAsignarSla > 0 ? "red" : "default", onClick: () => irARegistros({ soloSinAsignar24h: true, etiqueta: "Sin asignar >24 h" }) },

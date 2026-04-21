@@ -285,8 +285,7 @@ function intentResumen(text: string): QueryResult | null {
   const abiertos = eventos.filter((e) => e.estado === "abierto");
   const valorTotal = abiertos.reduce((acc, e) => acc + (e.valorAfectacion || 0), 0);
   const alertasNuevas = alertasIA.filter((a) => a.estado === "nueva");
-  const rcePendientes = insumosRCE.filter((r) => r.estadoRevision === "pendiente");
-  const falPendientes = insumosFaltantes.filter((f) => f.estadoRevision === "pendiente");
+  const evidenciasPend = evidencias.filter((e) => !e.veredictoOperador);
 
   const porCategoria = abiertos.reduce((acc, e) => {
     acc[e.categoria] = (acc[e.categoria] || 0) + 1;
@@ -301,7 +300,7 @@ function intentResumen(text: string): QueryResult | null {
   const topTerminal = Object.entries(porTerminal).sort((a, b) => b[1] - a[1])[0];
 
   return {
-    content: `**Resumen general del sistema:**\n\n- **${totalEventos}** eventos totales, **${abiertos.length}** abiertos\n- Valor total de afectación abierta: **${formatCurrency(valorTotal)}**\n- **${alertasNuevas.length}** alertas IA nuevas sin revisar\n- **${rcePendientes.length}** RCE pendientes de revisión\n- **${falPendientes.length}** faltantes pendientes en bandeja\n\n**Por categoría (abiertos):**\n${Object.entries(porCategoria).map(([k, v]) => `- ${k}: ${v}`).join("\n")}\n\n**Terminal con más casos abiertos:** ${topTerminal ? `${topTerminal[0]} (${topTerminal[1]})` : "N/A"}`,
+    content: `**Resumen general del sistema:**\n\n- **${totalEventos}** eventos totales, **${abiertos.length}** abiertos\n- Valor total de afectación abierta: **${formatCurrency(valorTotal)}**\n- **${alertasNuevas.length}** alertas IA nuevas sin revisar\n- **${evidenciasPend.length}** evidencias pendientes de auditoría\n\n**Por categoría (abiertos):**\n${Object.entries(porCategoria).map(([k, v]) => `- ${k}: ${v}`).join("\n")}\n\n**Terminal con más casos abiertos:** ${topTerminal ? `${topTerminal[0]} (${topTerminal[1]})` : "N/A"}`,
     entities: [],
   };
 }
@@ -339,26 +338,25 @@ function intentAlertas(text: string): QueryResult | null {
   };
 }
 
-function intentBandeja(text: string): QueryResult | null {
+function intentEventosAuto(text: string): QueryResult | null {
   const n = normalize(text);
-  if (!matchesAny(n, ["bandeja", "rce", "recaudo", "insumo", "faltantes pendientes"])) return null;
+  if (!matchesAny(n, ["auto", "automatico", "automaticos", "rce", "recaudo", "novedad 100", "regla", "reglas"])) return null;
 
-  const rcePend = insumosRCE.filter((r) => r.estadoRevision === "pendiente");
-  const rceNovedad = insumosRCE.filter((r) => r.estadoRevision === "cerrado");
-  const falPend = insumosFaltantes.filter((f) => f.estadoRevision === "pendiente");
-  const falInvest = insumosFaltantes.filter((f) => f.estadoRevision === "abierto");
-
-  const valorRCEPend = rcePend.reduce((acc, r) => acc + r.valorRecaudo, 0);
+  // Eventos auto-generados por reglas de negocio (RCE > $1M → dineros, novedad 100 → unidades).
+  // Las reglas finales aún las define negocio; por ahora reportamos el universo candidato del mock.
+  const candidatosDinero = insumosRCE.filter((r) => r.valorRecaudo > 1_000_000);
+  const candidatosUnidad = insumosFaltantes.filter((f) => f.codigoNovedad === "100");
+  const valorCandidatos = candidatosDinero.reduce((acc, r) => acc + r.valorRecaudo, 0);
 
   return {
-    content: `**Bandeja de trabajo:**\n\n**RCE (Recaudo contra entrega):**\n- Pendientes: **${rcePend.length}** (valor: ${formatCurrency(valorRCEPend)})\n- Con novedad: **${rceNovedad.length}**\n\n**Faltantes:**\n- Pendientes: **${falPend.length}**\n- En investigación: **${falInvest.length}**\n\n**RCE pendientes de mayor valor:**\n${rcePend.sort((a, b) => b.valorRecaudo - a.valorRecaudo).slice(0, 3).map((r) => { const g = getGuia(r.guia); const m = getMonedaPorTerminal(g?.terminalOrigen); return `- Guía ${r.guia}: ${formatCurrency(r.valorRecaudo, m.currency, m.locale)}`; }).join("\n")}`,
+    content: `**Eventos auto-generados por reglas de negocio:**\n\nLos eventos de dineros y unidades se crean en automático cuando se cumple la regla, y el operador los toma desde el módulo Eventos (estado abierto, sin asignar). También se pueden crear manualmente.\n\n**Candidatos en el universo actual:**\n- Dineros (RCE > $1M): **${candidatosDinero.length}** guías por valor de ${formatCurrency(valorCandidatos)}\n- Unidades (novedad 100): **${candidatosUnidad.length}** guías\n\n**Top 3 RCE de mayor valor:**\n${candidatosDinero.sort((a, b) => b.valorRecaudo - a.valorRecaudo).slice(0, 3).map((r) => { const g = getGuia(r.guia); const m = getMonedaPorTerminal(g?.terminalOrigen); return `- Guía ${r.guia}: ${formatCurrency(r.valorRecaudo, m.currency, m.locale)}`; }).join("\n")}`,
     entities: [],
   };
 }
 
 function defaultResponse(): QueryResult {
   return {
-    content: `No entendí bien tu pregunta. Puedo ayudarte con:\n\n- **Buscar eventos:** "Muéstrame el evento DIN-001" o "eventos abiertos"\n- **Buscar personas:** "Busca a Carlos Pérez" o "personas bloqueadas"\n- **Buscar guías:** "Información de la guía 19900293001"\n- **Buscar terminales:** "¿Cómo está Medellín?" o "eventos en Barranquilla"\n- **Buscar vehículos:** "Placa PLT-456"\n- **Resumen general:** "Dame un resumen" o "¿cómo va el panorama?"\n- **Evidencias:** "Estado de evidencias IA"\n- **Alertas:** "¿Qué alertas hay?"\n- **Bandeja:** "Estado de la bandeja" o "RCE pendientes"\n- **Categorías:** "¿Cuántos eventos de dineros hay?"`,
+    content: `No entendí bien tu pregunta. Puedo ayudarte con:\n\n- **Buscar eventos:** "Muéstrame el evento DIN-001" o "eventos abiertos"\n- **Buscar personas:** "Busca a Carlos Pérez" o "personas bloqueadas"\n- **Buscar guías:** "Información de la guía 19900293001"\n- **Buscar terminales:** "¿Cómo está Medellín?" o "eventos en Barranquilla"\n- **Buscar vehículos:** "Placa PLT-456"\n- **Resumen general:** "Dame un resumen" o "¿cómo va el panorama?"\n- **Evidencias:** "Estado de evidencias IA"\n- **Alertas:** "¿Qué alertas hay?"\n- **Eventos auto-generados:** "RCE candidatos" o "eventos automáticos"\n- **Categorías:** "¿Cuántos eventos de dineros hay?"`,
     entities: [],
   };
 }
@@ -374,7 +372,7 @@ export function processQuery(text: string): QueryResult {
     intentResumen,
     intentEvidencias,
     intentAlertas,
-    intentBandeja,
+    intentEventosAuto,
   ];
 
   for (const handler of handlers) {
@@ -430,12 +428,12 @@ export function generateInsights(): Array<{ title: string; description: string; 
     });
   }
 
-  const rcePendientes = insumosRCE.filter((r) => r.estadoRevision === "pendiente");
-  if (rcePendientes.length > 5) {
-    const valor = rcePendientes.reduce((acc, r) => acc + r.valorRecaudo, 0);
+  const candidatosDinero = insumosRCE.filter((r) => r.valorRecaudo > 1_000_000);
+  if (candidatosDinero.length > 5) {
+    const valor = candidatosDinero.reduce((acc, r) => acc + r.valorRecaudo, 0);
     insights.push({
-      title: `${rcePendientes.length} RCE pendientes por ${formatCurrency(valor)}`,
-      description: "Volumen alto de recaudos contra entrega sin revisar. Riesgo de vencimiento.",
+      title: `${candidatosDinero.length} candidatos a evento auto-generado de dineros (${formatCurrency(valor)})`,
+      description: "Volumen alto de RCE > $1M que dispararían eventos automáticos. Verificar capacidad del equipo para tomarlos.",
       severity: "alta",
       entities: [],
     });

@@ -565,10 +565,13 @@ export default function EvidenciasPage() {
       <div className="border-b border-border px-6 py-4 flex-shrink-0">
         <h1 className="text-lg font-bold flex items-center gap-2">
           <Camera className="w-5 h-5 text-muted-foreground" />
-          Gestión de Evidencias
+          Análisis de Evidencias
         </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Revisa evidencias fotográficas de entrega — clasificadas por IA o de registro rutinario
+        <p className="text-sm text-muted-foreground mt-1 max-w-3xl">
+          Aquí auditas las evidencias fotográficas de entrega. La IA hace una primera clasificación
+          (cumple / no cumple) y tu trabajo es validar ese veredicto: confirmarlo, marcarlo como
+          falso positivo o negativo, o validar entregas rutinarias sin análisis automático. Cuando
+          se identifica un error del operador, se genera un evento vinculado de forma automática.
         </p>
       </div>
       <div className="flex-1 overflow-y-auto p-6">
