@@ -21,7 +21,7 @@ const CATEGORIAS: { value: CategoriaEvento | "todos"; label: string }[] = [
   { value: "listas_vinculantes", label: "📋 Listas Vinculantes" },
   { value: "pqr",                label: "📞 Solicitudes Postventa" },
   { value: "disciplinarios",     label: "⚖️ Disciplinarios" },
-  { value: "eventos_seguridad", label: "🛡️ Eventos Seguridad" },
+  { value: "eventos_criticos", label: "🛡️ Eventos críticos" },
   { value: "evidencias",         label: "📸 Evidencias" },
 ];
 

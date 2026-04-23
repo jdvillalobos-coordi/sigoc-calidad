@@ -3,6 +3,7 @@ import type {
   Vehiculo,
   Guia,
   Evento,
+  CategoriaEvento,
   AlertaIA,
   Notificacion,
   UsuarioApp,
@@ -340,7 +341,8 @@ export const eventos: Evento[] = [
   {
     id: "DIN-001",
     categoria: "dineros",
-    tipoEvento: "Hurto de dinero",
+    tipoEvento: "Faltante de dinero",
+    estadoGestionSG: "Hurto de dinero",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "escalado",
@@ -402,7 +404,7 @@ export const eventos: Evento[] = [
   {
     id: "DIN-003",
     categoria: "dineros",
-    tipoEvento: "Faltante injustificado",
+    tipoEvento: "Faltante de dinero",
     tipoEntidad: "aliado_goo",
     estado: "cerrado",
     estadoFlujo: "cerrado",
@@ -438,7 +440,8 @@ export const eventos: Evento[] = [
   {
     id: "DIN-004",
     categoria: "dineros",
-    tipoEvento: "Hurto de dinero",
+    tipoEvento: "Faltante de dinero",
+    estadoGestionSG: "Hurto de dinero",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -491,7 +494,8 @@ export const eventos: Evento[] = [
   {
     id: "DIN-006",
     categoria: "dineros",
-    tipoEvento: "Hurto de dinero",
+    tipoEvento: "Faltante de dinero",
+    estadoGestionSG: "Hurto de dinero",
     tipoEntidad: "aliado_droop",
     estado: "cerrado",
     estadoFlujo: "cerrado",
@@ -527,7 +531,7 @@ export const eventos: Evento[] = [
   {
     id: "DIN-007",
     categoria: "dineros",
-    tipoEvento: "Faltante injustificado",
+    tipoEvento: "Faltante de dinero",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -552,7 +556,8 @@ export const eventos: Evento[] = [
   {
     id: "DIN-008",
     categoria: "dineros",
-    tipoEvento: "Hurto de dinero",
+    tipoEvento: "Faltante de dinero",
+    estadoGestionSG: "Hurto de dinero",
     tipoEntidad: "contratista",
     estado: "abierto",
     estadoFlujo: "escalado",
@@ -619,7 +624,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-001",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 400",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -651,7 +656,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-002",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 400",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -679,7 +684,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-003",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 100",
+    tipoEvento: "Faltante causal 100",
     tipoEntidad: "aliado_goo",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -710,7 +715,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-004",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 300",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "empleado",
     estado: "cerrado",
     estadoFlujo: "cerrado",
@@ -743,7 +748,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-005",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 400",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -768,7 +773,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-006",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 529",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -797,7 +802,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-007",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 400",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -823,7 +828,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-008",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 403",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "empleado",
     estado: "cerrado",
     estadoFlujo: "cerrado",
@@ -855,7 +860,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-009",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 400",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "aliado_goo",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -882,7 +887,7 @@ export const eventos: Evento[] = [
   {
     id: "UNI-010",
     categoria: "unidades",
-    tipoEvento: "Faltante novedad 400",
+    tipoEvento: "Faltantes causal 101",
     tipoEntidad: "aliado_goo",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -1806,8 +1811,8 @@ export const eventos: Evento[] = [
   // ══════════════════════════════════
   {
     id: "SEG-001",
-    categoria: "eventos_seguridad",
-    tipoEvento: "Accidente de tránsito",
+    categoria: "eventos_criticos",
+    tipoEvento: "Accidentes de Tránsito (Volcamiento, Choque, etc)",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -1816,6 +1821,7 @@ export const eventos: Evento[] = [
     fecha: "2026-03-10",
     descripcionHechos: "Vehículo de reparto sufrió colisión lateral en la Av. NQS con calle 72. Sin heridos graves, daños materiales menores.",
     guias: ["19900293001"],
+    valorAfectacion: 450000,
     personasResponsables: [{ personaId: "1036452781", cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya", rol: "responsable" }],
     personasParticipantes: [],
     vehiculosVinculados: [{ vehiculoId: "ABC-123" }],
@@ -1830,7 +1836,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "SEG-002",
-    categoria: "eventos_seguridad",
+    categoria: "eventos_criticos",
     tipoEvento: "Extorsión",
     tipoEntidad: "empleado",
     estado: "abierto",
@@ -1839,6 +1845,8 @@ export const eventos: Evento[] = [
     ciudad: "Medellín",
     fecha: "2026-03-05",
     descripcionHechos: "Conductor reporta llamadas amenazantes solicitando dinero para permitir tránsito por zona rural del oriente antioqueño.",
+    guias: ["19900293001"],
+    valorAfectacion: 250000,
     personasResponsables: [{ personaId: "71234567", cedula: "71234567", nombre: "Edgar Mauricio Salcedo Ruiz", rol: "responsable" }],
     personasParticipantes: [],
     escaladoA: { id: "u-nicolas", nombre: "Nicolás Ríos Castaño", cargo: "Contralor Nacional de Calidad" },
@@ -1858,7 +1866,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "SEG-003",
-    categoria: "eventos_seguridad",
+    categoria: "eventos_criticos",
     tipoEvento: "Hurto de Combustible",
     tipoEntidad: "empleado",
     estado: "cerrado",
@@ -1867,6 +1875,7 @@ export const eventos: Evento[] = [
     ciudad: "Cali",
     fecha: "2026-02-20",
     descripcionHechos: "Se detecta consumo anómalo de combustible en vehículo de ruta Cali-Buenaventura. Conductor reconoce desvío de 40 galones.",
+    guias: ["19900293001"],
     valorAfectacion: 680000,
     personasResponsables: [{ personaId: "31987654", cedula: "31987654", nombre: "Julián Esteban Torres Díaz", rol: "responsable" }],
     personasParticipantes: [],
@@ -1885,7 +1894,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "SEG-004",
-    categoria: "eventos_seguridad",
+    categoria: "eventos_criticos",
     tipoEvento: "Intrusión",
     tipoEntidad: "empleado",
     estado: "abierto",
@@ -1894,6 +1903,8 @@ export const eventos: Evento[] = [
     ciudad: "Barranquilla",
     fecha: "2026-03-18",
     descripcionHechos: "Cámaras de CCTV detectan ingreso no autorizado al patio de carga en horario nocturno. No se reportan faltantes pero se evidencia manipulación de sellos.",
+    guias: ["19900293002"],
+    valorAfectacion: 1,
     personasResponsables: [],
     personasParticipantes: [],
     asignadoA: { id: "u-jorge", nombre: "Jorge Castaño", cargo: "Interventor de Faltantes" },
@@ -1907,7 +1918,7 @@ export const eventos: Evento[] = [
   },
   {
     id: "SEG-005",
-    categoria: "eventos_seguridad",
+    categoria: "eventos_criticos",
     tipoEvento: "Suplantación",
     tipoEntidad: "empleado",
     estado: "abierto",
@@ -1917,6 +1928,7 @@ export const eventos: Evento[] = [
     fecha: "2026-04-01",
     descripcionHechos: "Se detecta que una persona se presentó con credencial falsa para retirar mercancía en nombre de un cliente. Guía fue entregada antes de verificar identidad.",
     guias: ["MX-80001"],
+    valorAfectacion: 1200000,
     personasResponsables: [],
     personasParticipantes: [],
     asignadoA: { id: "u-ana", nombre: "Ana Martínez", cargo: "Analista de Calidad" },
@@ -1998,7 +2010,7 @@ export const solicitudesCCTV: SolicitudCCTV[] = [
     eventoId: "UNI-001",
     terminalSolicitante: "Medellín",
     terminalInvestigar: "Medellín",
-    tipoNovedad: "Faltante novedad 100",
+    tipoNovedad: "Faltante causal 100",
     guia: "7501234567",
     descripcionSolicitud: "Revisar cámaras de plataforma de despacho del 4 de marzo entre 08:00 y 12:00. Se reporta faltante de unidad — necesitamos verificar si la carga fue subida al vehículo o si nunca llegó a plataforma.",
     fechaSolicitud: "2026-03-08T10:00:00",
@@ -2024,7 +2036,7 @@ export const solicitudesCCTV: SolicitudCCTV[] = [
     eventoId: "UNI-007",
     terminalSolicitante: "Medellín",
     terminalInvestigar: "Medellín",
-    tipoNovedad: "Faltante novedad 100",
+    tipoNovedad: "Faltante causal 100",
     guia: "7501234571",
     descripcionSolicitud: "Revisar cámaras de zona de descargue y bodega 3 el 10 de marzo entre 20:00 y 23:00. Se reportó faltante de mercancía después del descargue del vehículo TKJ-412. Necesitamos confirmar si la carga bajó completa.",
     fechaSolicitud: "2026-03-11T08:00:00",
@@ -3023,7 +3035,12 @@ function restaurarDatos() {
 
     if (data.eventos?.length) {
       eventos.length = 0;
-      data.eventos.forEach(e => eventos.push(e));
+      data.eventos.forEach((e) => {
+        if ((e as { categoria?: string }).categoria === "eventos_seguridad" || (e as { categoria?: string }).categoria === "evento_seguridad") {
+          (e as { categoria: CategoriaEvento }).categoria = "eventos_criticos";
+        }
+        eventos.push(e);
+      });
     }
     if (data.vehiculosEstado) {
       vehiculos.forEach(v => { if (data.vehiculosEstado[v.id]) v.estado = data.vehiculosEstado[v.id] as typeof v.estado; });

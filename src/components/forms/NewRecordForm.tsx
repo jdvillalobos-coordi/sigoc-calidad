@@ -13,31 +13,30 @@ const CATEGORIAS = [
   { id: "listas_vinculantes" as CategoriaEvento, icon: "📋", label: "Listas Vinculantes", desc: "Antecedentes, denuncias, vínculos externos (Truora)" },
   { id: "pqr" as CategoriaEvento, icon: "📞", label: "Solicitudes Postventa", desc: "Reclamaciones de clientes: mala entrega, deterioro, etc." },
   { id: "disciplinarios" as CategoriaEvento, icon: "⚖️", label: "Disciplinarios", desc: "Faltas laborales: llegadas tarde, desacatos, llamados de atención" },
-  { id: "eventos_seguridad" as CategoriaEvento, icon: "🛡️", label: "Eventos de Seguridad", desc: "Accidentes, hurtos, extorsión y otros eventos de seguridad" },
+  { id: "eventos_criticos" as CategoriaEvento, icon: "🛡️", label: "Eventos críticos", desc: "Accidentes, hurtos, extorsión y otros riesgos de alto impacto" },
   { id: "evidencias" as CategoriaEvento, icon: "📸", label: "Evidencias", desc: "Falsa evidencia de entrega o intento de entrega" },
 ] as const;
 
 const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[] }[]> = {
-  dineros:            [{ opciones: ["Hurto de dinero", "Pérdida de dinero", "Faltante de dinero", "Faltante injustificado", "Fraude de dinero (Jineteo)", "Dinero falsos", "Seguimiento RCE"] }],
-  unidades:           [{ opciones: ["Faltante novedad 100", "Faltante novedad 101", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529"] }],
+  dineros:            [{ opciones: ["Faltante de dinero", "Seguimiento RCE", "Dineros falsos"] }],
+  unidades:           [{ opciones: ["Faltante causal 100", "Faltantes causal 101"] }],
   listas_vinculantes: [
     { grupo: "Investigación", opciones: ["Denuncia penal", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] },
   ],
-  eventos_seguridad: [{ opciones: [
-    "Accidente de tránsito",
+  eventos_criticos: [{ opciones: [
+    "Aéreo (Dron)",
     "Activo CM Hurto / Pérdida (Sede)",
-    "Aéreo",
+    "Accidentes de Tránsito (Volcamiento, Choque, etc)",
     "Afectaciones a la seguridad híbrida",
     "Bloqueo de vías",
-    "Descuelgue",
     "Extorsión",
     "Falla del Servidor (Plataforma GPS)",
     "Fraude en la Documentación",
     "Fuga de Información",
     "Homicidio",
     "Hurto de Combustible",
-    "Inhibidores de Señal (GSM, GPRS, GPS)",
     "Intrusión",
+    "Inhibidores de Señal (GSM, GPRS, GPS)",
     "Lesiones Personales",
     "Sabotaje",
     "Secuestro",
@@ -83,7 +82,7 @@ const FUENTES: Record<CategoriaEvento, string> = {
   pqr:                "Reporte cliente / Agente CAL",
   disciplinarios:     "SuccessFactors / Gestión Humana",
   evidencias:         "Auditoría IA Evidencias",
-  eventos_seguridad:  "Gestión de Seguridad",
+  eventos_criticos:  "Gestión de Seguridad",
 };
 
 function PersonaSearchField({ value, persona, onChange, onSelect, onClear }: {
@@ -173,7 +172,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [guiaErrors, setGuiaErrors] = useState<Record<number, boolean>>({});
   const [cedulas, setCedulas] = useState<string[]>([""]);
   const [cedulasPersona, setCedulasPersona] = useState<Record<number, Persona>>({});
-  const [codigoNovedad, setCodigoNovedad] = useState(prefill?.codigoNovedad ?? "");
   const [placaInput, setPlacaInput] = useState("");
   const [placaData, setPlacaData] = useState<{ placa: string; tipo: string; conductorId: string; estado: string } | null>(null);
   const [placaError, setPlacaError] = useState(false);
@@ -200,7 +198,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const [placaAdicionalData, setPlacaAdicionalData] = useState<{ placa: string; tipo: string; conductorId: string; estado: string } | null>(null);
   const [placaAdicionalError, setPlacaAdicionalError] = useState(false);
   const [direccion, setDireccion] = useState("");
-  const [contenidoMercancia, setContenidoMercancia] = useState("");
   const [eventoCreado, setEventoCreado] = useState<string | null>(null);
 
   function buscarGuia(idx: number, num: string) {
@@ -251,45 +248,71 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const esPqrRecogida = categoria === "pqr" && pqrReferenciaEsRecogida(tipoEvento);
   const esIncumplimientoRecogidas = categoria === "pqr" && /incumplimiento.*recogida/i.test(tipoEvento);
   // Para PQR ya no se pide tipo de entidad (se deriva del Rol solicitante).
-  const hideTipoEntidad = categoria === "dineros" || categoria === "unidades" || categoria === "eventos_seguridad" || categoria === "pqr";
+  const hideTipoEntidad = categoria === "dineros" || categoria === "unidades" || categoria === "eventos_criticos" || categoria === "pqr";
   const mostrarPlacaAdicional = !esVehiculo && categoria === "listas_vinculantes";
-  const personaOpcional = esVehiculo || categoria === "pqr" || categoria === "listas_vinculantes" || categoria === "evidencias" || categoria === "eventos_seguridad" || categoria === "unidades";
+  const esAperturaDinOUni = categoria === "dineros" || categoria === "unidades";
+  const esAperturaEventosCriticos = categoria === "eventos_criticos";
+  const valorNumReg = Number(valorAfectacion);
+  const valorAperturaOk = valorAfectacion !== "" && !Number.isNaN(valorNumReg) && valorNumReg > 0;
+  const personaOpcional = esVehiculo || categoria === "pqr" || categoria === "listas_vinculantes" || categoria === "evidencias" || categoria === "eventos_criticos";
 
   // Si se elige "Incumplimiento recogidas", equipo recogida se fija a 0 por defecto y se bloquea.
   useEffect(() => {
     if (esIncumplimientoRecogidas) setEquipoRecogida("0");
   }, [esIncumplimientoRecogidas]);
 
-  const puedeCrear = !!(
-    categoria && tipoEvento && (hideTipoEntidad || tipoEntidad) && terminal && fecha && descripcion
-    && (esVehiculo ? placaInput : true)
-    && (personaOpcional || hideTipoEntidad || Object.keys(cedulasPersona).length > 0)
-    && (categoria === "pqr"
-      ? (terminalDestino && ciudadOrigen && ciudadDestino && equipoRecogida && equipoEntrega && tipoPoblacionOrigen && tipoPoblacionDestino && rolSolicitante
-        && (esPqrRecogida ? /^\d{8}$/.test(pqrIdRecogida.trim()) : /^\d{11}$/.test((guiaInputs[0] ?? "").trim())))
-      : true)
-  );
+  const puedeCrear = esAperturaDinOUni
+    ? !!(categoria && tipoEvento && terminal && fecha && descripcion.trim() && valorAperturaOk)
+    : esAperturaEventosCriticos
+    ? !!(categoria && tipoEvento && terminal && fecha && descripcion.trim() && valorAperturaOk)
+    : !!(
+        categoria && tipoEvento && (hideTipoEntidad || tipoEntidad) && terminal && fecha && descripcion
+        && (esVehiculo ? placaInput : true)
+        && (personaOpcional || hideTipoEntidad || Object.keys(cedulasPersona).length > 0)
+        && (categoria === "pqr"
+          ? (terminalDestino && ciudadOrigen && ciudadDestino && equipoRecogida && equipoEntrega && tipoPoblacionOrigen && tipoPoblacionDestino && rolSolicitante
+            && (esPqrRecogida ? /^\d{8}$/.test(pqrIdRecogida.trim()) : /^\d{11}$/.test((guiaInputs[0] ?? "").trim())))
+          : true)
+      );
 
   const [intentoCrear, setIntentoCrear] = useState(false);
   const camposFaltantes: string[] = [];
-  if (intentoCrear && !puedeCrear) {
-    if (!tipoEvento) camposFaltantes.push("Tipo de evento");
-    if (!hideTipoEntidad && !tipoEntidad) camposFaltantes.push("Tipo de entidad");
-    if (!terminal) camposFaltantes.push("Terminal");
-    if (!fecha) camposFaltantes.push("Fecha");
-    if (!descripcion) camposFaltantes.push("Descripción");
-    if (esVehiculo && !placaInput) camposFaltantes.push("Placa del vehículo");
-    if (!personaOpcional && Object.keys(cedulasPersona).length === 0) camposFaltantes.push("Persona responsable");
-    if (categoria === "pqr" && !ciudadOrigen) camposFaltantes.push("Ciudad origen");
-    if (categoria === "pqr" && !terminalDestino) camposFaltantes.push("Terminal destino");
-    if (categoria === "pqr" && !ciudadDestino) camposFaltantes.push("Ciudad destino");
-    if (categoria === "pqr" && !equipoRecogida) camposFaltantes.push("Equipo recogida");
-    if (categoria === "pqr" && !equipoEntrega) camposFaltantes.push("Equipo tenencia o Entrega");
-    if (categoria === "pqr" && !tipoPoblacionOrigen) camposFaltantes.push("Tipo población origen");
-    if (categoria === "pqr" && !tipoPoblacionDestino) camposFaltantes.push("Tipo población destino");
-    if (categoria === "pqr" && !rolSolicitante) camposFaltantes.push("Rol solicitante");
-    if (categoria === "pqr" && esPqrRecogida && !/^\d{8}$/.test(pqrIdRecogida.trim())) camposFaltantes.push("N° I.D recogida (8 dígitos)");
-    if (categoria === "pqr" && !esPqrRecogida && !/^\d{11}$/.test((guiaInputs[0] ?? "").trim())) camposFaltantes.push("N° guía (11 dígitos)");
+  if (intentoCrear && !puedeCrear && categoria) {
+    if (esAperturaDinOUni) {
+      if (!tipoEvento) camposFaltantes.push("Tipo de evento");
+      if (!terminal) camposFaltantes.push("Terminal");
+      if (!fecha) camposFaltantes.push("Fecha");
+      if (!descripcion.trim()) camposFaltantes.push("Descripción de los hechos");
+      if (valorAfectacion === "" || Number.isNaN(valorNumReg) || valorNumReg <= 0) {
+        camposFaltantes.push(categoria === "dineros" ? "Valor del dinero" : "Valor declarado de unidades");
+      }
+    } else if (esAperturaEventosCriticos) {
+      if (!tipoEvento) camposFaltantes.push("Tipo de evento");
+      if (!terminal) camposFaltantes.push("Terminal");
+      if (!fecha) camposFaltantes.push("Fecha");
+      if (!descripcion.trim()) camposFaltantes.push("Descripción de los hechos");
+      if (valorAfectacion === "" || Number.isNaN(valorNumReg) || valorNumReg <= 0) {
+        camposFaltantes.push("Valor de afectación");
+      }
+    } else {
+      if (!tipoEvento) camposFaltantes.push("Tipo de evento");
+      if (!hideTipoEntidad && !tipoEntidad) camposFaltantes.push("Tipo de entidad");
+      if (!terminal) camposFaltantes.push("Terminal");
+      if (!fecha) camposFaltantes.push("Fecha");
+      if (!descripcion) camposFaltantes.push("Descripción");
+      if (esVehiculo && !placaInput) camposFaltantes.push("Placa del vehículo");
+      if (!personaOpcional && Object.keys(cedulasPersona).length === 0) camposFaltantes.push("Persona responsable");
+      if (categoria === "pqr" && !ciudadOrigen) camposFaltantes.push("Ciudad origen");
+      if (categoria === "pqr" && !terminalDestino) camposFaltantes.push("Terminal destino");
+      if (categoria === "pqr" && !ciudadDestino) camposFaltantes.push("Ciudad destino");
+      if (categoria === "pqr" && !equipoRecogida) camposFaltantes.push("Equipo recogida");
+      if (categoria === "pqr" && !equipoEntrega) camposFaltantes.push("Equipo tenencia o Entrega");
+      if (categoria === "pqr" && !tipoPoblacionOrigen) camposFaltantes.push("Tipo población origen");
+      if (categoria === "pqr" && !tipoPoblacionDestino) camposFaltantes.push("Tipo población destino");
+      if (categoria === "pqr" && !rolSolicitante) camposFaltantes.push("Rol solicitante");
+      if (categoria === "pqr" && esPqrRecogida && !/^\d{8}$/.test(pqrIdRecogida.trim())) camposFaltantes.push("N° I.D recogida (8 dígitos)");
+      if (categoria === "pqr" && !esPqrRecogida && !/^\d{11}$/.test((guiaInputs[0] ?? "").trim())) camposFaltantes.push("N° guía (11 dígitos)");
+    }
   }
 
   const primerPersona = Object.values(cedulasPersona)[0];
@@ -307,7 +330,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setGuiaErrors({});
     setCedulas([""]);
     setCedulasPersona({});
-    setCodigoNovedad("");
     setPlacaInput("");
     setPlacaData(null);
     setPlacaError(false);
@@ -334,7 +356,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
     setPlacaAdicionalData(null);
     setPlacaAdicionalError(false);
     setDireccion("");
-    setContenidoMercancia("");
     setIntentoCrear(false);
     setEventoCreado(null);
   }
@@ -371,6 +392,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       : rolSolicitante === "tercero" ? "tercero"
       : undefined;
 
+    const sinPersonasAperturaDinUnid = categoria === "dineros" || categoria === "unidades" || categoria === "eventos_criticos";
     const personasVinculadas = Object.values(cedulasPersona).map((p) => ({
       personaId: p.id,
       cedula: p.cedula,
@@ -390,20 +412,26 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       guias:
         categoria === "pqr"
           ? (esRecogidaPqr ? [] : guiaInputs.filter(Boolean).slice(0, 1))
-          : guiaInputs.filter(Boolean).slice(0, 1),
+          : categoria === "eventos_criticos"
+            ? guiaInputs.map((g) => g.trim()).filter(Boolean)
+            : guiaInputs.filter(Boolean).slice(0, 1),
       pqrIdRecogida: categoria === "pqr" && esRecogidaPqr ? pqrIdRecogida.trim() : undefined,
-      personasResponsables: categoria === "dineros" ? [] : personasVinculadas,
-      personasParticipantes: categoria === "dineros" ? personasVinculadas : [],
-      vehiculosVinculados: [
-        ...(placaData ? [{ vehiculoId: placaData.placa }] : []),
-        ...(placaAdicionalData ? [{ vehiculoId: placaAdicionalData.placa }] : []),
-      ],
+      personasResponsables: sinPersonasAperturaDinUnid ? [] : personasVinculadas,
+      personasParticipantes: sinPersonasAperturaDinUnid
+        ? []
+        : categoria === "dineros"
+          ? personasVinculadas
+          : [],
+      vehiculosVinculados: sinPersonasAperturaDinUnid
+        ? []
+        : [
+            ...(placaData ? [{ vehiculoId: placaData.placa }] : []),
+            ...(placaAdicionalData ? [{ vehiculoId: placaAdicionalData.placa }] : []),
+          ],
       descripcionHechos: descripcion,
       valorAfectacion: categoria !== "pqr" && valorAfectacion ? Number(valorAfectacion) : undefined,
       valorDinero: categoria === "dineros" && valorAfectacion ? Number(valorAfectacion) : undefined,
-      codigoNovedad: categoria === "unidades" ? codigoNovedad || undefined : undefined,
       direccion: categoria === "listas_vinculantes" ? direccion || undefined : undefined,
-      contenidoMercancia: categoria === "unidades" ? contenidoMercancia || undefined : undefined,
       nitCliente: nitCliente || undefined,
       nombreCliente: nombreCliente || undefined,
       rolSolicitante: rolSolicitante as Evento["rolSolicitante"] || undefined,
@@ -417,7 +445,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       tipoPoblacionDestino: categoria === "pqr" ? tipoPoblacionDestino as Evento["tipoPoblacionDestino"] || undefined : undefined,
       equipoRecogida: categoria === "pqr" ? equipoRecogida || undefined : undefined,
       equipoEntrega: categoria === "pqr" ? equipoEntrega || undefined : undefined,
-      soportesAdjuntos: adjuntos.length > 0 ? adjuntos : undefined,
+      soportesAdjuntos: sinPersonasAperturaDinUnid ? undefined : (adjuntos.length > 0 ? adjuntos : undefined),
       fuenteExterna: FUENTES[categoria!],
       estadoFlujo: "abierto",
       asignadoA: categoria === "pqr" ? undefined : {
@@ -567,6 +595,48 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </div>
               )}
 
+              {categoria === "eventos_criticos" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Guías (opcional)</label>
+                  {guiaInputs.map((g, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input
+                        className={`flex-1 border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring ${guiaErrors[i] ? "border-red-400" : "border-border"}`}
+                        placeholder="N° guía"
+                        value={g}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setGuiaInputs((prev) => prev.map((x, j) => (j === i ? v : x)));
+                        }}
+                        onBlur={() => g && buscarGuia(i, g)}
+                      />
+                      {guiaInputs.length > 1 && (
+                        <button
+                          type="button"
+                          className="text-xs text-red-500 px-2"
+                          onClick={() => {
+                            setGuiaInputs((prev) => prev.filter((_, j) => j !== i));
+                            setGuiasData((d) => { const n = { ...d }; delete n[i]; return n; });
+                          }}
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setGuiaInputs((prev) => [...prev, ""])}
+                    className="text-xs text-primary flex items-center gap-1 hover:underline"
+                  >
+                    <Plus className="w-3 h-3" /> Agregar otra guía
+                  </button>
+                  {guiasData[0] && guiaInputs[0] && (
+                    <p className="text-[10px] text-muted-foreground">La primera guía consultada rellena terminal/ciudad al vincular en el sistema.</p>
+                  )}
+                </div>
+              )}
+
               {categoria === "pqr" && (
                 <div className="space-y-3 rounded-lg border border-primary/15 bg-primary/[0.03] p-3">
                   <p className="text-[10px] font-medium text-muted-foreground">Ubicación y equipos (tras origen y radicación)</p>
@@ -668,7 +738,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 </div>
               )}
 
-              {/* Vehículo asociado (opcional, para dineros/unidades/listas vinculantes cuando entidad no es vehículo) */}
+              {/* Vehículo asociado (listas vinculantes) */}
               {mostrarPlacaAdicional && (
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground mb-1 block">
@@ -699,7 +769,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               )}
 
               {/* Guía o I.D (un solo referente por evento; PQR según tipo) */}
-              {categoria !== "eventos_seguridad" && (
+              {categoria !== "eventos_criticos" && (
               <div>
                 {categoria === "pqr" && esPqrRecogida ? (
                   <>
@@ -742,8 +812,12 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                     <input
                       className={`w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring ${guiaErrors[0] ? "border-red-400" : "border-border"}`}
                       placeholder="19900293001"
+                      inputMode={categoria === "dineros" || categoria === "unidades" ? "numeric" : undefined}
                       value={guiaInputs[0] ?? ""}
-                      onChange={(e) => setGuiaInputs([e.target.value])}
+                      onChange={(e) => {
+                        const v = categoria === "dineros" || categoria === "unidades" ? e.target.value.replace(/\D/g, "") : e.target.value;
+                        setGuiaInputs([v]);
+                      }}
                       onBlur={() => guiaInputs[0] && buscarGuia(0, guiaInputs[0])}
                     />
                     {guiaErrors[0] && <p className="text-xs text-red-500 mt-0.5">Guía no encontrada — completa datos manualmente</p>}
@@ -755,9 +829,11 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                       </div>
                     )}
                     <p className="text-xs text-muted-foreground/70 mt-1">
-                      {esVehiculo
-                        ? "Opcional — un solo número de guía por evento"
-                        : "Opcional — dejar vacío si no aplica; una guía por evento"}
+                      {categoria === "dineros" || categoria === "unidades"
+                        ? "Opcional — un solo número de guía."
+                        : esVehiculo
+                          ? "Opcional — un solo número de guía por evento"
+                          : "Opcional — dejar vacío si no aplica; una guía por evento"}
                     </p>
                   </>
                 )}
@@ -765,7 +841,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               )}
 
               {/* Personas responsables (opcional para vehículos) */}
-              {categoria !== "unidades" && categoria !== "eventos_seguridad" && (
+              {categoria !== "unidades" && categoria !== "dineros" && categoria !== "eventos_criticos" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   {categoria === "dineros" ? "Persona(s) presente(s) en el evento" : categoria === "pqr" ? "Persona(s) relacionada(s)" : "Persona(s) responsable(s)"}{personaOpcional ? "" : " *"}
@@ -797,7 +873,9 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
 
               {/* Descripción */}
               <div>
-                <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descripción *</label>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">
+                  {categoria === "dineros" || categoria === "unidades" || categoria === "eventos_criticos" ? "Descripción de los hechos" : "Descripción"} *
+                </label>
                 <textarea
                   className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   rows={4}
@@ -807,7 +885,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                 />
               </div>
 
-              {/* Adjuntar imágenes o PDF (hasta 5, opcional) */}
+              {categoria !== "dineros" && categoria !== "unidades" && categoria !== "eventos_criticos" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   Adjuntar imágenes o PDF <span className="font-normal text-muted-foreground">(opcional, máx. 5)</span>
@@ -841,12 +919,14 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                   </div>
                 )}
               </div>
+              )}
 
               {/* Valor de afectación (no aplica en alta PQR) */}
-              {categoria !== "listas_vinculantes" && categoria !== "eventos_seguridad" && categoria !== "pqr" && (
+              {categoria !== "listas_vinculantes" && categoria !== "pqr" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                  {categoria === "dineros" ? "Valor del dinero" : categoria === "unidades" ? "Valor declarado de unidades" : "Valor estimado de afectación"}
+                  {categoria === "dineros" ? "Valor del dinero" : categoria === "unidades" ? "Valor declarado de unidades" : categoria === "eventos_criticos" ? "Valor de afectación" : "Valor estimado de afectación"}
+                  {(categoria === "dineros" || categoria === "unidades" || categoria === "eventos_criticos") && " *"}
                 </label>
                 <input
                   type="number"
@@ -856,17 +936,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                   onChange={(e) => setValorAfectacion(e.target.value)}
                 />
               </div>
-              )}
-
-              {/* Contenido de la mercancía (solo unidades) */}
-              {categoria === "unidades" && (
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">Contenido de la mercancía</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring" value={contenidoMercancia} onChange={(e) => setContenidoMercancia(e.target.value)}>
-                    <option value="">Seleccionar...</option>
-                    {["Accesorios", "Bancos", "Bisutería", "Calzado Marroquinería", "Cliente no declara contenido", "Confección", "Cosméticos", "Documentos", "Libros", "Licor", "Línea Blanca", "Loterías", "MQP", "Notarías", "Medicamentos", "Productos para el hogar", "Publicidad", "Repuestos", "Tecnología"].map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
               )}
 
               {categoria === "listas_vinculantes" && (
@@ -942,78 +1011,105 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               {puedeCrear && !eventoCreado && (
                 <div className="p-4 bg-muted/40 rounded-xl border border-border space-y-2">
                   <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">📋 Resumen del evento</p>
-                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                    <span className="text-muted-foreground">Categoría:</span>
-                    <span className="font-medium">{CATEGORIAS.find(c => c.id === categoria)?.label}</span>
-                    <span className="text-muted-foreground">Tipo:</span>
-                    <span className="font-medium">{tipoEvento}</span>
-                    {tipoEntidad && (<>
-                    <span className="text-muted-foreground">Entidad:</span>
-                    <span className="font-medium">{tipoEntidad}</span>
-                    </>)}
-                    <span className="text-muted-foreground">{categoria === "pqr" ? "Fecha radicación:" : "Fecha:"}</span>
-                    <span className="font-medium">{fecha}</span>
-                    {categoria === "pqr" && esPqrRecogida && pqrIdRecogida && (<>
-                      <span className="text-muted-foreground">N° I.D recogida:</span>
-                      <span className="font-medium font-mono">{pqrIdRecogida}</span>
-                    </>)}
-                    {((categoria === "pqr" && !esPqrRecogida) || categoria !== "pqr") && guiaInputs[0] && (<>
-                      <span className="text-muted-foreground">Guía:</span>
-                      <span className="font-medium font-mono">{guiaInputs[0]}</span>
-                    </>)}
-                    <span className="text-muted-foreground">{categoria === "pqr" ? "Terminal origen:" : "Terminal:"}</span>
-                    <span className="font-medium">{terminal}</span>
-                    {categoria === "pqr" && ciudadOrigen && (<>
-                      <span className="text-muted-foreground">Ciudad origen:</span>
-                      <span className="font-medium">{ciudadOrigen}</span>
-                    </>)}
-                    {categoria === "pqr" && rolSolicitante && (<>
-                      <span className="text-muted-foreground">Rol solicitante:</span>
-                      <span className="font-medium capitalize">{rolSolicitante}</span>
-                    </>)}
-                    {adjuntos.length > 0 && (<>
-                      <span className="text-muted-foreground">Adjuntos:</span>
-                      <span className="font-medium">{adjuntos.length} archivo{adjuntos.length > 1 ? "s" : ""}</span>
-                    </>)}
-                    {esVehiculo && placaData && (<>
-                      <span className="text-muted-foreground">Vehículo:</span>
-                      <span className="font-medium">{placaData.placa} ({placaData.tipo})</span>
-                    </>)}
-                    {primerPersona && (<>
-                      <span className="text-muted-foreground">{categoria === "dineros" ? "Persona presente:" : categoria === "pqr" ? "Persona relacionada:" : "Persona responsable:"}</span>
-                      <span className="font-medium">
-                        {primerPersona.nombre} (ID {primerPersona.cedula}){Object.keys(cedulasPersona).length > 1 ? ` +${Object.keys(cedulasPersona).length - 1} más` : ""}
-                      </span>
-                    </>)}
-                    {placaAdicionalData && (<>
-                      <span className="text-muted-foreground">Vehículo asociado:</span>
-                      <span className="font-medium">{placaAdicionalData.placa} ({placaAdicionalData.tipo})</span>
-                    </>)}
-                    {valorAfectacion && (<>
-                      <span className="text-muted-foreground">{categoria === "dineros" ? "Valor dinero:" : "Valor afectación:"}</span>
-                      <span className="font-medium">{formatCurrency(Number(valorAfectacion), getMonedaPorTerminal(terminal).currency, getMonedaPorTerminal(terminal).locale)}</span>
-                    </>)}
-                    {categoria === "pqr" && terminalDestino && (<>
-                      <span className="text-muted-foreground">Destino:</span>
-                      <span className="font-medium">{terminalDestino}{ciudadDestino ? ` — ${ciudadDestino}` : ""}</span>
-                    </>)}
-                    {categoria === "pqr" && equipoRecogida && (<>
-                      <span className="text-muted-foreground">Equipo recogida:</span>
-                      <span className="font-medium">{equipoRecogida}</span>
-                    </>)}
-                    <span className="text-muted-foreground">Fuente:</span>
-                    <span className="font-medium">{FUENTES[categoria]}</span>
-                    {categoria !== "pqr" && (<>
+                  {categoria === "dineros" || categoria === "unidades" || categoria === "eventos_criticos" ? (
+                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                      <span className="text-muted-foreground">Categoría:</span>
+                      <span className="font-medium">{CATEGORIAS.find(c => c.id === categoria)?.label}</span>
+                      <span className="text-muted-foreground">Tipo:</span>
+                      <span className="font-medium">{tipoEvento}</span>
+                      <span className="text-muted-foreground">Terminal:</span>
+                      <span className="font-medium">{terminal}</span>
+                      <span className="text-muted-foreground">Fecha:</span>
+                      <span className="font-medium">{fecha}</span>
+                      {guiaInputs.some((x) => x.trim()) && (<>
+                        <span className="text-muted-foreground">Guía(s):</span>
+                        <span className="font-medium font-mono">{guiaInputs.filter((x) => x.trim()).join(", ")}</span>
+                      </>)}
+                      {valorAfectacion && (<>
+                        <span className="text-muted-foreground">{categoria === "dineros" ? "Valor del dinero:" : categoria === "unidades" ? "Valor declarado de unidades:" : "Valor de afectación:"}</span>
+                        <span className="font-medium">{formatCurrency(Number(valorAfectacion), getMonedaPorTerminal(terminal).currency, getMonedaPorTerminal(terminal).locale)}</span>
+                      </>)}
+                      <span className="text-muted-foreground">Fuente:</span>
+                      <span className="font-medium">{FUENTES[categoria]}</span>
                       <span className="text-muted-foreground">Asignado a:</span>
                       <span className="font-medium">{usuarioLogueado.nombre}</span>
-                    </>)}
-                    {categoria === "pqr" && (<>
-                      <span className="text-muted-foreground">Asignación:</span>
-                      <span className="font-medium text-amber-600">Sin asignar — pendiente de Agente de SPL</span>
-                    </>)}
-                    <span className="text-muted-foreground">Estado:</span>
-                    <span className="font-medium">Abierto</span>
-                  </div>
+                      <span className="text-muted-foreground">Estado:</span>
+                      <span className="font-medium">Abierto</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                      <span className="text-muted-foreground">Categoría:</span>
+                      <span className="font-medium">{CATEGORIAS.find(c => c.id === categoria)?.label}</span>
+                      <span className="text-muted-foreground">Tipo:</span>
+                      <span className="font-medium">{tipoEvento}</span>
+                      {tipoEntidad && (<>
+                      <span className="text-muted-foreground">Entidad:</span>
+                      <span className="font-medium">{tipoEntidad}</span>
+                      </>)}
+                      <span className="text-muted-foreground">{categoria === "pqr" ? "Fecha radicación:" : "Fecha:"}</span>
+                      <span className="font-medium">{fecha}</span>
+                      {categoria === "pqr" && esPqrRecogida && pqrIdRecogida && (<>
+                        <span className="text-muted-foreground">N° I.D recogida:</span>
+                        <span className="font-medium font-mono">{pqrIdRecogida}</span>
+                      </>)}
+                      {((categoria === "pqr" && !esPqrRecogida) || categoria !== "pqr") && guiaInputs[0] && (<>
+                        <span className="text-muted-foreground">Guía:</span>
+                        <span className="font-medium font-mono">{guiaInputs[0]}</span>
+                      </>)}
+                      <span className="text-muted-foreground">{categoria === "pqr" ? "Terminal origen:" : "Terminal:"}</span>
+                      <span className="font-medium">{terminal}</span>
+                      {categoria === "pqr" && ciudadOrigen && (<>
+                        <span className="text-muted-foreground">Ciudad origen:</span>
+                        <span className="font-medium">{ciudadOrigen}</span>
+                      </>)}
+                      {categoria === "pqr" && rolSolicitante && (<>
+                        <span className="text-muted-foreground">Rol solicitante:</span>
+                        <span className="font-medium capitalize">{rolSolicitante}</span>
+                      </>)}
+                      {adjuntos.length > 0 && (<>
+                        <span className="text-muted-foreground">Adjuntos:</span>
+                        <span className="font-medium">{adjuntos.length} archivo{adjuntos.length > 1 ? "s" : ""}</span>
+                      </>)}
+                      {esVehiculo && placaData && (<>
+                        <span className="text-muted-foreground">Vehículo:</span>
+                        <span className="font-medium">{placaData.placa} ({placaData.tipo})</span>
+                      </>)}
+                      {primerPersona && (<>
+                        <span className="text-muted-foreground">{categoria === "dineros" ? "Persona presente:" : categoria === "pqr" ? "Persona relacionada:" : "Persona responsable:"}</span>
+                        <span className="font-medium">
+                          {primerPersona.nombre} (ID {primerPersona.cedula}){Object.keys(cedulasPersona).length > 1 ? ` +${Object.keys(cedulasPersona).length - 1} más` : ""}
+                        </span>
+                      </>)}
+                      {placaAdicionalData && (<>
+                        <span className="text-muted-foreground">Vehículo asociado:</span>
+                        <span className="font-medium">{placaAdicionalData.placa} ({placaAdicionalData.tipo})</span>
+                      </>)}
+                      {valorAfectacion && (<>
+                        <span className="text-muted-foreground">{categoria === "dineros" ? "Valor dinero:" : "Valor afectación:"}</span>
+                        <span className="font-medium">{formatCurrency(Number(valorAfectacion), getMonedaPorTerminal(terminal).currency, getMonedaPorTerminal(terminal).locale)}</span>
+                      </>)}
+                      {categoria === "pqr" && terminalDestino && (<>
+                        <span className="text-muted-foreground">Destino:</span>
+                        <span className="font-medium">{terminalDestino}{ciudadDestino ? ` — ${ciudadDestino}` : ""}</span>
+                      </>)}
+                      {categoria === "pqr" && equipoRecogida && (<>
+                        <span className="text-muted-foreground">Equipo recogida:</span>
+                        <span className="font-medium">{equipoRecogida}</span>
+                      </>)}
+                      <span className="text-muted-foreground">Fuente:</span>
+                      <span className="font-medium">{FUENTES[categoria]}</span>
+                      {categoria !== "pqr" && (<>
+                        <span className="text-muted-foreground">Asignado a:</span>
+                        <span className="font-medium">{usuarioLogueado.nombre}</span>
+                      </>)}
+                      {categoria === "pqr" && (<>
+                        <span className="text-muted-foreground">Asignación:</span>
+                        <span className="font-medium text-amber-600">Sin asignar — pendiente de Agente de SPL</span>
+                      </>)}
+                      <span className="text-muted-foreground">Estado:</span>
+                      <span className="font-medium">Abierto</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

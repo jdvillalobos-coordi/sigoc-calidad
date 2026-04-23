@@ -19,14 +19,14 @@ const SUGERENCIAS = [
 function renderMarkdown(text: string): React.ReactNode[] {
   const lines = text.split("\n");
   return lines.map((line, i) => {
-    let processed: React.ReactNode = line;
+    const processed: React.ReactNode = line;
 
     if (line.startsWith("**") && line.endsWith("**")) {
       return <p key={i} className="font-semibold mt-2 mb-1">{line.replace(/\*\*/g, "")}</p>;
     }
 
     const parts: React.ReactNode[] = [];
-    let remaining = line;
+    const remaining = line;
     let partKey = 0;
     const boldRegex = /\*\*(.+?)\*\*/g;
     let lastIndex = 0;

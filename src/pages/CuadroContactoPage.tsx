@@ -4,7 +4,7 @@ import { useApp } from "@/context/AppContext";
 import { Users, Car, MapPin, Building2, CalendarDays, X, Search, ArrowUpDown } from "lucide-react";
 import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
-import type { CategoriaEvento } from "@/types";
+import type { CategoriaEvento, Evento, Persona } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import type { DateRange } from "react-day-picker";
@@ -16,7 +16,7 @@ const CATS: { value: CategoriaEvento | "todas"; label: string }[] = [
   { value: "listas_vinculantes",label: "📋 Listas" },
   { value: "pqr",               label: "📞 Solicitudes Postventa" },
   { value: "disciplinarios",    label: "⚖️ Disciplinarios" },
-  { value: "eventos_seguridad", label: "🛡️ Seguridad" },
+  { value: "eventos_criticos", label: "🛡️ Eventos críticos" },
   { value: "evidencias",        label: "📸 Evidencias" },
 ];
 
@@ -35,6 +35,15 @@ function Bar({ value, max }: { value: number; max: number }) {
       <div className="h-full bg-primary rounded-full" style={{ width: `${max > 0 ? (value / max) * 100 : 0}%` }} />
     </div>
   );
+}
+
+/** Diligencias de apertura + presentes/responsables en investigación. */
+function personaLigadaAEvento(e: Evento, p: Pick<Persona, "id" | "cedula">): boolean {
+  if ((e.personasResponsables ?? []).some((pv) => pv.personaId === p.id)) return true;
+  if ((e.personasParticipantes ?? []).some((pv) => pv.personaId === p.id)) return true;
+  if ((e.presentesHallazgo ?? []).some((f) => f.personaId === p.id || f.cedula === p.cedula)) return true;
+  if ((e.responsablesHallazgo ?? []).some((f) => f.personaId === p.id || f.cedula === p.cedula)) return true;
+  return false;
 }
 
 const DECISION_LABELS: Record<string, string> = {
@@ -60,7 +69,7 @@ export default function CuadroContactoPage() {
   const [subTabVehiculos, setSubTabVehiculos] = React.useState<"activos" | "bloqueados">("activos");
   const [vehBusqueda, setVehBusqueda] = React.useState("");
 
-  const filtrados = React.useMemo(() => {
+  const filtradosSoloFecha = React.useMemo(() => {
     return eventos.filter((e) => {
       const fecha = new Date(e.fecha);
       let okFecha = true;
@@ -68,10 +77,15 @@ export default function CuadroContactoPage() {
         if (dateRange.from) okFecha = okFecha && !isBefore(fecha, startOfDay(dateRange.from));
         if (dateRange.to)   okFecha = okFecha && !isAfter(fecha, endOfDay(dateRange.to));
       }
-      const okCat = cat === "todas" || e.categoria === cat;
-      return okFecha && okCat;
+      return okFecha;
     });
-  }, [cat, dateRange, dataVersion]);
+  }, [dateRange, dataVersion]);
+
+  const filtrados = React.useMemo(() => {
+    return filtradosSoloFecha.filter((e) => {
+      return cat === "todas" || e.categoria === cat;
+    });
+  }, [cat, filtradosSoloFecha, dataVersion]);
 
   const termToRegional = React.useMemo(() => {
     const map: Record<string, string> = {};
@@ -106,21 +120,24 @@ export default function CuadroContactoPage() {
 
   const cuadroContacto = React.useMemo(() => {
     return personas.map((p) => {
-      const evsPeriodo = filtrados.filter((e) =>
-        (e.personasResponsables ?? []).some((pv) => pv.personaId === p.id) ||
-        (e.personasParticipantes ?? []).some((pv) => pv.personaId === p.id)
-      );
-      const tieneEventosEnPeriodo = evsPeriodo.length > 0;
-      if (!tieneEventosEnPeriodo) return null;
+      const enCategoriaYFecha = filtrados.filter((e) => personaLigadaAEvento(e, p));
+      if (enCategoriaYFecha.length === 0) return null;
 
+      const vinculacionesEnPeriodo = filtradosSoloFecha.filter((e) => personaLigadaAEvento(e, p));
       const lesivas = actividadesLesivas.filter((a) => a.personaId === p.id).length;
-      const ultimaDecision = decisionesPersona.filter(d => d.personaId === p.id).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
-      return { ...p, totalEventos: evsPeriodo.length, lesivas, ultimaDecision };
+      const ultimaDecision = decisionesPersona.filter((d) => d.personaId === p.id).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+      return {
+        ...p,
+        totalEventos: vinculacionesEnPeriodo.length,
+        eventosEnCategoriaFiltro: enCategoriaYFecha.length,
+        lesivas,
+        ultimaDecision,
+      };
     }).filter(Boolean).sort((a, b) => {
       const diff = (a?.totalEventos ?? 0) - (b?.totalEventos ?? 0);
       return sortDir === "desc" ? -diff : diff;
     });
-  }, [filtrados, sortDir, dataVersion]);
+  }, [filtrados, filtradosSoloFecha, sortDir, dataVersion]);
 
   const cuadroFiltrado = React.useMemo(() => {
     let lista = cuadroContacto;
@@ -397,9 +414,22 @@ export default function CuadroContactoPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold flex-shrink-0">
-                        {p.totalEventos} evento{p.totalEventos !== 1 ? "s" : ""}
-                      </span>
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0 text-right max-w-[9.5rem]">
+                        <span
+                          className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold"
+                          title="Eventos vinculados (apertura o investigación) en el rango de fechas, sumando todas las categorías"
+                        >
+                          {p.totalEventos} evento{p.totalEventos !== 1 ? "s" : ""}
+                        </span>
+                        {cat !== "todas" && p.eventosEnCategoriaFiltro < p.totalEventos && (
+                          <span
+                            className="text-[9px] text-muted-foreground leading-tight"
+                            title="Solo con la categoría del chip superior"
+                          >
+                            {p.eventosEnCategoriaFiltro} en {CATS.find((c) => c.value === cat)?.label ?? "categoría"}
+                          </span>
+                        )}
+                      </div>
                       {p.lesivas > 0 && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-200 font-medium flex-shrink-0">
                           {p.lesivas} lesiva{p.lesivas > 1 ? "s" : ""}

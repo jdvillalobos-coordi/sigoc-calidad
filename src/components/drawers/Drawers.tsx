@@ -1,11 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getVehiculoPorPlaca, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona, buscarPersonas } from "@/data/mockData";
-import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig } from "@/lib/utils-app";
+import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, labelCategoriaEvento } from "@/lib/utils-app";
 import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
 import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
-import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV, Persona, PersonaVinculada } from "@/types";
+import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV, Persona, PersonaVinculada, Anotacion } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import { CONTENIDO_RECURSO_DINEROS, CONTENIDO_RECURSO_UNIDADES, GRUPO_CIERRE_OPCIONES, CAUSA_UNIFICADA_DINEROS, CAUSA_UNIFICADA_UNIDADES } from "./dinerosUnidadesLists";
+
+const CONTENIDO_RECURSO_EVENTOS_CRITICOS = [
+  "Instalaciones",
+  "Computador",
+  "TIM",
+  "Impresora TIM",
+  "Celular corporativo",
+  "Bateria celular",
+  "Carreta",
+  "Candado satélital",
+  "Panorámico",
+  "Vehiculo ruta local",
+  "Vehiculo ruta nacional",
+  "Empleado CM",
+  "Socio",
+] as const;
 
 // ---- Flujo de trabajo (simplificado: Abierto → Escalado? → Cerrado) ----
 const FLUJO_STEPS: { key: EstadoFlujo; label: string; icon: string }[] = [
@@ -15,6 +32,69 @@ const FLUJO_STEPS: { key: EstadoFlujo; label: string; icon: string }[] = [
 ];
 
 const FLUJO_INDEX: Record<EstadoFlujo, number> = { abierto: 0, escalado: 1, cerrado: 2 };
+
+const INTERVENCION_DINEROS_OPCIONES = [
+  "Investigación Faltante de dinero",
+  "Acompañamiento de SG en la entrega y RCE",
+  "Seguimiento a la entrega y RCE",
+  "Seguimiento devolución de la unidad",
+  "Proceso Denuncia",
+  "Reporte Acta de Aprehensión",
+  "Reporte Acta de Incautación",
+  "602. Envío en Validación por Seguridad (Unidad retenida)",
+  "Solicitud desautorizar carga de trabajo",
+  "N/A (RCE / Entrega Efectiva al momento de investigar)",
+  "N/A (Devolución efectiva al momento de investigar)",
+] as const;
+
+const INTERVENCION_UNIDADES_OPCIONES = [
+  "Investigación de Faltante",
+  "Proceso Denuncia",
+  "Reporte Acta de Aprehensión",
+  "Reporte Acta de Incautación",
+] as const;
+
+const ESTADO_DINEROS_PARCIAL = ["En proceso de investigación", "En proceso (NyS)"] as const;
+const ESTADO_DINEROS_CIERRE = [
+  "RCE / Entrega Efectiva",
+  "Devolución Efectiva",
+  "Aprehensión",
+  "Incautación",
+  "Guía anulada (Unidad no recogida)",
+  "Hurto de dinero",
+  "Pérdida de dinero",
+  "Fraude de dinero (Jineteo)",
+  "Dineros falsos",
+] as const;
+
+const ESTADO_UNIDADES_PARCIAL = ["En proceso de investigación", "En proceso (NyS)"] as const;
+const ESTADO_UNIDADES_CIERRE = [
+  "Unidad Ubicada",
+  "Unidad Ubicada (sobrante)",
+  "Unidad Recuperada",
+  "Unidad Interna Ubicada",
+  "Unidad Interna Ubicada (sobrante)",
+  "Unidad Interna Recuperada",
+  "Aprehensión",
+  "Incautación",
+  "Cliente no Despacha",
+  "Pérdida Unidad en Recogida",
+  "Pérdida Unidad en Plataforma - Sede",
+  "Pérdida Unidad en Distribución",
+  "Pérdida unidad en Ruta Nacional",
+  "Pérdida Unidad Interna en Recogida",
+  "Pérdida Unidad Interna en Plataforma - Sede",
+  "Pérdida Unidad Interna en Distribución",
+  "Pérdida Unidad Interna en Ruta Nacional",
+  "Hurto Unidad en Recogida",
+  "Hurto Unidad en Plataforma - Sede",
+  "Hurto Unidad en Distribución",
+  "Hurto Unidad en Ruta Nacional",
+  "Hurto Unidad Interna en Recogida",
+  "Hurto Unidad Interna en Plataforma - Sede",
+  "Hurto Unidad Interna en Distribución",
+  "Hurto Unidad Interna en Ruta Nacional",
+] as const;
 
 function FlujoStepper({ current, wasEscalated }: { current: EstadoFlujo; wasEscalated: boolean }) {
   const idx = FLUJO_INDEX[current];
@@ -161,6 +241,146 @@ function PersonaHallazgoBuscador({ ev, setLocalEventos }: { ev: Evento; setLocal
   );
 }
 
+type FilaH = NonNullable<Evento["presentesHallazgo"]>[number];
+
+function validarCierreEventosCriticos(ev: Evento): string[] {
+  if (ev.categoria !== "eventos_criticos") return [];
+  const f: string[] = [];
+  if (!ev.timelineSeguimiento?.trim()) f.push("Timeline de seguimiento");
+  if (!ev.contenidoMercancia?.trim()) f.push("Contenido / Recurso afectado");
+  if (ev.lugarLatitud == null || ev.lugarLongitud == null) f.push("Latitud y longitud");
+  if (!ev.presentesHallazgo || ev.presentesHallazgo.length < 1) f.push("Personas presentes (mín. 1)");
+  if (ev.soporteCCTV == null || ev.soporteCCTV === "") f.push("Soporte CCTV");
+  return f;
+}
+
+function hallazgoLegadoDinU(ev: Evento) {
+  return (ev.categoria === "dineros" || ev.categoria === "unidades")
+    && !!(ev.personasResponsablesHechos?.trim())
+    && !((ev.presentesHallazgo?.length ?? 0) > 0)
+    && !((ev.responsablesHallazgo?.length ?? 0) > 0);
+}
+
+function validarCierreDinU(ev: Evento): string[] {
+  if (ev.categoria !== "dineros" && ev.categoria !== "unidades") return [];
+  const f: string[] = [];
+  if (!ev.timelineSeguimiento?.trim()) f.push("Timeline de seguimiento");
+  if (!ev.contenidoMercancia?.trim()) f.push("Contenido / Recurso afectado");
+  if (ev.lugarLatitud == null || ev.lugarLongitud == null) f.push("Latitud y longitud");
+  if (ev.soporteCCTV == null || ev.soporteCCTV === "") f.push("Soporte CCTV");
+  if (!ev.registroWorkflow?.trim()) f.push("# Registro workflow");
+  if (!ev.presentesHallazgo || ev.presentesHallazgo.length < 1) f.push("Personas presentes (mín. 1)");
+  if (ev.categoria === "unidades" && ev.unidadesFaltantes == null) f.push("Unidades faltantes");
+  if (!ev.intervencionSeguridad) f.push("Intervención SG");
+  if (!ev.causaRaiz) f.push("Desviaciones identificadas / Causa raíz");
+  if (!ev.estadoGestionSG) f.push("Conclusión Seguridad");
+  if (!ev.grupoCierre) f.push("Cierre");
+  return f;
+}
+
+function HallazgoPersonasConEquipo({
+  ev, setLocalEventos, field, label, requireEquipo = false,
+}: {
+  ev: Evento;
+  setLocalEventos: React.Dispatch<React.SetStateAction<Evento[]>>;
+  field: "presentesHallazgo" | "responsablesHallazgo";
+  label: string;
+  requireEquipo?: boolean;
+}) {
+  const [busqueda, setBusqueda] = useState("");
+  const [focused, setFocused] = useState(false);
+  const sugerencias = buscarPersonas(busqueda, 6);
+  const showSugerencias = focused && busqueda.length >= 2 && sugerencias.length > 0;
+  const filas = (ev[field] ?? []) as FilaH[];
+  const cedulas = new Set(filas.map((f) => f.cedula));
+
+  function setFilas(nuevo: FilaH[]) {
+    const idx = eventos.findIndex((x) => x.id === ev.id);
+    if (idx === -1) return;
+    if (field === "presentesHallazgo") {
+      eventos[idx].presentesHallazgo = nuevo.length ? nuevo : undefined;
+    } else {
+      eventos[idx].responsablesHallazgo = nuevo.length ? nuevo : undefined;
+    }
+    setLocalEventos([...eventos]);
+  }
+
+  function agregar(p: Persona) {
+    if (cedulas.has(p.cedula)) return;
+    const rol: PersonaVinculada["rol"] = field === "responsablesHallazgo" ? "responsable" : "participante";
+    setFilas([...filas, { personaId: p.id, cedula: p.cedula, nombre: p.nombre, rol, equipo: "" }]);
+    setBusqueda("");
+  }
+
+  function quitar(cedula: string) {
+    setFilas(filas.filter((f) => f.cedula !== cedula));
+  }
+
+  function setEquipo(cedula: string, equipo: string) {
+    setFilas(filas.map((f) => f.cedula === cedula ? { ...f, equipo: equipo || undefined } : f));
+  }
+
+  return (
+    <div>
+      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">{label}</label>
+      {filas.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          {filas.map((f) => (
+            <div key={f.cedula} className="flex flex-wrap items-end gap-2 p-2 rounded-lg border border-border bg-background">
+              <div className="flex-1 min-w-[120px]">
+                <div className="text-xs font-medium text-foreground">{f.nombre}</div>
+                <div className="text-[10px] text-muted-foreground">ID {f.cedula}</div>
+              </div>
+              <div className="w-32">
+                <label className="text-[9px] text-muted-foreground block mb-0.5">{requireEquipo ? "Equipo *" : "Equipo"}</label>
+                <input
+                  className="w-full text-xs border border-border rounded-md px-2 py-1.5 bg-background"
+                  placeholder="EQ-BOG-045"
+                  value={f.equipo ?? ""}
+                  onChange={(e) => setEquipo(f.cedula, e.target.value)}
+                />
+              </div>
+              <button type="button" onClick={() => quitar(f.cedula)} className="p-1.5 text-muted-foreground hover:text-destructive rounded" aria-label="Quitar">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <input
+          className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          placeholder="Buscar por nombre o cédula…"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setTimeout(() => setFocused(false), 200)}
+        />
+        {showSugerencias && (
+          <div className="absolute z-20 left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto">
+            {sugerencias.filter((s) => !cedulas.has(s.cedula)).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center gap-2"
+                onMouseDown={(e) => { e.preventDefault(); agregar(p); }}
+              >
+                <div className="text-xs font-medium">{p.nombre}</div>
+                <div className="text-[10px] text-muted-foreground">ID {p.cedula}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        className="text-[10px] text-primary hover:underline mt-1.5"
+        onClick={() => { setBusqueda(""); setFocused(true); }}
+      >
+        + Agregar persona
+      </button>
+    </div>
+  );
+}
+
 // ---- Componente para vincular vehículos a un evento existente ----
 function VehiculoVinculador({ ev, setLocalEventos }: { ev: Evento; setLocalEventos: React.Dispatch<React.SetStateAction<Evento[]>> }) {
   const [busqueda, setBusqueda] = useState("");
@@ -195,8 +415,8 @@ function VehiculoVinculador({ ev, setLocalEventos }: { ev: Evento; setLocalEvent
           placeholder="Placa ABC-123"
           value={busqueda}
           onChange={(e) => { setBusqueda(e.target.value.toUpperCase()); if (!e.target.value) { setError(false); setResultado(null); } }}
-          onBlur={() => busqueda && buscar(busqueda)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); busqueda && buscar(busqueda); } }}
+          onBlur={() => { if (busqueda) buscar(busqueda); }}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (busqueda) buscar(busqueda); } }}
         />
         {resultado && (
           <button onClick={agregar} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors">
@@ -222,7 +442,7 @@ export function RecordDetailDrawer() {
   const [localEventos, _setLocalEventos] = useState(eventos);
   const setLocalEventos: typeof _setLocalEventos = (v) => { _setLocalEventos(v); bumpData(); };
   const [nuevaAnotacion, setNuevaAnotacion] = useState("");
-  const [tipoAnotacion, setTipoAnotacion] = useState("hallazgo");
+  const [tipoAnotacion, setTipoAnotacion] = useState<Anotacion["tipo"]>("hallazgo");
   const [complementando, setComplementando] = useState(false);
   const [complementoTexto, setComplementoTexto] = useState("");
   const [resolviendoAbierto, setResolviendoAbierto] = useState(false);
@@ -285,6 +505,15 @@ export function RecordDetailDrawer() {
 
   function confirmarResolucion() {
     if (!resolucionSeleccionada) return;
+    const faltanCierre = ev.categoria === "dineros" || ev.categoria === "unidades"
+      ? validarCierreDinU(ev!)
+      : ev.categoria === "eventos_criticos"
+        ? validarCierreEventosCriticos(ev!)
+        : [];
+    if (faltanCierre.length > 0) {
+      toast({ variant: "destructive", title: "Completa el cierre del evento", description: faltanCierre.join(" · ") });
+      return;
+    }
     avanzarFlujo("cerrado", {
       resolucionFinal: resolucionSeleccionada as ResolucionFinal,
       observacionResolucion: observacionResolucion || undefined,
@@ -366,7 +595,7 @@ export function RecordDetailDrawer() {
     if (idx !== -1) {
       eventos[idx].anotaciones.push({
         id: `a${Date.now()}`, autorId: usuarioLogueado.id, autorNombre: usuarioLogueado.nombre,
-        autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(), texto: nuevaAnotacion, tipo: tipoAnotacion as any,
+        autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(), texto: nuevaAnotacion, tipo: tipoAnotacion,
       });
     }
     setLocalEventos([...eventos]);
@@ -411,7 +640,7 @@ export function RecordDetailDrawer() {
         id: `a${Date.now()}`, autorId: usuarioLogueado.id, autorNombre: usuarioLogueado.nombre,
         autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(),
         texto: `Soporte CCTV registrado: ${cctvDescripcion}${numArchivos > 0 ? ` — ${numArchivos} archivo(s) adjunto(s)` : ""}`,
-        tipo: "hallazgo" as any,
+        tipo: "hallazgo",
       });
       eventos[idx].historial.push({ id: `h${Date.now()}`, fecha: new Date().toISOString(), usuarioNombre: usuarioLogueado.nombre, accion: "Soporte CCTV registrado" });
     }
@@ -428,7 +657,7 @@ export function RecordDetailDrawer() {
     if (idx !== -1) {
       eventos[idx].anotaciones.push({
         id: `a${Date.now()}`, autorId: usuarioLogueado.id, autorNombre: usuarioLogueado.nombre,
-        autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(), texto: complementoTexto, tipo: "hallazgo" as any,
+        autorRol: usuarioLogueado.cargo, fecha: new Date().toISOString(), texto: complementoTexto, tipo: "hallazgo",
       });
     }
     setLocalEventos([...eventos]);
@@ -760,7 +989,7 @@ export function RecordDetailDrawer() {
             <h3 className="text-sm font-semibold mb-3">Información del evento</h3>
             <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
               {[
-                ["Categoría", categoriaConfig[ev.categoria].label],
+                ["Categoría", labelCategoriaEvento(ev.categoria)],
                 ["Tipo de evento", ev.tipoEvento],
                 [ev.categoria === "pqr" ? "Quién presenta (tipo entidad)" : "Tipo entidad", ev.tipoEntidad],
                 [ev.categoria === "pqr" ? "Terminal origen" : "Terminal", ev.terminal],
@@ -874,6 +1103,20 @@ export function RecordDetailDrawer() {
               <p className="text-sm leading-relaxed">{ev.descripcionHechos}</p>
             </div>
 
+            {(ev.categoria === "dineros" || ev.categoria === "unidades") && (ev.contenidoMercancia || ev.soporteCCTV) && (
+              <div className="mt-2 text-xs text-muted-foreground space-y-0.5 px-1">
+                {ev.contenidoMercancia && (
+                  <div><span className="font-medium text-foreground">Contenido / Recurso afectado: </span>{ev.contenidoMercancia}</div>
+                )}
+                {ev.soporteCCTV && (
+                  <div>
+                    <span className="font-medium text-foreground">Soporte CCTV (apertura): </span>
+                    {ev.soporteCCTV === "si" ? "Sí" : ev.soporteCCTV === "no" ? "No" : ev.soporteCCTV === "na" ? "N/A" : "—"}
+                  </div>
+                )}
+              </div>
+            )}
+
             {ev.categoria === "pqr" && ev.estadoFlujo !== "cerrado" && (
               <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
                 <h3 className="text-sm font-semibold text-violet-900 mb-0.5">Investigación PQR — equipo tenencia</h3>
@@ -926,146 +1169,448 @@ export function RecordDetailDrawer() {
             )}
           </section>
 
-          {/* Gestión de Seguridad — dineros/unidades/eventos_seguridad */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo !== "cerrado" && (
+          {/* Hallazgos de la investigación — Dineros y Unidades */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
+            <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-green-800">Hallazgos de la investigación</h3>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Timeline de seguimiento</label>
+                <textarea
+                  value={ev.timelineSeguimiento ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].timelineSeguimiento = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                  rows={3}
+                  placeholder="Cronología y acciones de seguimiento del caso…"
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                />
+              </div>
+              {ev.categoria === "unidades" && (
+                <div className="max-w-sm">
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unidades faltantes</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={ev.unidadesFaltantes ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].unidadesFaltantes = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                    }}
+                    placeholder="0"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Contenido / Recurso afectado</label>
+                <select
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={ev.contenidoMercancia ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].contenidoMercancia = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                >
+                  <option value="">Seleccionar…</option>
+                  {(ev.categoria === "dineros" ? CONTENIDO_RECURSO_DINEROS : CONTENIDO_RECURSO_UNIDADES).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Latitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={ev.lugarLatitud ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) { eventos[idx].lugarLatitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                      }}
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Longitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={ev.lugarLongitud ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) { eventos[idx].lugarLongitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                      }}
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+              {hallazgoLegadoDinU(ev) ? (
+                <p className="text-xs text-muted-foreground">Personas (registro legado, solo lectura): {ev.personasResponsablesHechos}</p>
+              ) : (
+                <div className="space-y-3">
+                  <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="presentesHallazgo" label="Personas presentes (ID y Equipo)" />
+                  <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="responsablesHallazgo" label="Personas responsables (ID y Equipo) (opcional)" />
+                </div>
+              )}
+              <VehiculoVinculador ev={ev} setLocalEventos={setLocalEventos} />
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soporte CCTV</label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ["si", "Sí"] as const,
+                      ["no", "No"] as const,
+                      ["na", "N/A"] as const,
+                    ] as const
+                  ).map(([v, l]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx === -1) return;
+                        eventos[idx].soporteCCTV = v;
+                        setLocalEventos([...eventos]);
+                      }}
+                      className={`flex-1 min-w-[5rem] py-1.5 rounded-lg border text-xs font-medium transition-colors ${(ev.soporteCCTV ?? "") === v ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background hover:bg-muted"}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adjuntos (opcional)</label>
+                {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {ev.soportesAdjuntos.map((s, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-green-100 text-green-700 border border-green-200">
+                        📎 {s}
+                        <button
+                          onClick={() => {
+                            const idx = eventos.findIndex((x) => x.id === ev.id);
+                            if (idx !== -1) {
+                              eventos[idx].soportesAdjuntos = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                              setLocalEventos([...eventos]);
+                            }
+                          }}
+                          className="hover:bg-green-200 rounded-full p-0.5 ml-0.5"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (!e.target.files) return;
+                    const nombres = Array.from(e.target.files).map(f => f.name);
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) {
+                      eventos[idx].soportesAdjuntos = [...(ev.soportesAdjuntos ?? []), ...nombres];
+                      setLocalEventos([...eventos]);
+                    }
+                    e.target.value = "";
+                  }}
+                  className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-green-100 file:text-green-700 hover:file:bg-green-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block"># registro workflow</label>
+                <input
+                  type="text"
+                  value={ev.registroWorkflow ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].registroWorkflow = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                  placeholder="#WF-12345"
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Hallazgos — Eventos críticos (H–S; sin T–X) */}
+          {ev.categoria === "eventos_criticos" && ev.estadoFlujo !== "cerrado" && (
+            <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-green-800">Hallazgos de la investigación</h3>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Timeline de seguimiento</label>
+                <textarea
+                  value={ev.timelineSeguimiento ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].timelineSeguimiento = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                  rows={3}
+                  placeholder="Cronología y seguimiento del caso…"
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Contenido / Recurso afectado</label>
+                <select
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  value={ev.contenidoMercancia ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].contenidoMercancia = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                >
+                  <option value="">Seleccionar…</option>
+                  {CONTENIDO_RECURSO_EVENTOS_CRITICOS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Latitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={ev.lugarLatitud ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) { eventos[idx].lugarLatitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                      }}
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Longitud</label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={ev.lugarLongitud ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) { eventos[idx].lugarLongitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
+                      }}
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="presentesHallazgo" label="Personas presentes (ID y Equipo)" />
+                <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="responsablesHallazgo" label="Personas responsables (ID y Equipo) (opcional)" />
+              </div>
+              <VehiculoVinculador ev={ev} setLocalEventos={setLocalEventos} />
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soporte CCTV</label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ["si", "Sí"] as const,
+                      ["no", "No"] as const,
+                      ["na", "N/A"] as const,
+                    ] as const
+                  ).map(([v, l]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx === -1) return;
+                        eventos[idx].soporteCCTV = v;
+                        setLocalEventos([...eventos]);
+                      }}
+                      className={`flex-1 min-w-[5rem] py-1.5 rounded-lg border text-xs font-medium transition-colors ${(ev.soporteCCTV ?? "") === v ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background hover:bg-muted"}`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adjuntos (opcional)</label>
+                {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {ev.soportesAdjuntos.map((s, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-green-100 text-green-700 border border-green-200">
+                        📎 {s}
+                        <button
+                          onClick={() => {
+                            const idx = eventos.findIndex((x) => x.id === ev.id);
+                            if (idx !== -1) {
+                              eventos[idx].soportesAdjuntos = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                              setLocalEventos([...eventos]);
+                            }
+                          }}
+                          className="hover:bg-green-200 rounded-full p-0.5 ml-0.5"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    if (!e.target.files) return;
+                    const nombres = Array.from(e.target.files).map(f => f.name);
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) {
+                      eventos[idx].soportesAdjuntos = [...(ev.soportesAdjuntos ?? []), ...nombres];
+                      setLocalEventos([...eventos]);
+                    }
+                    e.target.value = "";
+                  }}
+                  className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-green-100 file:text-green-700 hover:file:bg-green-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2"
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Gestión de Seguridad — Dineros y Unidades */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-blue-800 flex items-center gap-1.5">
-                🛡️ Gestión de Seguridad
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <h3 className="text-sm font-semibold text-blue-800">🛡️ Gestión de Seguridad</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Intervención Seguridad</label>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Intervención SG</label>
                   <select
                     value={ev.intervencionSeguridad ?? ""}
                     onChange={(e) => {
                       const idx = eventos.findIndex((x) => x.id === ev.id);
                       if (idx !== -1) { eventos[idx].intervencionSeguridad = e.target.value || undefined; setLocalEventos([...eventos]); }
                     }}
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
                   >
                     <option value="">Sin asignar</option>
-                    <option value="Acompañamiento de SG en la entrega y RCE">Acompañamiento SG en entrega y RCE</option>
-                    <option value="Seguimiento a la entrega y RCE">Seguimiento a la entrega y RCE</option>
-                    <option value="Seguimiento a la devolución">Seguimiento a la devolución</option>
-                    <option value="Investigación de Faltante">Investigación de Faltante</option>
-                    <option value="Investigación de Seguridad">Investigación de Seguridad</option>
-                    <option value="Investigación (Guía anulada)">Investigación (Guía anulada)</option>
-                    <option value="Proceso Denuncia">Proceso Denuncia</option>
-                    <option value="Reporte Acta de Aprehensión">Reporte Acta de Aprehensión</option>
-                    <option value="Reporte Acta de Incautación">Reporte Acta de Incautación</option>
-                    <option value="602. Envío en Validación por Seguridad (Unidad retenida)">602. Envío en Validación por Seguridad</option>
-                    <option value="N/A (Devolución efectiva al momento de investigar)">N/A (Devolución efectiva)</option>
-                    <option value="N/A (RCE / Entrega Efectiva al momento de investigar)">N/A (RCE / Entrega Efectiva)</option>
+                    {ev.categoria === "dineros" && INTERVENCION_DINEROS_OPCIONES.map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
+                    {ev.categoria === "unidades" && INTERVENCION_UNIDADES_OPCIONES.map((o) => (
+                      <option key={o} value={o}>{o}</option>
+                    ))}
                   </select>
-                  {ev.intervencionSeguridad?.startsWith("602") && (
+                  {ev.intervencionSeguridad?.startsWith("602.") && (
                     <p className="text-[10px] text-amber-700 mt-1 bg-amber-50 border border-amber-200 rounded px-2 py-1">
                       Causal 609: esta intervención se registra actualmente en NyS. Verificar si aplica reporte paralelo.
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Desviaciones identificadas</label>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Desviaciones identificadas / Causa raíz</label>
                   <select
-                    value={ev.desviacionesIdentificadas ?? ""}
+                    value={ev.causaRaiz ?? ""}
                     onChange={(e) => {
                       const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].desviacionesIdentificadas = e.target.value || undefined; setLocalEventos([...eventos]); }
+                      if (idx !== -1) { eventos[idx].causaRaiz = e.target.value || undefined; setLocalEventos([...eventos]); }
                     }}
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
                   >
                     <option value="">Sin asignar</option>
-                    {ev.tipoEvento === "Seguimiento RCE" ? (
-                      <>
-                        <option value="Demora legalización reexpedidor">Demora legalización reexpedidor</option>
-                        <option value="Demora anulación RCE">Demora anulación RCE</option>
-                        <option value="Pendiente devolución al remitente">Pendiente devolución al remitente</option>
-                        <option value="Pendiente inventario unidad">Pendiente inventario unidad</option>
-                        <option value="RCE mal liquidado">RCE mal liquidado</option>
-                        <option value="RCE pagado, no se refleja en el sistema">RCE pagado, no se refleja en el sistema</option>
-                        <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
-                        <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
-                        <option value="N/A">N/A</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="Demora legalización reexpedidor">Demora legalización reexpedidor</option>
-                        <option value="Demora anulación RCE">Demora anulación RCE</option>
-                        <option value="Pendiente devolución al remitente">Pendiente devolución al remitente</option>
-                        <option value="Pendiente inventario unidad">Pendiente inventario unidad</option>
-                        <option value="RCE mal liquidado">RCE mal liquidado</option>
-                        <option value="RCE pagado, no se refleja en el sistema">RCE pagado, no se refleja en el sistema</option>
-                        <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
-                        <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
-                      </>
+                    {ev.categoria === "dineros" && CAUSA_UNIFICADA_DINEROS.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                    {ev.categoria === "unidades" && (
+                      CAUSA_UNIFICADA_UNIDADES.map((g) => (
+                        <optgroup key={g.group} label={g.group}>
+                          {g.options.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </optgroup>
+                      ))
                     )}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Estado de la investigación</label>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Conclusión Seguridad</label>
                   <select
                     value={ev.estadoGestionSG ?? ""}
                     onChange={(e) => {
                       const idx = eventos.findIndex((x) => x.id === ev.id);
                       if (idx !== -1) { eventos[idx].estadoGestionSG = e.target.value || undefined; setLocalEventos([...eventos]); }
                     }}
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
                   >
                     <option value="">Sin asignar</option>
-                    <optgroup label="Parcial">
-                      <option value="Asignada">Asignada</option>
-                      <option value="En proceso">En proceso</option>
-                      <option value="En proceso (NyS)">En proceso (NyS)</option>
-                      <option value="809. Guía mal elaborada, error en RCE">809. Guía mal elaborada, error en RCE</option>
-                    </optgroup>
-                    <optgroup label="Cierre Investigación">
-                      <option value="RCE / Entrega Efectiva">RCE / Entrega Efectiva</option>
-                      <option value="Devolución Efectiva">Devolución Efectiva</option>
-                      <option value="Hurto">Hurto</option>
-                      <option value="Pérdida">Pérdida</option>
-                      <option value="Aprehensión">Aprehensión</option>
-                      <option value="Incautación">Incautación</option>
-                      <option value="Guía anulada (Unidad no recogida)">Guía anulada (Unidad no recogida)</option>
-                    </optgroup>
+                    {ev.categoria === "dineros" && (
+                      <>
+                        <optgroup label="Parcial">
+                          {ESTADO_DINEROS_PARCIAL.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                        <optgroup label="Cierre investigación">
+                          {ESTADO_DINEROS_CIERRE.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                      </>
+                    )}
+                    {ev.categoria === "unidades" && (
+                      <>
+                        <optgroup label="Parcial">
+                          {ESTADO_UNIDADES_PARCIAL.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                        <optgroup label="Cierre investigación">
+                          {ESTADO_UNIDADES_CIERRE.map((o) => <option key={o} value={o}>{o}</option>)}
+                        </optgroup>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Cierre</label>
+                  <select
+                    value={ev.grupoCierre ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx === -1) return;
+                      eventos[idx].grupoCierre = e.target.value || undefined;
+                      setLocalEventos([...eventos]);
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background"
+                  >
+                    <option value="">Sin asignar</option>
+                    {GRUPO_CIERRE_OPCIONES.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
                   </select>
                 </div>
               </div>
-              {/* Reclasificar tipo de evento */}
               {ev.estadoFlujo !== "cerrado" && (
                 <div className="pt-2 border-t border-amber-200">
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-amber-800">Tipo de evento</p>
+                    <p className="text-xs font-semibold text-amber-800">Reclasificar tipo de evento</p>
                     <p className="text-[10px] text-amber-600">Si la investigación revela un resultado diferente, reclasifica el tipo de evento.</p>
                     <select
                       value={ev.tipoEvento}
                       onChange={(e) => {
                         const idx = eventos.findIndex((x) => x.id === ev.id);
-                        if (idx !== -1) {
-                          eventos[idx].tipoEvento = e.target.value;
-                          eventos[idx].historial.push({
-                            id: `h-${Date.now()}`,
-                            fecha: new Date().toISOString(),
-                            usuarioNombre: usuarioLogueado.nombre,
-                            accion: `Reclasificó tipo de evento a "${e.target.value}"`,
-                          });
-                          setLocalEventos([...eventos]);
-                        }
+                        if (idx === -1) return;
+                        eventos[idx].tipoEvento = e.target.value;
+                        eventos[idx].historial.push({
+                          id: `h-${Date.now()}`,
+                          fecha: new Date().toISOString(),
+                          usuarioNombre: usuarioLogueado.nombre,
+                          accion: `Reclasificó tipo de evento a "${e.target.value}"`,
+                        });
+                        setLocalEventos([...eventos]);
                       }}
                       className="w-full border border-amber-300 rounded-lg px-3 py-1.5 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
                     >
-                      {ev.categoria === "dineros" && <>
-                        <option value="Seguimiento RCE">Seguimiento RCE</option>
-                        <option value="Hurto de dinero">Hurto de dinero</option>
-                        <option value="Pérdida de dinero">Pérdida de dinero</option>
-                        <option value="Faltante de dinero">Faltante de dinero</option>
-                        <option value="Faltante injustificado">Faltante injustificado</option>
-                        <option value="Fraude de dinero (Jineteo)">Fraude de dinero (Jineteo)</option>
-                        <option value="Dinero falsos">Dinero falsos</option>
-                      </>}
-                      {ev.categoria === "unidades" && <>
-                        {["Faltante novedad 100", "Faltante novedad 101", "Faltante novedad 300", "Faltante novedad 400", "Sobrante novedad 403", "Cierre especial 529", "Hurto de unidad", "Pérdida de unidad"].map(t => (
+                      {ev.categoria === "dineros" && (
+                        ["Faltante de dinero", "Seguimiento RCE", "Dineros falsos"].map((t) => (
                           <option key={t} value={t}>{t}</option>
-                        ))}
-                      </>}
+                        ))
+                      )}
+                      {ev.categoria === "unidades" && (
+                        ["Faltante causal 100", "Faltantes causal 101"].map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>
@@ -1073,8 +1618,8 @@ export function RecordDetailDrawer() {
             </section>
           )}
 
-          {/* Hallazgos de investigación — dineros/unidades/listas_vinculantes, solo editable */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo !== "cerrado" && (
+          {/* Hallazgos de investigación — listas vinculantes */}
+          {ev.categoria === "listas_vinculantes" && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
                 Hallazgos de investigación
@@ -1190,247 +1735,93 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Hallazgos de investigación — read-only para cerrados */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo === "cerrado" &&
-            (ev.unidadesFaltantes || ev.contenidoMercancia || ev.lugarLatitud || ev.lugarLongitud || ev.personasResponsablesHechos || ev.registroWorkflow || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_criticos") && ev.estadoFlujo === "cerrado" &&
+            (ev.unidadesFaltantes != null || ev.contenidoMercancia || ev.lugarLatitud != null || ev.lugarLongitud != null || ev.soporteCCTV || ev.personasResponsablesHechos
+              || (ev.presentesHallazgo && ev.presentesHallazgo.length) || (ev.responsablesHallazgo && ev.responsablesHallazgo.length) || ev.registroWorkflow
+              || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0) || ev.timelineSeguimiento) && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-2">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
                 Hallazgos de investigación
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                {ev.unidadesFaltantes != null && <div><span className="text-muted-foreground">Unidades faltantes:</span> <span className="font-medium">{ev.unidadesFaltantes}</span></div>}
-                {ev.contenidoMercancia && <div className="md:col-span-2"><span className="text-muted-foreground">Contenido mercancía:</span> <span className="font-medium">{ev.contenidoMercancia}</span></div>}
-                {(ev.lugarLatitud || ev.lugarLongitud) && <div><span className="text-muted-foreground">Coordenadas:</span> <span className="font-medium">{ev.lugarLatitud ?? "—"}, {ev.lugarLongitud ?? "—"}</span></div>}
-                {ev.personasResponsablesHechos && <div><span className="text-muted-foreground">Responsables de hechos:</span> <span className="font-medium">{ev.personasResponsablesHechos}</span></div>}
+                {ev.unidadesFaltantes != null && (ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes") && (
+                  <div><span className="text-muted-foreground">Unidades faltantes:</span> <span className="font-medium">{ev.unidadesFaltantes}</span></div>
+                )}
+                {ev.timelineSeguimiento && (ev.categoria === "eventos_criticos" || ev.categoria === "dineros" || ev.categoria === "unidades") && (
+                  <div className="md:col-span-2"><span className="text-muted-foreground">Timeline de seguimiento:</span> <span className="font-medium whitespace-pre-wrap">{ev.timelineSeguimiento}</span></div>
+                )}
+                {ev.contenidoMercancia && <div className="md:col-span-2"><span className="text-muted-foreground">Contenido / Recurso afectado:</span> <span className="font-medium">{ev.contenidoMercancia}</span></div>}
+                {ev.soporteCCTV && (ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "eventos_criticos") && (
+                  <div>
+                    <span className="text-muted-foreground">Soporte CCTV: </span>
+                    <span className="font-medium">
+                      {ev.soporteCCTV === "si" ? "Sí" : ev.soporteCCTV === "no" ? "No" : "N/A"}
+                    </span>
+                  </div>
+                )}
+                {(ev.lugarLatitud != null || ev.lugarLongitud != null) && <div><span className="text-muted-foreground">Coordenadas:</span> <span className="font-medium">{ev.lugarLatitud ?? "—"}, {ev.lugarLongitud ?? "—"}</span></div>}
                 {ev.registroWorkflow && <div><span className="text-muted-foreground"># Workflow:</span> <span className="font-medium">{ev.registroWorkflow}</span></div>}
+                {ev.presentesHallazgo && ev.presentesHallazgo.length > 0 && (
+                  <div className="md:col-span-2">
+                    <span className="text-muted-foreground">Personas presentes: </span>
+                    <span className="font-medium">
+                      {ev.presentesHallazgo.map((p) => `${p.nombre} (ID ${p.cedula})${p.equipo ? ` · ${p.equipo}` : ""}`).join(" · ")}
+                    </span>
+                  </div>
+                )}
+                {ev.responsablesHallazgo && ev.responsablesHallazgo.length > 0 && (
+                  <div className="md:col-span-2">
+                    <span className="text-muted-foreground">Personas responsables: </span>
+                    <span className="font-medium">
+                      {ev.responsablesHallazgo.map((p) => `${p.nombre} (ID ${p.cedula})${p.equipo ? ` · ${p.equipo}` : ""}`).join(" · ")}
+                    </span>
+                  </div>
+                )}
+                {ev.personasResponsablesHechos && <div className="md:col-span-2"><span className="text-muted-foreground">Responsables (registro legado):</span> <span className="font-medium">{ev.personasResponsablesHechos}</span></div>}
                 {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
                   <div className="md:col-span-2"><span className="text-muted-foreground">Soportes:</span> <span className="font-medium">{ev.soportesAdjuntos.join(", ")}</span></div>
+                )}
+                {(ev.categoria === "eventos_criticos" || ev.categoria === "dineros" || ev.categoria === "unidades")
+                  && ev.vehiculosVinculados && ev.vehiculosVinculados.length > 0 && (
+                  <div className="md:col-span-2">
+                    <span className="text-muted-foreground">Vehículos: </span>
+                    <span className="font-medium">
+                      {ev.vehiculosVinculados.map((vv) => getVehiculo(vv.vehiculoId)?.placa ?? vv.vehiculoId).join(" · ")}
+                    </span>
+                  </div>
                 )}
               </div>
             </section>
           )}
 
-          {/* Causa raíz y cierre — para unidades y dineros */}
-          {(ev.categoria === "unidades" || ev.categoria === "dineros" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo !== "cerrado" && (
-            <section className="border border-purple-200 bg-purple-50/30 rounded-xl p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-purple-800 flex items-center gap-1.5">
-                🔎 Investigación y cierre
-              </h3>
-              <div>
-                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Causa raíz de la novedad</label>
-                <select
-                  value={ev.causaRaiz ?? ""}
-                  onChange={(e) => {
-                    const idx = eventos.findIndex((x) => x.id === ev.id);
-                    if (idx !== -1) { eventos[idx].causaRaiz = e.target.value || undefined; setLocalEventos([...eventos]); }
-                  }}
-                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Seleccionar causa raíz...</option>
-                  {ev.categoria === "dineros" && <>
-                  <optgroup label="Operativo">
-                    <option value="op-1-Faltante en cuadre de cierre">Faltante en cuadre de cierre</option>
-                    <option value="op-2-Error en planilla de recaudo">Error en planilla de recaudo</option>
-                    <option value="op-3-Diferencia en cambio / billete">Diferencia en cambio / billete</option>
-                    <option value="op-4-Doble cobro">Doble cobro</option>
-                  </optgroup>
-                  <optgroup label="Seguridad">
-                    <option value="seg-1-Hurto por empleado">Hurto por empleado</option>
-                    <option value="seg-2-Hurto por tercero">Hurto por tercero</option>
-                    <option value="seg-3-Pérdida en tránsito">Pérdida en tránsito</option>
-                    <option value="seg-4-Jineteo">Jineteo</option>
-                    <option value="seg-5-Fraude documentario">Fraude documentario</option>
-                  </optgroup>
-                  <optgroup label="Operador">
-                    <option value="ope-1-Error de digitación">Error de digitación</option>
-                    <option value="ope-2-Devolución no procesada">Devolución no procesada</option>
-                    <option value="ope-3-Descuadre sin justificación">Descuadre sin justificación</option>
-                  </optgroup>
-                  </>}
-                  {ev.categoria === "unidades" && <>
-                  <optgroup label="1 — Rotulado / Etiquetas">
-                    <option value="1-Unidad mal rotulada o sin marcar">Unidad mal rotulada o sin marcar</option>
-                    <option value="1-Unidad con doble rótulo">Unidad con doble rótulo</option>
-                    <option value="1-Etiquetas Trocadas">Etiquetas Trocadas</option>
-                    <option value="1-Guía pendiente por anular">Guía pendiente por anular</option>
-                  </optgroup>
-                  <optgroup label="2 — Despacho / Transporte">
-                    <option value="2-Unidad se queda dentro del Vehículo Local">Unidad se queda en Vehículo Local</option>
-                    <option value="2-Unidad se queda dentro del Vehículo Ruta Nacional">Unidad se queda en Vehículo Ruta Nacional</option>
-                    <option value="2-Unidad se queda en Origen">Unidad se queda en Origen</option>
-                    <option value="2-Unidad llega a Destino Errado">Unidad llega a Destino Errado</option>
-                    <option value="2-Unidad se despacha en otro Trailer">Unidad se despacha en otro Trailer</option>
-                    <option value="2-Cargue de la Unidad a la Móvil Sin Guía">Cargue de la Unidad a la Móvil Sin Guía</option>
-                  </optgroup>
-                  <optgroup label="3 — Entrega">
-                    <option value="3-Entrega Trocada">Entrega Trocada</option>
-                    <option value="3-Entrega Unidad Sin Guía">Entrega Unidad Sin Guía</option>
-                    <option value="3-Suplantación de Firma">Suplantación de Firma</option>
-                  </optgroup>
-                  <optgroup label="4 — Solución operativa">
-                    <option value="4-La Unidad si llegó, mal reporte">La Unidad si llegó, mal reporte</option>
-                    <option value="4-MQP - Entrega directa al cliente">MQP - Entrega directa al cliente</option>
-                    <option value="4-Unidad dentro del Tiempo de Entrega">Unidad dentro del Tiempo de Entrega</option>
-                    <option value="4-Unidad ya Entregada al Cliente">Unidad ya Entregada al Cliente</option>
-                    <option value="4-Unidad se queda donde el Cliente">Unidad se queda donde el Cliente</option>
-                    <option value="4-Se entrega unidad sellada (sellos originales)">Se entrega unidad sellada</option>
-                    <option value="4-Se entrega unidad con guía vínculo">Se entrega unidad con guía vínculo</option>
-                    <option value="4-Devolución al remitente con guía vínculo">Devolución con guía vínculo</option>
-                    <option value="4-Demora por enlace">Demora por enlace</option>
-                    <option value="4-Unidad se queda en Terminal de Enlace">Unidad se queda en Terminal de Enlace</option>
-                    <option value="4-Pérdida de Etiqueta">Pérdida de Etiqueta</option>
-                    <option value="4-Unidad Incautada por autoridad competente">Unidad Incautada por autoridad</option>
-                    <option value="4-Unidad aprehendida por autoridad competente">Unidad aprehendida por autoridad</option>
-                    <option value="4-Contrabando (Unidad incautada)">Contrabando (Unidad incautada)</option>
-                    <option value="4-Unidad no es leída por el Sorter">Unidad no es leída por el Sorter</option>
-                  </optgroup>
-                  <optgroup label="5 — Checkpoint">
-                    <option value="5-Ausencia lectura Checkpoint">Ausencia lectura Checkpoint</option>
-                    <option value="5-Lectura checkpoint sin cobertura de cámaras">Lectura checkpoint sin cobertura de cámaras</option>
-                  </optgroup>
-                  <optgroup label="6-14 — Otras causas">
-                    <option value="6-Unidad se queda por Deterioro en el Despacho">Deterioro en el Despacho</option>
-                    <option value="7-Unidad en planilla cero o mal leída en despacho">Planilla cero o mal leída</option>
-                    <option value="8-Avería en el transporte">Avería en el transporte</option>
-                    <option value="9-Cambio de destino">Cambio de destino</option>
-                    <option value="10-Cliente recibe y firma, guía se pierde">Cliente recibe y firma, guía se pierde</option>
-                    <option value="11-Despacho mal elaborado, anulado o repetido">Despacho mal elaborado</option>
-                    <option value="12-Unidad con Dummy mal Asociado">Unidad con Dummy mal Asociado</option>
-                    <option value="13-Unidad va en Consolidadora pero no llega">Unidad va en Consolidadora pero no llega</option>
-                    <option value="14-Retracto Remitente">Retracto Remitente</option>
-                  </optgroup>
-                  <optgroup label="15 — Seguridad externa">
-                    <option value="15-Atraco en vía pública">Atraco en vía pública</option>
-                    <option value="15-Vandalismo">Vandalismo</option>
-                    <option value="15-Intrusión en Sede">Intrusión en Sede</option>
-                  </optgroup>
-                  <optgroup label="16 — Protocolo de seguridad">
-                    <option value="16-Descuido, Distracción, Imprudencia">Descuido, Distracción, Imprudencia</option>
-                    <option value="16-Entrega en dirección diferente">Entrega en dirección diferente</option>
-                    <option value="16-Entrega en la Calle / Corredor / Vía">Entrega en la Calle / Corredor / Vía</option>
-                    <option value="16-Mercancía al borde del furgón">Mercancía al borde del furgón</option>
-                    <option value="16-Mercancía en la cabina">Mercancía en la cabina</option>
-                    <option value="16-Mercancía a cuidado de terceros">Mercancía a cuidado de terceros</option>
-                    <option value="16-Mercancías en móvil no corresponden zona">Mercancías en móvil no corresponden zona</option>
-                    <option value="16-Carreta Sola con Mercancía">Carreta Sola con Mercancía</option>
-                    <option value="16-Moto Sola con Maletín lleno de Mercancía">Moto Sola con Maletín lleno de Mercancía</option>
-                    <option value="16-No alertar cliente destino (Suplantación CM)">No alertar cliente destino (Suplantación CM)</option>
-                    <option value="16-No exigencia firma y CC guía destinatario">No exigencia firma y CC guía destinatario</option>
-                    <option value="16-No firma guía destinatario con CC">No firma guía destinatario con CC</option>
-                    <option value="16-No entrega al interior destinatario">No entrega al interior destinatario</option>
-                    <option value="16-No uso de caletas para dinero">No uso de caletas para dinero</option>
-                    <option value="16-No uso de candado, móvil en movimiento">No uso de candado, móvil en movimiento</option>
-                    <option value="16-No uso de candado, vehículo detenido">No uso de candado, vehículo detenido</option>
-                    <option value="16-No uso botón pánico ante riesgo inminente">No uso botón pánico ante riesgo inminente</option>
-                    <option value="16-No uso de lazo en carreta con Mercancía">No uso de lazo en carreta con Mercancía</option>
-                    <option value="16-Uso de Vanes en Rutas Riesgo alto">Uso de Vanes en Rutas Riesgo alto</option>
-                    <option value="16-Unidades pequeñas en carreta">Unidades pequeñas en carreta</option>
-                    <option value="16-Mercancías Alto valor, sitios marginales">Mercancías Alto valor, sitios marginales</option>
-                    <option value="16-Cargue de Unidad Deteriorada">Cargue de Unidad Deteriorada</option>
-                    <option value="16-Ausencia de Control Personal de Seguridad">Ausencia de Control Personal de Seguridad</option>
-                    <option value="16-Móvil sola (Rompen el candado)">Móvil sola (Rompen el candado)</option>
-                    <option value="16-No se identifica la unidad por cámaras">No se identifica por cámaras</option>
-                  </optgroup>
-                  <optgroup label="17+ — Infraestructura y otros">
-                    <option value="17-Ausencia de cobertura por CCTV">Ausencia de cobertura por CCTV</option>
-                    <option value="17-No se cuenta con grabación de CCTV">No se cuenta con grabación de CCTV</option>
-                    <option value="18-Empleado/Aliado deshonesto">Empleado/Aliado deshonesto</option>
-                    <option value="20-Cierre de Vías">Cierre de Vías</option>
-                    <option value="21-Cargue inteligente, sin registro fotográfico">Cargue inteligente, sin registro fotográfico</option>
-                    <option value="22-Intrusión">Intrusión</option>
-                    <option value="22-Hurto por terceros (Accidente en ruta)">Hurto por terceros (Accidente en ruta)</option>
-                    <option value="23-Ubicada en NyS">Ubicada en NyS</option>
-                    <option value="23-Se pierde trazabilidad en NyS">Se pierde trazabilidad en NyS</option>
-                    <option value="24-Bloqueo de vías">Bloqueo de vías</option>
-                    <option value="24-Descuelgue">Descuelgue</option>
-                    <option value="24-Terrorismo">Terrorismo</option>
-                    <option value="24-Vandalismo">Vandalismo</option>
-                    <option value="25-Se entrega unidad a Control Salvamento">Se entrega unidad a Control Salvamento</option>
-                  </optgroup>
-                  </>}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Grupo de cierre</label>
-                  <select
-                    value={ev.grupoCierre ?? ""}
-                    onChange={(e) => {
-                      const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].grupoCierre = e.target.value || undefined; eventos[idx].subgrupoCierre = undefined; setLocalEventos([...eventos]); }
-                    }}
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Seleccionar grupo...</option>
-                    <option value="Hurto">Hurto</option>
-                    <option value="Perdida">Pérdida</option>
-                    <option value="Solución SG en la Operación">Solución SG en la Operación</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Subgrupo de cierre</label>
-                  <select
-                    value={ev.subgrupoCierre ?? ""}
-                    onChange={(e) => {
-                      const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].subgrupoCierre = e.target.value || undefined; setLocalEventos([...eventos]); }
-                    }}
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                    disabled={!ev.grupoCierre}
-                  >
-                    <option value="">Seleccionar subgrupo...</option>
-                    {ev.grupoCierre === "Hurto" && <>
-                      <option value="Hurto Unidad en Distribución">Hurto Unidad en Distribución</option>
-                      <option value="Hurto Unidad en Plataforma / Sede">Hurto Unidad en Plataforma / Sede</option>
-                      <option value="Hurto unidad en recogida">Hurto unidad en recogida</option>
-                      <option value="Hurto Unidad Interna en Distribución">Hurto Unidad Interna en Distribución</option>
-                      <option value="Hurto Unidad Interna en Plataforma / Sede">Hurto Unidad Interna en Plataforma / Sede</option>
-                      <option value="Hurto Unidad interna en recogida">Hurto Unidad interna en recogida</option>
-                    </>}
-                    {ev.grupoCierre === "Perdida" && <>
-                      <option value="Perdida Unidad en Distribución">Pérdida Unidad en Distribución</option>
-                      <option value="Perdida Unidad en Plataforma / Sede">Pérdida Unidad en Plataforma / Sede</option>
-                      <option value="Perdida Unidad en recogida">Pérdida Unidad en recogida</option>
-                      <option value="Perdida Unidad Interna en Distribución">Pérdida Unidad Interna en Distribución</option>
-                      <option value="Perdida Unidad Interna en Plataforma / Sede">Pérdida Unidad Interna en Plataforma / Sede</option>
-                      <option value="Perdida Unidad Interna en recogida">Pérdida Unidad Interna en recogida</option>
-                    </>}
-                    {ev.grupoCierre === "Solución SG en la Operación" && <>
-                      <option value="Cliente no Despacha">Cliente no Despacha</option>
-                      <option value="Unidad Incautada por Autoridad">Unidad Incautada por Autoridad</option>
-                      <option value="Unidad Aprehendida por Autoridad">Unidad Aprehendida por Autoridad</option>
-                      <option value="Unidad Interna Ubicada">Unidad Interna Ubicada</option>
-                      <option value="Unidad Interna Ubicada (sobrante)">Unidad Interna Ubicada (sobrante)</option>
-                      <option value="Unidad Ubicada">Unidad Ubicada</option>
-                      <option value="Unidad Ubicada (sobrante)">Unidad Ubicada (sobrante)</option>
-                      <option value="Unidad Recuperada">Unidad Recuperada</option>
-                      <option value="Unidad Interna Recuperada">Unidad Interna Recuperada</option>
-                    </>}
-                  </select>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Causa raíz y cierre — read-only si cerrado */}
-          {(ev.categoria === "unidades" || ev.categoria === "dineros" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo === "cerrado" && (ev.causaRaiz || ev.grupoCierre) && (
+          {/* Causa y cierre — read-only: modelo con subgrupo (legado) */}
+          {(
+            (ev.categoria === "dineros" || ev.categoria === "unidades")
+              && ev.estadoFlujo === "cerrado"
+              && (ev.causaRaiz || ev.grupoCierre)
+              && (ev.subgrupoCierre || (ev.grupoCierre && ["Hurto", "Perdida", "Solución SG en la Operación"].includes(ev.grupoCierre!)))
+          ) && (
             <section className="bg-muted/40 rounded-xl p-4">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">🔎 Investigación y cierre</h3>
-              <div className="grid grid-cols-3 gap-3 text-xs">
-                {ev.causaRaiz && <div><div className="text-muted-foreground mb-0.5">Causa raíz</div><div className="font-medium">{ev.causaRaiz}</div></div>}
-                {ev.grupoCierre && <div><div className="text-muted-foreground mb-0.5">Grupo cierre</div><div className="font-medium">{ev.grupoCierre}</div></div>}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                {ev.causaRaiz && <div><div className="text-muted-foreground mb-0.5">{(ev.categoria === "dineros" || ev.categoria === "unidades") ? "Desviaciones / Causa raíz" : "Causa raíz"}</div><div className="font-medium">{ev.causaRaiz}</div></div>}
+                {ev.grupoCierre && <div><div className="text-muted-foreground mb-0.5">Cierre / grupo</div><div className="font-medium">{ev.grupoCierre}</div></div>}
                 {ev.subgrupoCierre && <div><div className="text-muted-foreground mb-0.5">Subgrupo cierre</div><div className="font-medium">{ev.subgrupoCierre}</div></div>}
               </div>
             </section>
           )}
 
-          {/* Gestión SG — vista read-only si cerrado */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "eventos_seguridad") && ev.estadoFlujo === "cerrado" && (ev.intervencionSeguridad || ev.desviacionesIdentificadas || ev.estadoGestionSG) && (
+          {/* Gestión SG — vista read-only si cerrado (Dineros / Unidades) */}
+          {(ev.categoria === "dineros" || ev.categoria === "unidades")
+            && ev.estadoFlujo === "cerrado"
+            && !!(ev.intervencionSeguridad || ev.causaRaiz || ev.estadoGestionSG || ev.grupoCierre) && (
             <section className="bg-muted/40 rounded-xl p-4">
               <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">🛡️ Gestión de Seguridad</h3>
-              <div className="grid grid-cols-3 gap-3 text-xs">
-                {ev.intervencionSeguridad && <div><div className="text-muted-foreground mb-0.5">Intervención</div><div className="font-medium">{ev.intervencionSeguridad}</div></div>}
-                {ev.desviacionesIdentificadas && <div><div className="text-muted-foreground mb-0.5">Desviaciones</div><div className="font-medium">{ev.desviacionesIdentificadas}</div></div>}
-                {ev.estadoGestionSG && <div><div className="text-muted-foreground mb-0.5">Estado de la investigación</div><div className="font-medium">{ev.estadoGestionSG}</div></div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                {ev.intervencionSeguridad && <div><div className="text-muted-foreground mb-0.5">Intervención SG</div><div className="font-medium">{ev.intervencionSeguridad}</div></div>}
+                {ev.causaRaiz && <div><div className="text-muted-foreground mb-0.5">Desviaciones / Causa raíz</div><div className="font-medium">{ev.causaRaiz}</div></div>}
+                {ev.estadoGestionSG && <div><div className="text-muted-foreground mb-0.5">Conclusión Seguridad</div><div className="font-medium">{ev.estadoGestionSG}</div></div>}
+                {ev.grupoCierre && <div><div className="text-muted-foreground mb-0.5">Cierre</div><div className="font-medium">{ev.grupoCierre}</div></div>}
               </div>
             </section>
           )}
@@ -1609,7 +2000,7 @@ export function RecordDetailDrawer() {
                 placeholder="Escribe una anotación de seguimiento..."
               />
               <div className="flex items-center gap-2 mt-2">
-                <select value={tipoAnotacion} onChange={(e) => setTipoAnotacion(e.target.value)} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none">
+                <select value={tipoAnotacion} onChange={(e) => setTipoAnotacion(e.target.value as Anotacion["tipo"])} className="text-xs border border-border rounded-lg px-2 py-1.5 bg-background focus:outline-none">
                   <option value="seguimiento">📝 Seguimiento</option>
                   <option value="hallazgo">🔍 Hallazgo</option>
                   <option value="resolucion">✅ Resolución</option>
@@ -1836,7 +2227,7 @@ export function RecordDetailDrawer() {
 
 // ---- Persona 360 ----
 const CAT_ICON: Record<string, string> = {
-  dineros: "💰", unidades: "📦", listas_vinculantes: "📋", pqr: "📞", disciplinarios: "⚖️", evidencias: "📸",
+  dineros: "💰", unidades: "📦", listas_vinculantes: "📋", pqr: "📞", disciplinarios: "⚖️", evidencias: "📸", eventos_criticos: "🛡️",
 };
 
 export function Persona360Drawer() {
@@ -2399,7 +2790,7 @@ export function Guia360Drawer() {
   const evGuia = getEventosPorGuia(guia.numero);
 
   const timeline = evGuia.flatMap((e) => [
-    { fecha: e.fecha, texto: `${categoriaConfig[e.categoria].label} — ${e.tipoEvento} (${e.id})`, eventoId: e.id },
+    { fecha: e.fecha, texto: `${labelCategoriaEvento(e.categoria)} — ${e.tipoEvento} (${e.id})`, eventoId: e.id },
     ...e.anotaciones.map((a) => ({ fecha: a.fecha.split("T")[0], texto: `Anotación de ${a.autorNombre} — ${a.texto.slice(0, 60)}...`, eventoId: e.id })),
   ]).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
 

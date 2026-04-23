@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Search, Bell, ChevronDown } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { personas, vehiculos, guias, eventos } from "@/data/mockData";
-import { categoriaConfig, descripcionCorta, AvatarInicial } from "@/lib/utils-app";
+import { getCategoriaVisual, descripcionCorta, AvatarInicial } from "@/lib/utils-app";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 
@@ -140,7 +140,7 @@ function SearchBar() {
                 📋 Eventos
               </div>
               {registrosRes.map((r) => {
-                const cfg = categoriaConfig[r.categoria];
+                const cfg = getCategoriaVisual(r.categoria);
                 return (
                   <button
                     key={r.id}

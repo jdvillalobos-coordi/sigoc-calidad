@@ -256,6 +256,7 @@ function intentBuscarCategoria(text: string): QueryResult | null {
     lista: "listas_vinculantes", listas: "listas_vinculantes", vinculante: "listas_vinculantes", antecedente: "listas_vinculantes",
     pqr: "pqr", queja: "pqr", reclamo: "pqr", reclamacion: "pqr", peticion: "pqr",
     disciplinario: "disciplinarios", disciplinarios: "disciplinarios", sancion: "disciplinarios", falta: "disciplinarios",
+    critico: "eventos_criticos", criticos: "eventos_criticos", terrorismo: "eventos_criticos", vandalismo: "eventos_criticos", extorsion: "eventos_criticos",
   };
 
   let cat: string | null = null;
@@ -269,7 +270,7 @@ function intentBuscarCategoria(text: string): QueryResult | null {
   const filtrados = eventos.filter((e) => e.categoria === cat);
   const abiertos = filtrados.filter((e) => e.estado === "abierto");
   const valorTotal = filtrados.reduce((acc, e) => acc + (e.valorAfectacion || 0), 0);
-  const catLabel = { dineros: "Dineros", unidades: "Unidades", listas_vinculantes: "Listas Vinculantes", pqr: "Solicitudes Postventa", disciplinarios: "Disciplinarios" }[cat!] || cat;
+  const catLabel = { dineros: "Dineros", unidades: "Unidades", listas_vinculantes: "Listas Vinculantes", pqr: "Solicitudes Postventa", disciplinarios: "Disciplinarios", eventos_criticos: "Eventos críticos", evidencias: "Evidencias" }[cat!] || cat;
 
   return {
     content: `**Categoría ${catLabel}:** ${filtrados.length} eventos total (${abiertos.length} abiertos)\nValor total de afectación: ${formatCurrency(valorTotal)}\n\n**Eventos abiertos:**\n${abiertos.slice(0, 6).map((e) => `- ${formatEventoResumen(e)}`).join("\n") || "Ninguno"}`,

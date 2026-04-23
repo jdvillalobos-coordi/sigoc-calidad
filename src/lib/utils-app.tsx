@@ -9,7 +9,7 @@ export const categoriaConfig: Record<CategoriaEvento, { label: string; color: st
   pqr:                 { label: "Solicitudes Postventa", color: "badge-pqr",        dot: "bg-purple-600", icon: "📞", bgColor: "bg-purple-600" },
   disciplinarios:      { label: "Disciplinarios",     color: "badge-disciplinarios", dot: "bg-red-600",    icon: "⚖️", bgColor: "bg-red-600" },
   evidencias:          { label: "Evidencias",         color: "badge-evidencias",     dot: "bg-orange-500", icon: "📸", bgColor: "bg-orange-500" },
-  eventos_seguridad:   { label: "Eventos Seguridad", color: "badge-seguridad",      dot: "bg-amber-600",  icon: "🛡️", bgColor: "bg-amber-600" },
+  eventos_criticos:   { label: "Eventos críticos", color: "badge-seguridad",      dot: "bg-amber-600",  icon: "🛡️", bgColor: "bg-amber-600" },
 };
 
 export const estadoConfig: Record<EstadoEvento, { label: string; color: string }> = {
@@ -54,9 +54,34 @@ export function descripcionCorta(evento: Evento): string {
   return evento.id;
 }
 
+/** Categorías legacy o datos en localStorage antes de alinear nombres con el modelo. */
+const CATEGORIA_ALIAS: Record<string, CategoriaEvento> = {
+  eventos_seguridad: "eventos_criticos",
+  evento_seguridad: "eventos_criticos",
+};
+
+function resolveCategoriaParaBadge(categoria: string): { key: CategoriaEvento; label: string } {
+  const aliased = CATEGORIA_ALIAS[categoria] ?? categoria;
+  if (aliased in categoriaConfig) {
+    return { key: aliased as CategoriaEvento, label: categoriaConfig[aliased as CategoriaEvento].label };
+  }
+  return { key: "listas_vinculantes", label: `Categoría: ${categoria}` };
+}
+
+/** Colores/ícono según categoría; tolera valores legacy o corruptos en localStorage. */
+export function getCategoriaVisual(c: string) {
+  const { key } = resolveCategoriaParaBadge(c);
+  return categoriaConfig[key];
+}
+
+export function labelCategoriaEvento(c: string): string {
+  return resolveCategoriaParaBadge(c).label;
+}
+
 // Badge components
 export function CategoriaBadge({ categoria, className = "" }: { categoria: CategoriaEvento; className?: string }) {
-  const cfg = categoriaConfig[categoria];
+  const { key, label } = resolveCategoriaParaBadge(categoria);
+  const cfg = categoriaConfig[key];
   // Inline colors to avoid Tailwind purge issues
   const colorMap: Record<CategoriaEvento, string> = {
     dineros:            "bg-green-100 text-green-800 border border-green-200",
@@ -65,12 +90,12 @@ export function CategoriaBadge({ categoria, className = "" }: { categoria: Categ
     pqr:                "bg-purple-100 text-purple-800 border border-purple-200",
     disciplinarios:     "bg-red-100 text-red-800 border border-red-200",
     evidencias:          "bg-orange-100 text-orange-800 border border-orange-200",
-    eventos_seguridad:   "bg-amber-100 text-amber-800 border border-amber-200",
+    eventos_criticos:   "bg-amber-100 text-amber-800 border border-amber-200",
   };
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[categoria]} ${className}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[key]} ${className}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
-      {cfg.label}
+      {label}
     </span>
   );
 }

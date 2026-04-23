@@ -9,7 +9,7 @@ export type CategoriaEvento =
   | "pqr"
   | "disciplinarios"
   | "evidencias"
-  | "eventos_seguridad";
+  | "eventos_criticos";
 
 export type EstadoEvento = "abierto" | "cerrado";
 
@@ -49,6 +49,8 @@ export interface PersonaVinculada {
   cedula: string;
   nombre: string;
   rol: "responsable" | "participante";
+  /** Personas en hallazgos (presentes / responsables investigación) */
+  equipo?: string;
 }
 
 // ---- Persona ----
@@ -186,6 +188,14 @@ export interface Evento {
   equipoTenencia?: number;
   /** N° I.D de recogida (8 dígitos) cuando no aplica guía de entrega. */
   pqrIdRecogida?: string;
+  /** Dineros / Unidades: soporte de grabación (hallazgo / cierre). N/A = “na” */
+  soporteCCTV?: "si" | "no" | "na";
+  /** Dineros / Unidades / Eventos críticos: presentes (investigación) */
+  presentesHallazgo?: PersonaVinculada[];
+  /** Dineros / Unidades / Eventos críticos: presentes o responsables en investigación; responsables es opcional en todas. */
+  responsablesHallazgo?: PersonaVinculada[];
+  /** Eventos críticos (H): timeline de seguimiento (textarea) */
+  timelineSeguimiento?: string;
   // Gestión de Seguridad (RCE / Faltantes):
   intervencionSeguridad?: string;
   desviacionesIdentificadas?: string;
@@ -207,7 +217,7 @@ export interface Evento {
   // Disciplinarios:
   gravedadFalta?: "leve" | "grave" | "gravisima";
   decisionGH?: string;
-  // Eventos de Seguridad:
+  // Eventos críticos:
   activoCM?: string;
   clasificacionActivo?: string;
   equipoPersonaPresente?: string;
