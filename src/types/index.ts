@@ -188,7 +188,7 @@ export interface Evento {
   equipoTenencia?: number;
   /** N° I.D de recogida (8 dígitos) cuando no aplica guía de entrega. */
   pqrIdRecogida?: string;
-  /** Dineros / Unidades: soporte de grabación (hallazgo / cierre). N/A = “na” */
+  /** @deprecated Ya no se captura en UI; el CCTV va por solicitudes (`solicitudesCCTV`). Legado en datos. */
   soporteCCTV?: "si" | "no" | "na";
   /** Dineros / Unidades / Eventos críticos: presentes (investigación) */
   presentesHallazgo?: PersonaVinculada[];

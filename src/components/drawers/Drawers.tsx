@@ -255,7 +255,6 @@ function validarCierreEventosCriticos(ev: Evento): string[] {
   if (!ev.contenidoMercancia?.trim()) f.push("Contenido / Recurso afectado");
   if (ev.lugarLatitud == null || ev.lugarLongitud == null) f.push("Latitud y longitud");
   if (!ev.presentesHallazgo || ev.presentesHallazgo.length < 1) f.push("Personas presentes (mín. 1)");
-  if (ev.soporteCCTV == null || ev.soporteCCTV === "") f.push("Soporte CCTV");
   return f;
 }
 
@@ -272,7 +271,6 @@ function validarCierreDinU(ev: Evento): string[] {
   if (!tieneBitacoraInvestigacion(ev)) f.push("Al menos una anotación en el timeline de seguimiento");
   if (!ev.contenidoMercancia?.trim()) f.push("Contenido / Recurso afectado");
   if (ev.lugarLatitud == null || ev.lugarLongitud == null) f.push("Latitud y longitud");
-  if (ev.soporteCCTV == null || ev.soporteCCTV === "") f.push("Soporte CCTV");
   if (!ev.registroWorkflow?.trim()) f.push("# Registro workflow");
   if (!ev.presentesHallazgo || ev.presentesHallazgo.length < 1) f.push("Personas presentes (mín. 1)");
   if (ev.categoria === "unidades" && ev.unidadesFaltantes == null) f.push("Unidades faltantes");
@@ -579,13 +577,24 @@ export function RecordDetailDrawer() {
     toast({ title: `Estado actualizado a "${newLabel}"` });
   }
 
+  function cerrarEventoDinU() {
+    const faltantes = validarCierreDinU(ev!);
+    if (faltantes.length > 0) {
+      toast({ variant: "destructive", title: "Completa los campos requeridos", description: faltantes.join(" · ") });
+      return;
+    }
+    avanzarFlujo("cerrado", {
+      fechaResolucion: new Date().toISOString(),
+      resueltoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
+    });
+    toast({ title: "Evento cerrado correctamente" });
+  }
+
   function confirmarResolucion() {
     if (!resolucionSeleccionada) return;
-    const faltanCierre = ev.categoria === "dineros" || ev.categoria === "unidades"
-      ? validarCierreDinU(ev!)
-      : ev.categoria === "eventos_criticos"
-        ? validarCierreEventosCriticos(ev!)
-        : [];
+    const faltanCierre = ev.categoria === "eventos_criticos"
+      ? validarCierreEventosCriticos(ev!)
+      : [];
     if (faltanCierre.length > 0) {
       toast({ variant: "destructive", title: "Completa el cierre del evento", description: faltanCierre.join(" · ") });
       return;
@@ -830,10 +839,17 @@ export function RecordDetailDrawer() {
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors">
                   <AlertTriangle className="w-3.5 h-3.5" /> Escalar
                 </button>
-                <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
-                  <Check className="w-3.5 h-3.5" /> Resolver y cerrar
-                </button>
+                {(ev.categoria === "dineros" || ev.categoria === "unidades") ? (
+                  <button onClick={cerrarEventoDinU}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
+                    <Check className="w-3.5 h-3.5" /> Resolver y cerrar
+                  </button>
+                ) : (
+                  <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
+                    <Check className="w-3.5 h-3.5" /> Resolver y cerrar
+                  </button>
+                )}
               </>
             )}
             {ev.estadoFlujo === "escalado" && (
@@ -913,8 +929,8 @@ export function RecordDetailDrawer() {
             </div>
           )}
 
-          {/* Panel de resolución */}
-          {resolviendoAbierto && ev.estadoFlujo === "abierto" && (
+          {/* Panel de resolución (no aplica para dineros/unidades — se cierran directamente desde Gestión de Seguridad) */}
+          {resolviendoAbierto && ev.estadoFlujo === "abierto" && ev.categoria !== "dineros" && ev.categoria !== "unidades" && (
             <div className="border border-green-200 bg-green-50/50 rounded-xl p-4 space-y-3">
               <div className="text-xs font-semibold text-green-800">Resolver evento</div>
               <div className="grid grid-cols-2 gap-1.5">
@@ -1181,17 +1197,9 @@ export function RecordDetailDrawer() {
               <p className="text-sm leading-relaxed">{ev.descripcionHechos}</p>
             </div>
 
-            {(ev.categoria === "dineros" || ev.categoria === "unidades") && (ev.contenidoMercancia || ev.soporteCCTV) && (
+            {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.contenidoMercancia && (
               <div className="mt-2 text-xs text-muted-foreground space-y-0.5 px-1">
-                {ev.contenidoMercancia && (
-                  <div><span className="font-medium text-foreground">Contenido / Recurso afectado: </span>{ev.contenidoMercancia}</div>
-                )}
-                {ev.soporteCCTV && (
-                  <div>
-                    <span className="font-medium text-foreground">Soporte CCTV (apertura): </span>
-                    {ev.soporteCCTV === "si" ? "Sí" : ev.soporteCCTV === "no" ? "No" : ev.soporteCCTV === "na" ? "N/A" : "—"}
-                  </div>
-                )}
+                <div><span className="font-medium text-foreground">Contenido / Recurso afectado: </span>{ev.contenidoMercancia}</div>
               </div>
             )}
 
@@ -1329,32 +1337,6 @@ export function RecordDetailDrawer() {
               )}
               <VehiculoVinculador ev={ev} setLocalEventos={setLocalEventos} />
               <div>
-                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soporte CCTV</label>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      ["si", "Sí"] as const,
-                      ["no", "No"] as const,
-                      ["na", "N/A"] as const,
-                    ] as const
-                  ).map(([v, l]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => {
-                        const idx = eventos.findIndex((x) => x.id === ev.id);
-                        if (idx === -1) return;
-                        eventos[idx].soporteCCTV = v;
-                        setLocalEventos([...eventos]);
-                      }}
-                      className={`flex-1 min-w-[5rem] py-1.5 rounded-lg border text-xs font-medium transition-colors ${(ev.soporteCCTV ?? "") === v ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background hover:bg-muted"}`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
                 <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adjuntos (opcional)</label>
                 {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1473,32 +1455,6 @@ export function RecordDetailDrawer() {
                 <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="responsablesHallazgo" label="Personas responsables (ID y Equipo) (opcional)" />
               </div>
               <VehiculoVinculador ev={ev} setLocalEventos={setLocalEventos} />
-              <div>
-                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soporte CCTV</label>
-                <div className="flex flex-wrap gap-2">
-                  {(
-                    [
-                      ["si", "Sí"] as const,
-                      ["no", "No"] as const,
-                      ["na", "N/A"] as const,
-                    ] as const
-                  ).map(([v, l]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => {
-                        const idx = eventos.findIndex((x) => x.id === ev.id);
-                        if (idx === -1) return;
-                        eventos[idx].soporteCCTV = v;
-                        setLocalEventos([...eventos]);
-                      }}
-                      className={`flex-1 min-w-[5rem] py-1.5 rounded-lg border text-xs font-medium transition-colors ${(ev.soporteCCTV ?? "") === v ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background hover:bg-muted"}`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adjuntos (opcional)</label>
                 {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
@@ -1689,80 +1645,88 @@ export function RecordDetailDrawer() {
           {ev.categoria === "listas_vinculantes" && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
-                Hallazgos de investigación
+                Información del evento
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unidades faltantes</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={ev.unidadesFaltantes ?? ""}
-                    onChange={(e) => {
-                      const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].unidadesFaltantes = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
-                    }}
-                    placeholder="0"
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-                <PersonaHallazgoBuscador ev={ev} setLocalEventos={setLocalEventos} />
-              </div>
               <div>
-                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Contenido / descripción mercancía</label>
-                <textarea
-                  value={ev.contenidoMercancia ?? ""}
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Tipo de evento</label>
+                <select
+                  value={ev.tipoEvento}
                   onChange={(e) => {
                     const idx = eventos.findIndex((x) => x.id === ev.id);
-                    if (idx !== -1) { eventos[idx].contenidoMercancia = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    if (idx === -1) return;
+                    eventos[idx].tipoEvento = e.target.value;
+                    eventos[idx].historial.push({
+                      id: `h-${Date.now()}`,
+                      fecha: new Date().toISOString(),
+                      usuarioNombre: usuarioLogueado.nombre,
+                      accion: `Reclasificó tipo de evento a "${e.target.value}"`,
+                    });
+                    setLocalEventos([...eventos]);
                   }}
-                  rows={2}
-                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="Fuente externa">Fuente externa</option>
+                  <option value="Fuente interna">Fuente interna</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Categoría</label>
+                  <select
+                    value={ev.categoriaLesivaEvento ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) {
+                        eventos[idx].categoriaLesivaEvento = e.target.value || undefined;
+                        eventos[idx].subcategoriaLesivaEvento = undefined;
+                        setLocalEventos([...eventos]);
+                      }
+                    }}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Seleccionar categoría...</option>
+                    {Object.entries(CATEGORIAS_LESIVAS).map(([key, val]) => (
+                      <option key={key} value={key}>{val.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Subcategoría</label>
+                  <select
+                    value={ev.subcategoriaLesivaEvento ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) {
+                        eventos[idx].subcategoriaLesivaEvento = e.target.value || undefined;
+                        setLocalEventos([...eventos]);
+                      }
+                    }}
+                    disabled={!ev.categoriaLesivaEvento}
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  >
+                    <option value="">Seleccionar subcategoría...</option>
+                    {ev.categoriaLesivaEvento && CATEGORIAS_LESIVAS[ev.categoriaLesivaEvento as keyof typeof CATEGORIAS_LESIVAS]?.subcategorias.map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Dirección</label>
+                <input
+                  type="text"
+                  value={ev.direccion ?? ""}
+                  onChange={(e) => {
+                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                    if (idx !== -1) { eventos[idx].direccion = e.target.value || undefined; setLocalEventos([...eventos]); }
+                  }}
+                  placeholder="Dirección del remitente/destinatario"
+                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                 />
+                <p className="text-[10px] text-muted-foreground mt-1">Aplica para Remitentes / Destinatarios</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Latitud</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={ev.lugarLatitud ?? ""}
-                    onChange={(e) => {
-                      const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].lugarLatitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
-                    }}
-                    placeholder="4.6097"
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Longitud</label>
-                  <input
-                    type="number"
-                    step="any"
-                    value={ev.lugarLongitud ?? ""}
-                    onChange={(e) => {
-                      const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].lugarLongitud = e.target.value ? Number(e.target.value) : undefined; setLocalEventos([...eventos]); }
-                    }}
-                    placeholder="-74.0817"
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block"># Registro Workflow</label>
-                  <input
-                    type="text"
-                    value={ev.registroWorkflow ?? ""}
-                    onChange={(e) => {
-                      const idx = eventos.findIndex((x) => x.id === ev.id);
-                      if (idx !== -1) { eventos[idx].registroWorkflow = e.target.value || undefined; setLocalEventos([...eventos]); }
-                    }}
-                    placeholder="#WF-12345"
-                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-              </div>
+              <PersonaHallazgoBuscador ev={ev} setLocalEventos={setLocalEventos} />
+              <VehiculoVinculador ev={ev} setLocalEventos={setLocalEventos} />
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adjuntos (denuncias, versión libre, etc.)</label>
                 {ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0 && (
@@ -1797,13 +1761,12 @@ export function RecordDetailDrawer() {
                   className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-green-100 file:text-green-700 hover:file:bg-green-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2"
                 />
               </div>
-              <VehiculoVinculador ev={ev} setLocalEventos={setLocalEventos} />
             </section>
           )}
 
           {/* Hallazgos de investigación — read-only para cerrados */}
           {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_criticos") && ev.estadoFlujo === "cerrado" &&
-            (ev.unidadesFaltantes != null || ev.contenidoMercancia || ev.lugarLatitud != null || ev.lugarLongitud != null || ev.soporteCCTV || ev.personasResponsablesHechos
+            (ev.unidadesFaltantes != null || ev.contenidoMercancia || ev.lugarLatitud != null || ev.lugarLongitud != null || ev.personasResponsablesHechos
               || (ev.presentesHallazgo && ev.presentesHallazgo.length) || (ev.responsablesHallazgo && ev.responsablesHallazgo.length) || ev.registroWorkflow
               || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-2">
@@ -1815,14 +1778,6 @@ export function RecordDetailDrawer() {
                   <div><span className="text-muted-foreground">Unidades faltantes:</span> <span className="font-medium">{ev.unidadesFaltantes}</span></div>
                 )}
                 {ev.contenidoMercancia && <div className="md:col-span-2"><span className="text-muted-foreground">Contenido / Recurso afectado:</span> <span className="font-medium">{ev.contenidoMercancia}</span></div>}
-                {ev.soporteCCTV && (ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "eventos_criticos") && (
-                  <div>
-                    <span className="text-muted-foreground">Soporte CCTV: </span>
-                    <span className="font-medium">
-                      {ev.soporteCCTV === "si" ? "Sí" : ev.soporteCCTV === "no" ? "No" : "N/A"}
-                    </span>
-                  </div>
-                )}
                 {(ev.lugarLatitud != null || ev.lugarLongitud != null) && <div><span className="text-muted-foreground">Coordenadas:</span> <span className="font-medium">{ev.lugarLatitud ?? "—"}, {ev.lugarLongitud ?? "—"}</span></div>}
                 {ev.registroWorkflow && <div><span className="text-muted-foreground"># Workflow:</span> <span className="font-medium">{ev.registroWorkflow}</span></div>}
                 {ev.presentesHallazgo && ev.presentesHallazgo.length > 0 && (

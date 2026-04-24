@@ -20,9 +20,7 @@ const CATEGORIAS = [
 const TIPOS_EVENTO: Record<CategoriaEvento, { grupo?: string; opciones: string[] }[]> = {
   dineros:            [{ opciones: ["Faltante de dinero", "Seguimiento RCE", "Dineros falsos"] }],
   unidades:           [{ opciones: ["Faltante causal 100", "Faltantes causal 101"] }],
-  listas_vinculantes: [
-    { grupo: "Investigación", opciones: ["Denuncia penal", "Vinculación grupos al margen de la ley", "Antecedente Truora", "Reporte empresa externa"] },
-  ],
+  listas_vinculantes: [{ opciones: ["Fuente externa", "Fuente interna"] }],
   eventos_criticos: [{ opciones: [
     "Aéreo (Dron)",
     "Activo CM Hurto / Pérdida (Sede)",
@@ -264,7 +262,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
   const puedeCrear = esAperturaDinOUni
     ? !!(categoria && tipoEvento && terminal && fecha && descripcion.trim() && valorAperturaOk)
     : esAperturaEventosCriticos
-    ? !!(categoria && tipoEvento && terminal && fecha && descripcion.trim() && valorAperturaOk)
+    ? !!(categoria && tipoEvento && terminal && fecha && descripcion.trim())
     : !!(
         categoria && tipoEvento && (hideTipoEntidad || tipoEntidad) && terminal && fecha && descripcion
         && (esVehiculo ? placaInput : true)
@@ -291,9 +289,6 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       if (!terminal) camposFaltantes.push("Terminal");
       if (!fecha) camposFaltantes.push("Fecha");
       if (!descripcion.trim()) camposFaltantes.push("Descripción de los hechos");
-      if (valorAfectacion === "" || Number.isNaN(valorNumReg) || valorNumReg <= 0) {
-        camposFaltantes.push("Valor de afectación");
-      }
     } else {
       if (!tipoEvento) camposFaltantes.push("Tipo de evento");
       if (!hideTipoEntidad && !tipoEntidad) camposFaltantes.push("Tipo de entidad");
@@ -932,8 +927,8 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
               {categoria !== "listas_vinculantes" && categoria !== "pqr" && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
-                  {categoria === "dineros" ? "Valor del dinero" : categoria === "unidades" ? "Valor declarado de unidades" : categoria === "eventos_criticos" ? "Valor de afectación" : "Valor estimado de afectación"}
-                  {(categoria === "dineros" || categoria === "unidades" || categoria === "eventos_criticos") && " *"}
+                  {categoria === "dineros" ? "Valor del dinero" : categoria === "unidades" ? "Valor declarado de unidades" : categoria === "eventos_criticos" ? "Valor de afectación (opcional)" : "Valor estimado de afectación"}
+                  {(categoria === "dineros" || categoria === "unidades") && " *"}
                 </label>
                 <input
                   type="number"

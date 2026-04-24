@@ -917,7 +917,7 @@ export const eventos: Evento[] = [
   {
     id: "LIS-001",
     categoria: "listas_vinculantes",
-    tipoEvento: "Antecedente Truora",
+    tipoEvento: "Fuente externa",
     tipoEntidad: "empleado",
     estado: "cerrado",
     estadoFlujo: "cerrado",
@@ -945,7 +945,7 @@ export const eventos: Evento[] = [
   {
     id: "LIS-002",
     categoria: "listas_vinculantes",
-    tipoEvento: "Denuncia penal",
+    tipoEvento: "Fuente interna",
     tipoEntidad: "empleado",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -973,7 +973,7 @@ export const eventos: Evento[] = [
   {
     id: "LIS-003",
     categoria: "listas_vinculantes",
-    tipoEvento: "Reporte empresa externa",
+    tipoEvento: "Fuente externa",
     tipoEntidad: "aliado_goo",
     estado: "abierto",
     estadoFlujo: "abierto",
@@ -999,7 +999,7 @@ export const eventos: Evento[] = [
   {
     id: "LIS-004",
     categoria: "listas_vinculantes",
-    tipoEvento: "Antecedente Truora",
+    tipoEvento: "Fuente externa",
     tipoEntidad: "contratista",
     estado: "cerrado",
     estadoFlujo: "cerrado",
