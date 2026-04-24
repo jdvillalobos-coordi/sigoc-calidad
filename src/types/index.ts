@@ -195,6 +195,7 @@ export interface Evento {
   /** Dineros / Unidades / Eventos críticos: presentes o responsables en investigación; responsables es opcional en todas. */
   responsablesHallazgo?: PersonaVinculada[];
   /** Eventos críticos (H): timeline de seguimiento (textarea) */
+  /** @deprecated Se consolidó en `anotaciones`; se migra al abrir el detalle si aún existe texto. */
   timelineSeguimiento?: string;
   // Gestión de Seguridad (RCE / Faltantes):
   intervencionSeguridad?: string;

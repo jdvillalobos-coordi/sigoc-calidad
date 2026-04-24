@@ -243,10 +243,15 @@ function PersonaHallazgoBuscador({ ev, setLocalEventos }: { ev: Evento; setLocal
 
 type FilaH = NonNullable<Evento["presentesHallazgo"]>[number];
 
+/** Bitácora única del caso: al menos una anotación con texto en el timeline. */
+function tieneBitacoraInvestigacion(ev: Evento): boolean {
+  return ev.anotaciones.some((a) => a.texto.trim().length > 0);
+}
+
 function validarCierreEventosCriticos(ev: Evento): string[] {
   if (ev.categoria !== "eventos_criticos") return [];
   const f: string[] = [];
-  if (!ev.timelineSeguimiento?.trim()) f.push("Timeline de seguimiento");
+  if (!tieneBitacoraInvestigacion(ev)) f.push("Al menos una anotación en el timeline de seguimiento");
   if (!ev.contenidoMercancia?.trim()) f.push("Contenido / Recurso afectado");
   if (ev.lugarLatitud == null || ev.lugarLongitud == null) f.push("Latitud y longitud");
   if (!ev.presentesHallazgo || ev.presentesHallazgo.length < 1) f.push("Personas presentes (mín. 1)");
@@ -264,7 +269,7 @@ function hallazgoLegadoDinU(ev: Evento) {
 function validarCierreDinU(ev: Evento): string[] {
   if (ev.categoria !== "dineros" && ev.categoria !== "unidades") return [];
   const f: string[] = [];
-  if (!ev.timelineSeguimiento?.trim()) f.push("Timeline de seguimiento");
+  if (!tieneBitacoraInvestigacion(ev)) f.push("Al menos una anotación en el timeline de seguimiento");
   if (!ev.contenidoMercancia?.trim()) f.push("Contenido / Recurso afectado");
   if (ev.lugarLatitud == null || ev.lugarLongitud == null) f.push("Latitud y longitud");
   if (ev.soporteCCTV == null || ev.soporteCCTV === "") f.push("Soporte CCTV");
@@ -472,6 +477,33 @@ export function RecordDetailDrawer() {
     setCctvDescripcion("");
     setCctvArchivos([]);
   }, [drawer.id]);
+
+  /** Migra texto legado del campo único `timelineSeguimiento` a la bitácora `anotaciones` (un solo timeline). */
+  useEffect(() => {
+    if (drawer.tipo !== "registro" || !drawer.id) return;
+    const idx = eventos.findIndex((x) => x.id === drawer.id);
+    if (idx === -1) return;
+    const e = eventos[idx];
+    const txt = e.timelineSeguimiento?.trim();
+    if (!txt) return;
+    const legacyId = `legacy-timeline-${e.id}`;
+    if (e.anotaciones.some((a) => a.id === legacyId)) return;
+    eventos[idx].anotaciones = [
+      ...eventos[idx].anotaciones,
+      {
+        id: legacyId,
+        autorId: "sistema",
+        autorNombre: "Sistema",
+        autorRol: "Consolidación",
+        fecha: new Date().toISOString(),
+        texto: txt,
+        tipo: "seguimiento",
+      },
+    ];
+    eventos[idx].timelineSeguimiento = undefined;
+    _setLocalEventos([...eventos]);
+    bumpData();
+  }, [drawer.id, drawer.tipo, bumpData]);
 
   if (drawer.tipo !== "registro" || !drawer.id) return null;
 
@@ -1173,19 +1205,9 @@ export function RecordDetailDrawer() {
           {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800">Hallazgos de la investigación</h3>
-              <div>
-                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Timeline de seguimiento</label>
-                <textarea
-                  value={ev.timelineSeguimiento ?? ""}
-                  onChange={(e) => {
-                    const idx = eventos.findIndex((x) => x.id === ev.id);
-                    if (idx !== -1) { eventos[idx].timelineSeguimiento = e.target.value || undefined; setLocalEventos([...eventos]); }
-                  }}
-                  rows={3}
-                  placeholder="Cronología y acciones de seguimiento del caso…"
-                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                />
-              </div>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                El seguimiento día a día del caso va en <span className="font-medium text-foreground">Timeline de seguimiento</span> (más abajo): agrega anotaciones con fecha y autor.
+              </p>
               {ev.categoria === "unidades" && (
                 <div className="max-w-sm">
                   <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Unidades faltantes</label>
@@ -1342,19 +1364,9 @@ export function RecordDetailDrawer() {
           {ev.categoria === "eventos_criticos" && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800">Hallazgos de la investigación</h3>
-              <div>
-                <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Timeline de seguimiento</label>
-                <textarea
-                  value={ev.timelineSeguimiento ?? ""}
-                  onChange={(e) => {
-                    const idx = eventos.findIndex((x) => x.id === ev.id);
-                    if (idx !== -1) { eventos[idx].timelineSeguimiento = e.target.value || undefined; setLocalEventos([...eventos]); }
-                  }}
-                  rows={3}
-                  placeholder="Cronología y seguimiento del caso…"
-                  className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                />
-              </div>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                El seguimiento día a día del caso va en <span className="font-medium text-foreground">Timeline de seguimiento</span> (más abajo): agrega anotaciones con fecha y autor.
+              </p>
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Contenido / Recurso afectado</label>
                 <select
@@ -1738,7 +1750,7 @@ export function RecordDetailDrawer() {
           {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_criticos") && ev.estadoFlujo === "cerrado" &&
             (ev.unidadesFaltantes != null || ev.contenidoMercancia || ev.lugarLatitud != null || ev.lugarLongitud != null || ev.soporteCCTV || ev.personasResponsablesHechos
               || (ev.presentesHallazgo && ev.presentesHallazgo.length) || (ev.responsablesHallazgo && ev.responsablesHallazgo.length) || ev.registroWorkflow
-              || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0) || ev.timelineSeguimiento) && (
+              || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-2">
               <h3 className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
                 Hallazgos de investigación
@@ -1746,9 +1758,6 @@ export function RecordDetailDrawer() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                 {ev.unidadesFaltantes != null && (ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes") && (
                   <div><span className="text-muted-foreground">Unidades faltantes:</span> <span className="font-medium">{ev.unidadesFaltantes}</span></div>
-                )}
-                {ev.timelineSeguimiento && (ev.categoria === "eventos_criticos" || ev.categoria === "dineros" || ev.categoria === "unidades") && (
-                  <div className="md:col-span-2"><span className="text-muted-foreground">Timeline de seguimiento:</span> <span className="font-medium whitespace-pre-wrap">{ev.timelineSeguimiento}</span></div>
                 )}
                 {ev.contenidoMercancia && <div className="md:col-span-2"><span className="text-muted-foreground">Contenido / Recurso afectado:</span> <span className="font-medium">{ev.contenidoMercancia}</span></div>}
                 {ev.soporteCCTV && (ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "eventos_criticos") && (
