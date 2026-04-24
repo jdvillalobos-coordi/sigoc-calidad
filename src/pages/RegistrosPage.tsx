@@ -88,7 +88,7 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, abrirTerminal, setNuevaRegistroAbierto, setFormPrefill, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro, dataVersion } = useApp();
+  const { abrirRegistro, setNuevaRegistroAbierto, setFormPrefill, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro, dataVersion } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [estadoFlujoFiltro, setEstadoFlujoFiltro] = useState<string>("todos");
@@ -408,11 +408,8 @@ export default function RegistrosPage() {
                       <td className="px-4 py-3 text-xs text-muted-foreground capitalize hidden xl:table-cell">
                         {e.tipoEntidad.replace(/_/g, " ")}
                       </td>
-                      <td className="px-4 py-3">
-                        <button onClick={(ev) => { ev.stopPropagation(); abrirTerminal(e.terminal); }}
-                          className="text-xs text-primary hover:underline font-medium">
-                          {e.terminal}
-                        </button>
+                      <td className="px-4 py-3 text-xs text-foreground font-medium">
+                        {e.terminal}
                       </td>
                       <td className="px-4 py-3">
                         {e.asignadoA
