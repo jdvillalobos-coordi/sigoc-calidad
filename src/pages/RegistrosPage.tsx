@@ -9,6 +9,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import {
+  contarCargaAsignacion,
+  crearOperadoresAsignacion,
+  cumpleFiltroAsignacion,
+  labelFiltroAsignacion,
+  type FiltroAsignacionTrabajo,
+  type OperadorAsignacion,
+} from "@/lib/asignacion-trabajo";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -31,17 +39,6 @@ const PAGE_SIZES: { value: PageSizeOpt; label: string }[] = [
   { value: 50,    label: "50" },
   { value: 100,   label: "100" },
   { value: "all", label: "Todo" },
-];
-
-type OperadorAsignacion = { id: string; nombre: string; cargo: string };
-
-const OPERADORES_BASE: OperadorAsignacion[] = [
-  { id: "u-sandra", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional de Calidad" },
-  { id: "u-jorge", nombre: "Jorge Castaño", cargo: "Interventor de Faltantes" },
-  { id: "u-ana", nombre: "Ana Martínez", cargo: "Analista de Seguridad" },
-  { id: "u-diego", nombre: "Diego Ramírez", cargo: "Gestor de Calidad" },
-  { id: "u-lucia", nombre: "Lucía Gómez", cargo: "Agente Logístico" },
-  { id: "u-nicolas", nombre: "Nicolás Ríos Castaño", cargo: "Contralor Nacional de Calidad" },
 ];
 
 // ── Componentes pequeños ─────────────────────────────────────
@@ -113,7 +110,7 @@ export default function RegistrosPage() {
   const [paisFiltro, setPaisFiltro]           = useState("todos");
   const [regionalFiltro, setRegionalFiltro]   = useState("todos");
   const [terminalFiltro, setTerminalFiltro]   = useState("todos");
-  const [asignadoFiltro, setAsignadoFiltro]   = useState("todos");
+  const [asignadoFiltro, setAsignadoFiltro]   = useState<FiltroAsignacionTrabajo>("todos");
   const [dateRange, setDateRange]             = useState<DateRange | undefined>(undefined);
   const [sortField, setSortField]             = useState<"fecha" | "diasAbierto" | "id">("fecha");
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
@@ -156,21 +153,7 @@ export default function RegistrosPage() {
         : terminales
   , [regionalFiltro, paisFiltro]);
 
-  const asignadosUnicos = useMemo(() => {
-    const map = new Map<string, string>();
-    eventos.forEach((e) => { if (e.asignadoA?.id) map.set(e.asignadoA.id, e.asignadoA.nombre); });
-    return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [dataVersion]);
-
-  const operadoresAsignacion = useMemo(() => {
-    const map = new Map<string, OperadorAsignacion>();
-    OPERADORES_BASE.forEach((op) => map.set(op.id, op));
-    map.set(usuarioLogueado.id, { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo });
-    eventos.forEach((e) => {
-      if (e.asignadoA) map.set(e.asignadoA.id, e.asignadoA);
-    });
-    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [dataVersion]);
+  const operadoresAsignacion = useMemo(() => crearOperadoresAsignacion(eventos, usuarioLogueado), [dataVersion]);
 
   const q = busquedaQuery.toLowerCase().trim();
 
@@ -179,7 +162,7 @@ export default function RegistrosPage() {
     .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
     .filter((e) => estadoFlujoFiltro === "todos" || e.estadoFlujo === estadoFlujoFiltro)
     .filter((e) => !soloMios || e.asignadoA?.id === usuarioLogueado.id)
-    .filter((e) => asignadoFiltro === "todos" || (asignadoFiltro === "sin_asignar" ? !e.asignadoA : e.asignadoA?.id === asignadoFiltro))
+    .filter((e) => cumpleFiltroAsignacion(e, asignadoFiltro, usuarioLogueado.id))
     .filter((e) => !soloCerrados || e.estadoFlujo === "cerrado")
     .filter((e) => !soloEscaladosAMi || (e.escaladoA?.id === usuarioLogueado.id && e.estadoFlujo === "escalado"))
     .filter((e) => !soloVencidos || (e.diasAbierto > 30 && e.estado === "abierto"))
@@ -223,6 +206,12 @@ export default function RegistrosPage() {
   const effectivePerPage = perPage === "all" ? filtered.length : perPage;
   const pages = effectivePerPage > 0 ? Math.ceil(filtered.length / effectivePerPage) : 1;
   const paged = perPage === "all" ? filtered : filtered.slice((page - 1) * effectivePerPage, page * effectivePerPage);
+  const cargaAsignacion = contarCargaAsignacion(
+    filtered,
+    operadoresAsignacion,
+    (evento) => evento.estadoFlujo !== "cerrado"
+  );
+  const sinAsignarPendientes = filtered.filter((evento) => evento.estadoFlujo !== "cerrado" && !evento.asignadoA).length;
   const eventosSeleccionablesPagina = paged.filter((e) => e.estadoFlujo !== "cerrado").map((e) => e.id);
   const todosPaginaSeleccionados = eventosSeleccionablesPagina.length > 0 && eventosSeleccionablesPagina.every((id) => seleccionados.has(id));
   const operadorDestino = operadoresAsignacion.find((op) => op.id === operadorDestinoId);
@@ -361,10 +350,11 @@ export default function RegistrosPage() {
           <select
             className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
             value={asignadoFiltro}
-            onChange={(e) => { setAsignadoFiltro(e.target.value); setPage(1); }}>
+            onChange={(e) => { setAsignadoFiltro(e.target.value as FiltroAsignacionTrabajo); setPage(1); }}>
             <option value="todos">Todos los asignados</option>
             <option value="sin_asignar">Sin asignar</option>
-            {asignadosUnicos.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+            <option value="mis_asignados">Mis asignados</option>
+            {operadoresAsignacion.map((op) => <option key={op.id} value={`usuario:${op.id}`}>{op.nombre}</option>)}
           </select>
 
           {/* País → Regional → Terminal (cascada) */}
@@ -416,7 +406,7 @@ export default function RegistrosPage() {
             {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
-            {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${asignadoFiltro === "sin_asignar" ? "Sin asignar" : asignadosUnicos.find(a => a.id === asignadoFiltro)?.nombre ?? asignadoFiltro}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
+            {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${labelFiltroAsignacion(asignadoFiltro, operadoresAsignacion)}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
             {soloSinAsignar24h && !navEtiqueta && (
               <FilterPill label="Sin asignar >24 h" onRemove={() => { setSoloSinAsignar24h(false); setPage(1); }} />
             )}
@@ -427,6 +417,15 @@ export default function RegistrosPage() {
               />
             )}
             <button onClick={limpiarFiltros} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">Limpiar filtros</button>
+          </div>
+        )}
+        {(sinAsignarPendientes > 0 || cargaAsignacion.length > 0) && (
+          <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground">Carga:</span>
+            {sinAsignarPendientes > 0 && <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Sin asignar {sinAsignarPendientes}</span>}
+            {cargaAsignacion.slice(0, 5).map((row) => (
+              <span key={row.id} className="px-2 py-0.5 rounded-full bg-muted/60 border border-border">{row.nombre.split(" ").slice(0, 2).join(" ")} {row.count}</span>
+            ))}
           </div>
         )}
         {seleccionados.size > 0 && (
