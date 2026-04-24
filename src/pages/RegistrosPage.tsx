@@ -4,7 +4,7 @@ import { CategoriaBadge, EstadoBadge } from "@/lib/utils-app";
 import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
 import { useApp } from "@/context/AppContext";
 import { Plus, ChevronUp, ChevronDown, CalendarDays, X } from "lucide-react";
-import type { CategoriaEvento } from "@/types";
+import type { CategoriaEvento, Evento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -41,6 +41,25 @@ const PAGE_SIZES: { value: PageSizeOpt; label: string }[] = [
   { value: "all", label: "Todo" },
 ];
 
+type FlujoUnidadesFiltro = "todos" | "seguridad_sg" | "investigacion_faltantes";
+const FLUJOS_UNIDADES: { value: FlujoUnidadesFiltro; label: string; detail: string }[] = [
+  { value: "todos", label: "Todos", detail: "Unidades" },
+  { value: "seguridad_sg", label: "Gestión Seguridad", detail: "100/101" },
+  { value: "investigacion_faltantes", label: "Investigación Faltantes", detail: "300/400/829" },
+];
+
+function esInvestigacionFaltantesEvento(e: Pick<Evento, "categoria" | "subflujo">) {
+  return e.categoria === "unidades" && e.subflujo === "investigacion_faltantes";
+}
+
+function esSeguridadUnidadesEvento(e: Pick<Evento, "categoria" | "subflujo">) {
+  return e.categoria === "unidades" && e.subflujo !== "investigacion_faltantes";
+}
+
+function labelFlujoUnidades(flujo: FlujoUnidadesFiltro) {
+  return FLUJOS_UNIDADES.find((f) => f.value === flujo)?.label ?? flujo;
+}
+
 // ── Componentes pequeños ─────────────────────────────────────
 
 function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }) {
@@ -54,13 +73,13 @@ function FilterPill({ label, onRemove }: { label: string; onRemove: () => void }
   );
 }
 
-function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; onChange: (r: DateRange | undefined) => void }) {
+function DateRangeFilter({ range, onChange, placeholder = "Rango de fechas" }: { range: DateRange | undefined; onChange: (r: DateRange | undefined) => void; placeholder?: string }) {
   const [open, setOpen] = useState(false);
   const label = range?.from
     ? range.to
       ? `${format(range.from, "d MMM", { locale: es })} – ${format(range.to, "d MMM", { locale: es })}`
       : format(range.from, "d MMM yyyy", { locale: es })
-    : "Rango de fechas";
+    : placeholder;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -111,6 +130,10 @@ export default function RegistrosPage() {
   const [regionalFiltro, setRegionalFiltro]   = useState("todos");
   const [terminalFiltro, setTerminalFiltro]   = useState("todos");
   const [asignadoFiltro, setAsignadoFiltro]   = useState<FiltroAsignacionTrabajo>("todos");
+  const [flujoUnidadesFiltro, setFlujoUnidadesFiltro] = useState<FlujoUnidadesFiltro>("todos");
+  const [codigoNovedadFiltro, setCodigoNovedadFiltro] = useState("todos");
+  const [equipoFaltantesFiltro, setEquipoFaltantesFiltro] = useState("todos");
+  const [fechaNovedadFiltro, setFechaNovedadFiltro] = useState<DateRange | undefined>(undefined);
   const [dateRange, setDateRange]             = useState<DateRange | undefined>(undefined);
   const [sortField, setSortField]             = useState<"fecha" | "diasAbierto" | "id">("fecha");
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
@@ -154,13 +177,32 @@ export default function RegistrosPage() {
   , [regionalFiltro, paisFiltro]);
 
   const operadoresAsignacion = useMemo(() => crearOperadoresAsignacion(eventos, usuarioLogueado), [dataVersion]);
+  const equiposFaltantes = useMemo(() => Array.from(new Set(eventos
+    .filter((e) => e.subflujo === "investigacion_faltantes" && e.ultimoEquipoAsignado)
+    .map((e) => e.ultimoEquipoAsignado as string)
+  )).sort(), [dataVersion]);
 
   const q = busquedaQuery.toLowerCase().trim();
+  const mostrarFiltrosInvestigacionFaltantes = categoriaFiltro === "unidades" && flujoUnidadesFiltro === "investigacion_faltantes";
 
   const filtered = useMemo(() => eventos
     .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
+    .filter((e) => {
+      if (flujoUnidadesFiltro === "todos") return true;
+      if (flujoUnidadesFiltro === "investigacion_faltantes") return esInvestigacionFaltantesEvento(e);
+      return esSeguridadUnidadesEvento(e);
+    })
     .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
     .filter((e) => estadoFlujoFiltro === "todos" || e.estadoFlujo === estadoFlujoFiltro)
+    .filter((e) => flujoUnidadesFiltro !== "investigacion_faltantes" || codigoNovedadFiltro === "todos" || e.codigoNovedad === codigoNovedadFiltro)
+    .filter((e) => flujoUnidadesFiltro !== "investigacion_faltantes" || equipoFaltantesFiltro === "todos" || e.ultimoEquipoAsignado === equipoFaltantesFiltro)
+    .filter((e) => {
+      if (flujoUnidadesFiltro !== "investigacion_faltantes" || !fechaNovedadFiltro?.from) return true;
+      if (!e.fechaNovedad) return false;
+      const fecha = parseISO(e.fechaNovedad);
+      const to = fechaNovedadFiltro.to ?? new Date();
+      return isWithinInterval(fecha, { start: fechaNovedadFiltro.from, end: to });
+    })
     .filter((e) => !soloMios || e.asignadoA?.id === usuarioLogueado.id)
     .filter((e) => cumpleFiltroAsignacion(e, asignadoFiltro, usuarioLogueado.id))
     .filter((e) => !soloCerrados || e.estadoFlujo === "cerrado")
@@ -201,7 +243,7 @@ export default function RegistrosPage() {
       else                                  cmp = a.id.localeCompare(b.id);
       return sortDir === "asc" ? cmp : -cmp;
     })
-  , [categoriaFiltro, estadoFiltro, estadoFlujoFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, soloSinAsignar24h, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir, dataVersion]);
+  , [categoriaFiltro, flujoUnidadesFiltro, estadoFiltro, estadoFlujoFiltro, codigoNovedadFiltro, equipoFaltantesFiltro, fechaNovedadFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, soloSinAsignar24h, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir, dataVersion]);
 
   const effectivePerPage = perPage === "all" ? filtered.length : perPage;
   const pages = effectivePerPage > 0 ? Math.ceil(filtered.length / effectivePerPage) : 1;
@@ -247,7 +289,7 @@ export default function RegistrosPage() {
           id: `h-${Date.now()}-${evento.id}`,
           fecha: ahora,
           usuarioNombre: usuarioLogueado.nombre,
-          accion: `Asignó el evento a ${operador.nombre}`,
+          accion: operador.id === usuarioLogueado.id ? "Tomó el caso" : `Asignó el evento a ${operador.nombre}`,
         });
       } else {
         const anterior = evento.asignadoA?.nombre ?? "sin asignación";
@@ -287,12 +329,46 @@ export default function RegistrosPage() {
   }
 
   const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloCerrados || soloEscaladosAMi || soloVencidos || soloSinAsignar24h || estadoFiltro !== "todos";
-  const hayFiltrosActivos = hayFiltrosNav || categoriaFiltro !== "todos" || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || !!dateRange?.from || !!q;
+  const hayFiltrosFaltantesActivos = mostrarFiltrosInvestigacionFaltantes && (codigoNovedadFiltro !== "todos" || equipoFaltantesFiltro !== "todos" || !!fechaNovedadFiltro?.from);
+  const hayFiltrosActivos = hayFiltrosNav || categoriaFiltro !== "todos" || flujoUnidadesFiltro !== "todos" || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || hayFiltrosFaltantesActivos || !!dateRange?.from || !!q;
   const totalVisible = filtered.length;
+
+  function limpiarFiltrosInvestigacionFaltantes() {
+    setCodigoNovedadFiltro("todos");
+    setEquipoFaltantesFiltro("todos");
+    setFechaNovedadFiltro(undefined);
+  }
+
+  function seleccionarCategoria(value: CategoriaEvento | "todos") {
+    setCategoriaFiltro(value);
+    // Al cambiar categoría limpiamos los filtros de navegación para evitar
+    // combinaciones confusas (ej: "Escalados activos" + PQR)
+    setEstadoFlujoFiltro("todos");
+    setSoloMios(false);
+    setSoloCerrados(false);
+    setSoloEscaladosAMi(false);
+    setSoloVencidos(false);
+    setSoloSinAsignar24h(false);
+    setNavEtiqueta(null);
+    if (value !== "todos") setEstadoFiltro("todos");
+    if (value !== "unidades") {
+      setFlujoUnidadesFiltro("todos");
+      limpiarFiltrosInvestigacionFaltantes();
+    }
+    setPage(1);
+  }
+
+  function seleccionarFlujoUnidades(value: FlujoUnidadesFiltro) {
+    setFlujoUnidadesFiltro(value);
+    if (value !== "investigacion_faltantes") limpiarFiltrosInvestigacionFaltantes();
+    setPage(1);
+  }
 
   function limpiarFiltros() {
     setCategoriaFiltro("todos");
+    setFlujoUnidadesFiltro("todos");
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setAsignadoFiltro("todos");
+    setCodigoNovedadFiltro("todos"); setEquipoFaltantesFiltro("todos"); setFechaNovedadFiltro(undefined);
     setDateRange(undefined); setBusquedaQuery(""); setEstadoFiltro("todos");
     setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false); setSoloEscaladosAMi(false);
     setSoloVencidos(false); setSoloSinAsignar24h(false); setNavEtiqueta(null); setPage(1);
@@ -309,20 +385,7 @@ export default function RegistrosPage() {
           <div className="flex items-center gap-1 flex-wrap">
             {CATEGORIAS.map((c) => (
               <button key={c.value}
-                onClick={() => {
-                  setCategoriaFiltro(c.value);
-                  // Al cambiar categoría limpiamos los filtros de navegación para evitar
-                  // combinaciones confusas (ej: "Escalados activos" + PQR)
-                  setEstadoFlujoFiltro("todos");
-                  setSoloMios(false);
-                  setSoloCerrados(false);
-                  setSoloEscaladosAMi(false);
-                  setSoloVencidos(false);
-                  setSoloSinAsignar24h(false);
-                  setNavEtiqueta(null);
-                  if (c.value !== "todos") setEstadoFiltro("todos");
-                  setPage(1);
-                }}
+                onClick={() => seleccionarCategoria(c.value)}
                 className={cn(
                   "px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors",
                   categoriaFiltro === c.value
@@ -333,6 +396,26 @@ export default function RegistrosPage() {
               </button>
             ))}
           </div>
+
+          {categoriaFiltro === "unidades" && (
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+              {FLUJOS_UNIDADES.map((flujo) => (
+                <button
+                  key={flujo.value}
+                  onClick={() => seleccionarFlujoUnidades(flujo.value)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors",
+                    flujoUnidadesFiltro === flujo.value
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-card/60"
+                  )}
+                >
+                  <span>{flujo.label}</span>
+                  <span className="ml-1 font-mono text-[10px] font-medium opacity-70">{flujo.detail}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="w-px h-5 bg-border mx-1" />
 
@@ -379,12 +462,41 @@ export default function RegistrosPage() {
 
           <DateRangeFilter range={dateRange} onChange={(r) => { setDateRange(r); setPage(1); }} />
 
+          {mostrarFiltrosInvestigacionFaltantes && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <select
+                className="text-xs border border-orange-200 rounded-lg px-2.5 py-1.5 bg-orange-50/60 text-orange-900 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                value={codigoNovedadFiltro}
+                onChange={(e) => { setCodigoNovedadFiltro(e.target.value); setPage(1); }}
+                title="Código novedad Investigación Faltantes"
+              >
+                <option value="todos">Cod. novedad</option>
+                <option value="300">300</option>
+                <option value="400">400</option>
+                <option value="829">829</option>
+              </select>
+              <select
+                className="text-xs border border-orange-200 rounded-lg px-2.5 py-1.5 bg-orange-50/60 text-orange-900 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                value={equipoFaltantesFiltro}
+                onChange={(e) => { setEquipoFaltantesFiltro(e.target.value); setPage(1); }}
+                title="Último equipo asignado"
+              >
+                <option value="todos">Último equipo</option>
+                {equiposFaltantes.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+              </select>
+              <DateRangeFilter range={fechaNovedadFiltro} onChange={(r) => { setFechaNovedadFiltro(r); setPage(1); }} placeholder="Fecha novedad" />
+            </>
+          )}
+
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground font-medium">{totalVisible} evento{totalVisible !== 1 ? "s" : ""}</span>
-          <button onClick={() => { setFormPrefill(null); setNuevaRegistroAbierto(true); }}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors">
-            <Plus className="w-3.5 h-3.5" /> Nuevo evento
-          </button>
+          {!mostrarFiltrosInvestigacionFaltantes && (
+            <button onClick={() => { setFormPrefill(null); setNuevaRegistroAbierto(true); }}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:bg-primary/90 transition-colors">
+              <Plus className="w-3.5 h-3.5" /> Nuevo evento
+            </button>
+          )}
         </div>
 
         {hayFiltrosActivos && (
@@ -399,7 +511,13 @@ export default function RegistrosPage() {
             {categoriaFiltro !== "todos" && (
               <FilterPill
                 label={CATEGORIAS.find(c => c.value === categoriaFiltro)?.label ?? categoriaFiltro}
-                onRemove={() => { setCategoriaFiltro("todos"); setPage(1); }}
+                onRemove={() => seleccionarCategoria("todos")}
+              />
+            )}
+            {categoriaFiltro === "unidades" && flujoUnidadesFiltro !== "todos" && (
+              <FilterPill
+                label={`Flujo: ${labelFlujoUnidades(flujoUnidadesFiltro)}`}
+                onRemove={() => seleccionarFlujoUnidades("todos")}
               />
             )}
             {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => { setBusquedaQuery(""); setPage(1); }} />}
@@ -407,6 +525,14 @@ export default function RegistrosPage() {
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
             {terminalFiltro !== "todos" && <FilterPill label={`Terminal: ${terminalFiltro}`} onRemove={() => { setTerminalFiltro("todos"); setPage(1); }} />}
             {asignadoFiltro !== "todos" && <FilterPill label={`Asignado: ${labelFiltroAsignacion(asignadoFiltro, operadoresAsignacion)}`} onRemove={() => { setAsignadoFiltro("todos"); setPage(1); }} />}
+            {mostrarFiltrosInvestigacionFaltantes && codigoNovedadFiltro !== "todos" && <FilterPill label={`Cod. novedad: ${codigoNovedadFiltro}`} onRemove={() => { setCodigoNovedadFiltro("todos"); setPage(1); }} />}
+            {mostrarFiltrosInvestigacionFaltantes && equipoFaltantesFiltro !== "todos" && <FilterPill label={`Equipo: ${equipoFaltantesFiltro}`} onRemove={() => { setEquipoFaltantesFiltro("todos"); setPage(1); }} />}
+            {mostrarFiltrosInvestigacionFaltantes && fechaNovedadFiltro?.from && (
+              <FilterPill
+                label={`Fecha novedad: ${format(fechaNovedadFiltro.from, "dd MMM", { locale: es })}${fechaNovedadFiltro.to ? ` – ${format(fechaNovedadFiltro.to, "dd MMM", { locale: es })}` : ""}`}
+                onRemove={() => { setFechaNovedadFiltro(undefined); setPage(1); }}
+              />
+            )}
             {soloSinAsignar24h && !navEtiqueta && (
               <FilterPill label="Sin asignar >24 h" onRemove={() => { setSoloSinAsignar24h(false); setPage(1); }} />
             )}
@@ -517,6 +643,8 @@ export default function RegistrosPage() {
                 {paged.map((e) => {
                   const responsable = (e.personasResponsables ?? [])[0];
                   const slaSinAsignar = eventoSinAsignarSlaCritico(e);
+                  const investigacionFaltantes = esInvestigacionFaltantesEvento(e);
+                  const seguridadUnidades = esSeguridadUnidadesEvento(e);
                   return (
                     <tr key={e.id}
                       onClick={() => abrirRegistro(e.id)}
@@ -539,6 +667,9 @@ export default function RegistrosPage() {
                       <td className="px-4 py-3 min-w-[200px]">
                         <span className="block text-xs font-medium text-foreground">{e.tipoEvento}</span>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {e.codigoNovedad && investigacionFaltantes && (
+                            <span className="text-[10px] text-muted-foreground">Cod. {e.codigoNovedad}</span>
+                          )}
                           {responsable && (
                             <span className="text-[10px] text-muted-foreground">
                               {responsable.nombre}
@@ -552,7 +683,7 @@ export default function RegistrosPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground capitalize hidden xl:table-cell">
-                        {e.tipoEntidad.replace(/_/g, " ")}
+                        {investigacionFaltantes ? "Evento automático" : e.tipoEntidad.replace(/_/g, " ")}
                       </td>
                       <td className="px-4 py-3 text-xs text-foreground font-medium">
                         {e.terminal}
@@ -564,7 +695,9 @@ export default function RegistrosPage() {
                               <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold flex-shrink-0">
                                 {e.asignadoA.nombre.split(" ").map(n => n[0]).slice(0, 2).join("")}
                               </div>
-                              <span className="text-xs text-foreground truncate max-w-[110px]">{e.asignadoA.nombre.split(" ").slice(0, 2).join(" ")}</span>
+                              <div className="min-w-0">
+                                <span className="block text-xs text-foreground truncate max-w-[110px]">{e.asignadoA.nombre.split(" ").slice(0, 2).join(" ")}</span>
+                              </div>
                             </div>
                           )
                           : (

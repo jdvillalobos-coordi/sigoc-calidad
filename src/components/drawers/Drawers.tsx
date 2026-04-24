@@ -96,6 +96,30 @@ const ESTADO_UNIDADES_CIERRE = [
   "Hurto Unidad Interna en Ruta Nacional",
 ] as const;
 
+const CONCLUSIONES_INVESTIGACION_FALTANTES = [
+  { value: "301", label: "301 - Unidades internas ubicadas - GI" },
+  { value: "302", label: "302 - Unidades internas no ubicadas / no enviadas - GP" },
+  { value: "401", label: "401 - Unidad(es) ubicada(s) - GI" },
+  { value: "402", label: "402 - Unidad(es) no ubicada(s) / no enviada(s) - GP" },
+  { value: "411", label: "411 - Guía con solicitud de anulación en revisión" },
+] as const;
+
+function esInvestigacionFaltantes(ev: Evento) {
+  return ev.categoria === "unidades" && ev.subflujo === "investigacion_faltantes";
+}
+
+function validarCierreInvestigacionFaltantes(ev: Evento): string[] {
+  const f: string[] = [];
+  if (!ev.hallazgosOrigen?.trim()) f.push("Hallazgos relevantes en origen");
+  if (!ev.hallazgosDestino?.trim()) f.push("Hallazgos relevantes en destino");
+  if (!ev.codigoConclusion) f.push("Conclusión investigación");
+  if (!ev.terminalResponsable) f.push("Terminal responsable");
+  if (!ev.equipoResponsable?.trim()) f.push("Equipo responsable");
+  if (!ev.codigoEmpleadoResponsable?.trim()) f.push("Código empleado responsable");
+  if (!ev.nombreEmpleadoResponsable?.trim()) f.push("Nombre empleado responsable");
+  return f;
+}
+
 function FlujoStepper({ current, wasEscalated }: { current: EstadoFlujo; wasEscalated: boolean }) {
   const idx = FLUJO_INDEX[current];
   const escaladoSkipped = !wasEscalated && current !== "escalado" && idx > 1;
@@ -237,6 +261,31 @@ function PersonaHallazgoBuscador({ ev, setLocalEventos }: { ev: Evento; setLocal
           <span className="text-xs text-amber-600 mt-0.5 block">No se encontró "{busqueda}"</span>
         )}
       </div>
+    </div>
+  );
+}
+
+function CampoTextoInvestigacionFaltantes({ ev, field, label, rows = 2, disabled = false, setLocalEventos }: {
+  ev: Evento;
+  field: keyof Pick<Evento, "hallazgosOrigen" | "hallazgosDestino" | "versionRemitente" | "versionDestinatario" | "versionEntrega" | "conceptoSeguridad" | "conceptoAuditoria" | "comentariosAdicionales">;
+  label: string;
+  rows?: number;
+  disabled?: boolean;
+  setLocalEventos: React.Dispatch<React.SetStateAction<Evento[]>>;
+}) {
+  return (
+    <div>
+      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">{label}</label>
+      <textarea
+        value={(ev[field] as string | undefined) ?? ""}
+        onChange={(e) => {
+          const idx = eventos.findIndex((x) => x.id === ev.id);
+          if (idx !== -1) { (eventos[idx][field] as string | undefined) = e.target.value || undefined; setLocalEventos([...eventos]); }
+        }}
+        rows={rows}
+        disabled={disabled}
+        className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-none disabled:opacity-60 disabled:cursor-not-allowed"
+      />
     </div>
   );
 }
@@ -493,6 +542,7 @@ export function RecordDetailDrawer() {
   const [cctvFormAbierto, setCctvFormAbierto] = useState(false);
   const [cctvDescripcion, setCctvDescripcion] = useState("");
   const [cctvArchivos, setCctvArchivos] = useState<File[]>([]);
+  const [soporteInvestigacionUrl, setSoporteInvestigacionUrl] = useState("");
 
   useEffect(() => {
     setNuevaAnotacion("");
@@ -508,6 +558,7 @@ export function RecordDetailDrawer() {
     setCctvFormAbierto(false);
     setCctvDescripcion("");
     setCctvArchivos([]);
+    setSoporteInvestigacionUrl("");
   }, [drawer.id]);
 
   /** Migra texto legado del campo único `timelineSeguimiento` a la bitácora `anotaciones` (un solo timeline). */
@@ -554,6 +605,8 @@ export function RecordDetailDrawer() {
 
   const relacionados = getEventosRelacionados(ev.id);
   const wasEscalated = !!(ev.escaladoA || ev.fechaEscalamiento);
+  const investigacionFaltantes = esInvestigacionFaltantes(ev);
+  const investigacionFaltantesCerrada = investigacionFaltantes && ev.estadoFlujo === "cerrado";
 
   function avanzarFlujo(nuevoFlujo: EstadoFlujo, extras: Partial<Evento> = {}) {
     const prevLabel = FLUJO_STEPS.find(s => s.key === ev!.estadoFlujo)?.label ?? ev!.estadoFlujo;
@@ -578,6 +631,10 @@ export function RecordDetailDrawer() {
   }
 
   function cerrarEventoDinU() {
+    if (investigacionFaltantes) {
+      cerrarInvestigacionFaltantes();
+      return;
+    }
     const faltantes = validarCierreDinU(ev!);
     if (faltantes.length > 0) {
       toast({ variant: "destructive", title: "Completa los campos requeridos", description: faltantes.join(" · ") });
@@ -588,6 +645,31 @@ export function RecordDetailDrawer() {
       resueltoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
     });
     toast({ title: "Evento cerrado correctamente" });
+  }
+
+  function cerrarInvestigacionFaltantes() {
+    const faltantes = validarCierreInvestigacionFaltantes(ev!);
+    if (faltantes.length > 0) {
+      toast({ variant: "destructive", title: "Completa la investigación", description: faltantes.join(" · ") });
+      return;
+    }
+    avanzarFlujo("cerrado", {
+      fechaResolucion: new Date().toISOString(),
+      resueltoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
+    });
+    toast({ title: "Investigación Faltantes cerrada correctamente" });
+  }
+
+  function agregarSoporteInvestigacionUrl() {
+    const url = soporteInvestigacionUrl.trim();
+    if (!url) return;
+    const idx = eventos.findIndex((x) => x.id === ev!.id);
+    if (idx !== -1) {
+      eventos[idx].soportesAdicionalesInvestigacion = [...(eventos[idx].soportesAdicionalesInvestigacion ?? []), url];
+      setLocalEventos([...eventos]);
+      setSoporteInvestigacionUrl("");
+      toast({ title: "Enlace agregado a soportes" });
+    }
   }
 
   function confirmarResolucion() {
@@ -751,6 +833,31 @@ export function RecordDetailDrawer() {
     toast({ title: "✅ Hallazgo agregado a la investigación" });
   }
 
+  function tomarCaso() {
+    const ahora = new Date().toISOString();
+    const idx = eventos.findIndex((e) => e.id === ev!.id);
+    if (idx === -1) return;
+    eventos[idx].asignadoA = { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo };
+    eventos[idx].fechaAsignacion = ahora;
+    eventos[idx].asignadoPor = { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre };
+    eventos[idx].historial.push({ id: `h-${Date.now()}`, fecha: ahora, usuarioNombre: usuarioLogueado.nombre, accion: "Tomó el caso" });
+    setLocalEventos([...eventos]);
+    toast({ title: "Caso tomado", description: `Asignado a ${usuarioLogueado.nombre}` });
+  }
+
+  function soltarCaso() {
+    const ahora = new Date().toISOString();
+    const idx = eventos.findIndex((e) => e.id === ev!.id);
+    if (idx === -1) return;
+    const anterior = eventos[idx].asignadoA?.nombre ?? "sin asignación";
+    delete eventos[idx].asignadoA;
+    delete eventos[idx].fechaAsignacion;
+    eventos[idx].asignadoPor = { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre };
+    eventos[idx].historial.push({ id: `h-${Date.now()}`, fecha: ahora, usuarioNombre: usuarioLogueado.nombre, accion: `Soltó el caso (antes asignado a ${anterior})` });
+    setLocalEventos([...eventos]);
+    toast({ title: "Caso liberado", description: "Quedó sin asignar" });
+  }
+
   return (
     <>
       <div className="fixed inset-0 bg-black/30 z-40" onClick={cerrarDrawer} />
@@ -761,6 +868,16 @@ export function RecordDetailDrawer() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <CategoriaBadge categoria={ev.categoria} />
+                {investigacionFaltantes && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 text-[10px] font-semibold">
+                    Investigación Faltantes · Interventores
+                  </span>
+                )}
+                {ev.categoria === "unidades" && !investigacionFaltantes && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold">
+                    Seguridad SG · 100/101
+                  </span>
+                )}
                 <span className="font-mono text-sm font-bold">{ev.id}</span>
                 {ev.estado !== "cerrado" && ev.diasAbierto > 30 && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded-full">
@@ -804,15 +921,18 @@ export function RecordDetailDrawer() {
             )}
             {!ev.asignadoA && ev.estadoFlujo === "abierto" && (
               <button
-                onClick={() => {
-                  avanzarFlujo(ev.estadoFlujo, {
-                    asignadoA: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo },
-                  });
-                  toast({ title: "Caso tomado", description: `Asignado a ${usuarioLogueado.nombre}` });
-                }}
+                onClick={tomarCaso}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm"
               >
                 <UserCheck className="w-3.5 h-3.5" /> Tomar caso
+              </button>
+            )}
+            {ev.asignadoA?.id === usuarioLogueado.id && ev.estadoFlujo !== "cerrado" && (
+              <button
+                onClick={soltarCaso}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-medium transition-colors"
+              >
+                Soltar caso
               </button>
             )}
             {ev.estadoFlujo === "escalado" && ev.escaladoA && (
@@ -839,17 +959,17 @@ export function RecordDetailDrawer() {
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors">
                   <AlertTriangle className="w-3.5 h-3.5" /> Escalar
                 </button>
-                {(ev.categoria === "dineros" || ev.categoria === "unidades") ? (
+                {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes ? (
                   <button onClick={cerrarEventoDinU}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
                     <Check className="w-3.5 h-3.5" /> Resolver y cerrar
                   </button>
-                ) : (
+                ) : !investigacionFaltantes ? (
                   <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
                     <Check className="w-3.5 h-3.5" /> Resolver y cerrar
                   </button>
-                )}
+                ) : null}
               </>
             )}
             {ev.estadoFlujo === "escalado" && (
@@ -1080,7 +1200,15 @@ export function RecordDetailDrawer() {
           <section>
             <h3 className="text-sm font-semibold mb-3">Información del evento</h3>
             <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
-              {[
+              {(investigacionFaltantes ? [
+                ["Categoría", labelCategoriaEvento(ev.categoria)],
+                ["Flujo operativo", "Investigación Faltantes - Interventores"],
+                ["Tipo de evento", ev.tipoEvento],
+                ["Origen", ev.origenEvento === "automatico" ? "Automático" : ev.origenEvento],
+                ["Código novedad", ev.codigoNovedad],
+                [ev.categoria === "pqr" ? "Fecha radicación" : "Fecha", formatDate(ev.fecha)],
+                ["Días abierto", `${ev.diasAbierto} días`],
+              ] : [
                 ["Categoría", labelCategoriaEvento(ev.categoria)],
                 ["Tipo de evento", ev.tipoEvento],
                 [ev.categoria === "pqr" ? "Quién presenta (tipo entidad)" : "Tipo entidad", ev.tipoEntidad],
@@ -1110,7 +1238,7 @@ export function RecordDetailDrawer() {
                 ...(ev.resultadoIA ? [["Resultado IA", ev.resultadoIA === "cumple" ? "Cumple" : "No cumple"]] : []),
                 ...(ev.veredictoOperador ? [["Veredicto auditor", ev.veredictoOperador === "confirma" ? "Confirmado" : ev.veredictoOperador === "falso_negativo" ? "Falso negativo" : "Falso positivo"]] : []),
                 ...(ev.direccion ? [["Dirección", ev.direccion]] : []),
-              ].map(([l, v], rowIdx) => (
+              ]).filter(([, v]) => v).map(([l, v], rowIdx) => (
                 <div key={`${l}-${rowIdx}`}>
                   <div className="text-xs text-muted-foreground mb-0.5">{l}</div>
                   {(l === "Terminal" || l === "Terminal origen") ? (
@@ -1255,8 +1383,161 @@ export function RecordDetailDrawer() {
             )}
           </section>
 
+          {investigacionFaltantes && (
+            <>
+              <section className="border border-orange-200 bg-orange-50/40 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-orange-800">Datos de apertura automática</h3>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-orange-700 border border-orange-200 font-semibold">Creado automáticamente</span>
+                    {ev.codigoNovedad && <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200 font-semibold">Cod. {ev.codigoNovedad}</span>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {[
+                    ["Tipo de evento", ev.tipoEvento],
+                    ["N° de guía", ev.guias?.join(", ")],
+                    ["Descripción de la novedad", ev.descripcionNovedad],
+                    ["Terminal origen", ev.terminal],
+                    ["Terminal destino", ev.terminalDestino],
+                    ["Ciudad origen", ev.ciudad],
+                    ["Tipo población origen", ev.tipoPoblacionOrigen === "directa_domestica" ? "Directa/Doméstica" : ev.tipoPoblacionOrigen === "reexpedicion" ? "Reexpedición" : undefined],
+                    ["Ciudad destino", ev.ciudadDestino],
+                    ["Tipo población destino", ev.tipoPoblacionDestino === "directa_domestica" ? "Directa/Doméstica" : ev.tipoPoblacionDestino === "reexpedicion" ? "Reexpedición" : undefined],
+                    ["Valor declarado", ev.valorDeclarado ? (() => { const m = getMonedaPorTerminal(ev.terminal); return formatCurrency(ev.valorDeclarado!, m.currency, m.locale); })() : undefined],
+                    ["Último equipo asignado", ev.ultimoEquipoAsignado],
+                    ["Fecha novedad", ev.fechaNovedad ? formatDate(ev.fechaNovedad) : undefined],
+                    ["NIT cliente", ev.nitCliente],
+                    ["Cliente", ev.nombreCliente],
+                    ["Rol solicitante", ev.rolSolicitante],
+                  ].filter(([, v]) => v).map(([label, value]) => (
+                    <div key={label} className={label === "Descripción de la novedad" ? "md:col-span-2" : ""}>
+                      <div className="text-orange-700/70 mb-0.5">{label}</div>
+                      <div className="font-medium text-orange-950">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-blue-800">Diligenciamiento del interventor</h3>
+                  {investigacionFaltantesCerrada && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold">Investigación cerrada</span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="hallazgosOrigen" label="Hallazgos relevantes en origen *" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="hallazgosDestino" label="Hallazgos relevantes en destino *" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="versionRemitente" label="Versión remitente" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="versionDestinatario" label="Versión destinatario" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="versionEntrega" label="Versión entrega" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="conceptoSeguridad" label="Concepto de Seguridad (si aplica)" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="conceptoAuditoria" label="Concepto auditoría" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                  <CampoTextoInvestigacionFaltantes ev={ev} field="comentariosAdicionales" label="Comentarios adicionales" disabled={investigacionFaltantesCerrada} setLocalEventos={setLocalEventos} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Reporte a jefe inmediato (imagen/PDF)</label>
+                    <input type="file" accept="image/*,application/pdf" multiple disabled={investigacionFaltantesCerrada} onChange={(e) => {
+                      const nombres = Array.from(e.target.files ?? []).map((f) => f.name);
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].reporteJefeInmediatoAdjuntos = [...(ev.reporteJefeInmediatoAdjuntos ?? []), ...nombres]; setLocalEventos([...eventos]); }
+                      e.target.value = "";
+                    }} className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2 disabled:opacity-60 disabled:cursor-not-allowed" />
+                    {!!ev.reporteJefeInmediatoAdjuntos?.length && <p className="text-[10px] text-muted-foreground mt-1">{ev.reporteJefeInmediatoAdjuntos.join(", ")}</p>}
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adicionales (imágenes, documentos o enlaces)</label>
+                    <input type="file" multiple disabled={investigacionFaltantesCerrada} onChange={(e) => {
+                      const nombres = Array.from(e.target.files ?? []).map((f) => f.name);
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].soportesAdicionalesInvestigacion = [...(ev.soportesAdicionalesInvestigacion ?? []), ...nombres]; setLocalEventos([...eventos]); }
+                      e.target.value = "";
+                    }} className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2 disabled:opacity-60 disabled:cursor-not-allowed" />
+                    {!investigacionFaltantesCerrada && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="url"
+                          value={soporteInvestigacionUrl}
+                          onChange={(e) => setSoporteInvestigacionUrl(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              agregarSoporteInvestigacionUrl();
+                            }
+                          }}
+                          placeholder="https://..."
+                          className="flex-1 min-w-0 text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <button
+                          type="button"
+                          onClick={agregarSoporteInvestigacionUrl}
+                          disabled={!soporteInvestigacionUrl.trim()}
+                          className="px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Agregar enlace
+                        </button>
+                      </div>
+                    )}
+                    {!!ev.soportesAdicionalesInvestigacion?.length && <p className="text-[10px] text-muted-foreground mt-1">{ev.soportesAdicionalesInvestigacion.join(", ")}</p>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Conclusión investigación *</label>
+                    <select value={ev.codigoConclusion ?? ""} disabled={investigacionFaltantesCerrada} onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].codigoConclusion = (e.target.value || undefined) as Evento["codigoConclusion"]; setLocalEventos([...eventos]); }
+                    }} className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background disabled:opacity-60 disabled:cursor-not-allowed">
+                      <option value="">Seleccionar conclusión...</option>
+                      {CONCLUSIONES_INVESTIGACION_FALTANTES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Terminal responsable *</label>
+                    <select value={ev.terminalResponsable ?? ""} disabled={investigacionFaltantesCerrada} onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].terminalResponsable = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }} className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background disabled:opacity-60 disabled:cursor-not-allowed">
+                      <option value="">Seleccionar terminal...</option>
+                      {[...new Set(Object.values(PAISES_REGIONALES).flatMap((r) => Object.values(r).flat()))].map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Equipo responsable *</label>
+                    <input value={ev.equipoResponsable ?? ""} disabled={investigacionFaltantesCerrada} onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) { eventos[idx].equipoResponsable = e.target.value || undefined; setLocalEventos([...eventos]); }
+                    }} className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background disabled:opacity-60 disabled:cursor-not-allowed" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Código empleado responsable *</label>
+                    <input value={ev.codigoEmpleadoResponsable ?? ""} disabled={investigacionFaltantesCerrada} onChange={(e) => {
+                      const codigo = e.target.value;
+                      const persona = personas.find((p) => p.cedula === codigo || p.id === codigo);
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) {
+                        eventos[idx].codigoEmpleadoResponsable = codigo || undefined;
+                        eventos[idx].nombreEmpleadoResponsable = persona?.nombre;
+                        setLocalEventos([...eventos]);
+                      }
+                    }} className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background disabled:opacity-60 disabled:cursor-not-allowed" />
+                    {ev.codigoEmpleadoResponsable && !ev.nombreEmpleadoResponsable && <p className="text-[10px] text-amber-700 mt-1">No se encontró empleado con ese código.</p>}
+                    {ev.nombreEmpleadoResponsable && <p className="text-[10px] text-green-700 mt-1">Empleado: {ev.nombreEmpleadoResponsable}</p>}
+                  </div>
+                </div>
+                {ev.estadoFlujo !== "cerrado" && (
+                  <button onClick={cerrarInvestigacionFaltantes} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
+                    <Check className="w-3.5 h-3.5" /> Cerrar Investigación Faltantes
+                  </button>
+                )}
+              </section>
+            </>
+          )}
+
           {/* Hallazgos de la investigación — Dineros y Unidades */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800">Hallazgos de la investigación</h3>
               <p className="text-[10px] text-muted-foreground leading-snug">
@@ -1498,7 +1779,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Gestión de Seguridad — Dineros y Unidades */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && ev.estadoFlujo !== "cerrado" && (
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-blue-800">🛡️ Gestión de Seguridad</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1765,7 +2046,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Hallazgos de investigación — read-only para cerrados */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_criticos") && ev.estadoFlujo === "cerrado" &&
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_criticos") && !investigacionFaltantes && ev.estadoFlujo === "cerrado" &&
             (ev.unidadesFaltantes != null || ev.contenidoMercancia || ev.lugarLatitud != null || ev.lugarLongitud != null || ev.personasResponsablesHechos
               || (ev.presentesHallazgo && ev.presentesHallazgo.length) || (ev.responsablesHallazgo && ev.responsablesHallazgo.length) || ev.registroWorkflow
               || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
@@ -1832,6 +2113,7 @@ export function RecordDetailDrawer() {
 
           {/* Gestión SG — vista read-only si cerrado (Dineros / Unidades) */}
           {(ev.categoria === "dineros" || ev.categoria === "unidades")
+            && !investigacionFaltantes
             && ev.estadoFlujo === "cerrado"
             && !!(ev.intervencionSeguridad || ev.causaRaiz || ev.estadoGestionSG || ev.grupoCierre) && (
             <section className="bg-muted/40 rounded-xl p-4">

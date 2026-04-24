@@ -125,6 +125,7 @@ export interface Evento {
   eventosAsociados?: string[];
   categoria: CategoriaEvento;
   tipoEvento: string;
+  subflujo?: "investigacion_faltantes";
   modulo?: string;
   fuenteExterna?: string;
   origenEvento?: "manual" | "automatico";
@@ -174,6 +175,25 @@ export interface Evento {
   valorDinero?: number;
   // Unidades:
   codigoNovedad?: string;
+  codigoConclusion?: "301" | "302" | "401" | "402" | "411";
+  descripcionNovedad?: string;
+  ultimoEquipoAsignado?: string;
+  fechaNovedad?: string;
+  valorDeclarado?: number;
+  hallazgosOrigen?: string;
+  hallazgosDestino?: string;
+  versionRemitente?: string;
+  versionDestinatario?: string;
+  versionEntrega?: string;
+  conceptoSeguridad?: string;
+  conceptoAuditoria?: string;
+  comentariosAdicionales?: string;
+  reporteJefeInmediatoAdjuntos?: string[];
+  soportesAdicionalesInvestigacion?: string[];
+  terminalResponsable?: string;
+  equipoResponsable?: string;
+  codigoEmpleadoResponsable?: string;
+  nombreEmpleadoResponsable?: string;
   // Proceso Evidencias:
   resultadoIA?: "cumple" | "no_cumple";
   veredictoOperador?: "confirma" | "falso_negativo" | "falso_positivo";
@@ -441,7 +461,7 @@ export type CausalFaltante =
 export interface InsumoFaltante {
   id: string;
   guia: string;
-  codigoNovedad: "100" | "101" | "300" | "400" | "403" | "529";
+  codigoNovedad: "100" | "101" | "300" | "400" | "403" | "529" | "829";
   estadoRevision: EstadoRevisionInsumo;
   causal?: CausalFaltante;
   checkpointOrigen?: boolean;
