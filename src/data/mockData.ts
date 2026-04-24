@@ -634,7 +634,7 @@ export const eventos: Evento[] = [
     fecha: "2026-02-03",
     descripcionHechos: "Paquete reportado como faltante en guía 19900293001. Cliente Textiles La Merced solicitó investigación urgente. Último escaneo en bodega Bogotá checkpoint 3.",
     valorAfectacion: 1850000,
-    codigoNovedad: "400",
+    codigoNovedad: "101",
     guias: ["19900293001"],
     personasResponsables: [{ personaId: "71234567", cedula: "71234567", nombre: "Edgar Mauricio Salcedo Ruiz", rol: "responsable" }],
     personasParticipantes: [{ personaId: "1036452781", cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya", rol: "participante" }],
@@ -664,9 +664,9 @@ export const eventos: Evento[] = [
     terminal: "Medellín",
     ciudad: "Medellín",
     fecha: "2026-02-13",
-    descripcionHechos: "Segundo faltante vinculado a la misma terminal y mismo perfil. Guía 20000001004 reportada con novedad 400. Posible patrón.",
+    descripcionHechos: "Segundo faltante vinculado a la misma terminal y mismo perfil. Guía 20000001004 reportada con causal 101. Posible patrón.",
     valorAfectacion: 3800000,
-    codigoNovedad: "400",
+    codigoNovedad: "101",
     guias: ["20000001004"],
     personasResponsables: [{ personaId: "71234567", cedula: "71234567", nombre: "Edgar Mauricio Salcedo Ruiz", rol: "responsable" }],
     personasParticipantes: [{ personaId: "1036452781", cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya", rol: "participante" }],
@@ -725,7 +725,7 @@ export const eventos: Evento[] = [
     fecha: "2026-02-18",
     descripcionHechos: "Faltante parcial en guía con alto valor. Se confirmó contaminación de producto en bodega Bogotá.",
     valorAfectacion: 1650000,
-    codigoNovedad: "300",
+    codigoNovedad: "101",
     guias: ["20000001001"],
     personasResponsables: [{ personaId: "39876543", cedula: "39876543", nombre: "Claudia Marcela Patiño Soto", rol: "responsable" }],
     personasParticipantes: [],
@@ -758,7 +758,7 @@ export const eventos: Evento[] = [
     fecha: "2026-03-02",
     descripcionHechos: "Segunda novedad en el mismo mes en terminal Barranquilla. Incremento inusual.",
     valorAfectacion: 2250000,
-    codigoNovedad: "400",
+    codigoNovedad: "101",
     guias: ["20000001009"],
     personasResponsables: [],
     personasParticipantes: [],
@@ -783,7 +783,7 @@ export const eventos: Evento[] = [
     fecha: "2026-03-06",
     descripcionHechos: "Faltante en ruta Bucaramanga-Bogotá. Conductor reportó irregularidad antes de despacho. Vehículo PLT-456.",
     valorAfectacion: 5200000,
-    codigoNovedad: "529",
+    codigoNovedad: "101",
     guias: ["20000001007"],
     personasResponsables: [{ personaId: "79845623", cedula: "79845623", nombre: "Hernán Darío Ríos Zapata", rol: "responsable" }],
     personasParticipantes: [{ personaId: "1067891234", cedula: "1067891234", nombre: "Javier Ernesto Castillo Nieto", rol: "participante" }],
@@ -812,7 +812,7 @@ export const eventos: Evento[] = [
     fecha: "2026-03-11",
     descripcionHechos: "Tercer evento con Carlos Pérez como participante en 30 días. Guía 20000001015.",
     valorAfectacion: 1500000,
-    codigoNovedad: "400",
+    codigoNovedad: "101",
     guias: ["20000001015"],
     personasResponsables: [],
     personasParticipantes: [{ personaId: "1036452781", cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya", rol: "participante" }],
@@ -838,7 +838,7 @@ export const eventos: Evento[] = [
     fecha: "2026-03-10",
     descripcionHechos: "Faltante resuelto. Error operativo en escaneo. Mercancía en bodega de destino.",
     valorAfectacion: 1350000,
-    codigoNovedad: "403",
+    codigoNovedad: "101",
     guias: ["20000001003"],
     personasResponsables: [{ personaId: "52341289", cedula: "52341289", nombre: "Gloria Patricia Restrepo Mesa", rol: "responsable" }],
     personasParticipantes: [],
@@ -870,7 +870,7 @@ export const eventos: Evento[] = [
     fecha: "2026-02-26",
     descripcionHechos: "Primer faltante del ciclo en Terminal Barranquilla. Guía con alto valor declarado.",
     valorAfectacion: 3800000,
-    codigoNovedad: "400",
+    codigoNovedad: "101",
     guias: ["20000001004"],
     personasResponsables: [{ personaId: "43567891", cedula: "43567891", nombre: "Marta Cecilia Quintero Álvarez", rol: "responsable" }],
     personasParticipantes: [],
@@ -897,7 +897,7 @@ export const eventos: Evento[] = [
     fecha: "2026-03-08",
     descripcionHechos: "Tercer faltante en Terminal Barranquilla en menos de 30 días. Sin responsable asignado. Patrón sistemático.",
     valorAfectacion: 2850000,
-    codigoNovedad: "400",
+    codigoNovedad: "101",
     guias: ["20000001009"],
     personasResponsables: [],
     personasParticipantes: [{ personaId: "8765432", cedula: "8765432", nombre: "Roberto Carlos Mendoza Lara", rol: "participante" }],
@@ -2093,7 +2093,7 @@ export const alertasIA: AlertaIA[] = [
     id: "AI-003",
     severidad: "alta",
     titulo: "Terminal Barranquilla: incremento del 40% en faltantes código 400",
-    descripcion: "La Terminal Barranquilla registra un incremento del 40% en faltantes con código de novedad 400 comparado con el mes anterior. 3 casos abiertos o pendientes en los últimos 21 días sin responsable asignado.",
+    descripcion: "La Terminal Barranquilla registra un incremento del 40% en faltantes con causal 101 comparado con el mes anterior. 3 casos abiertos o pendientes en los últimos 21 días sin responsable asignado.",
     fechaDeteccion: "2026-03-08",
     tipo: "terminal_anomala",
     entidadesInvolucradas: [
@@ -3068,4 +3068,14 @@ function restaurarDatos() {
   } catch { /* corrupted data, ignore */ }
 }
 
+/** Unidades: el código de novedad del evento sigue al tipo (causal 100 / 101), no a códigos legacy (300, 400, etc.). */
+function alinearCodigoNovedadUnidadesDesdeTipo() {
+  for (const e of eventos) {
+    if (e.categoria !== "unidades") continue;
+    if (/\b101\b/.test(e.tipoEvento)) e.codigoNovedad = "101";
+    else if (/\b100\b/.test(e.tipoEvento)) e.codigoNovedad = "100";
+  }
+}
+
 restaurarDatos();
+alinearCodigoNovedadUnidadesDesdeTipo();

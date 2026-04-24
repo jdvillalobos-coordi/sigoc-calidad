@@ -400,6 +400,12 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       rol: (categoria === "dineros" ? "participante" : "responsable") as "responsable" | "participante",
     }));
 
+    /** Código de novedad alineado al tipo de evento (100 / 101) en Unidades. */
+    const codigoNovedadUnidades: Evento["codigoNovedad"] | undefined =
+      categoria === "unidades"
+        ? (/\b101\b/.test(tipoEvento) ? "101" : /\b100\b/.test(tipoEvento) ? "100" : undefined)
+        : undefined;
+
     const nuevoEvento: Evento = {
       id,
       estado: "abierto",
@@ -431,6 +437,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       descripcionHechos: descripcion,
       valorAfectacion: categoria !== "pqr" && valorAfectacion ? Number(valorAfectacion) : undefined,
       valorDinero: categoria === "dineros" && valorAfectacion ? Number(valorAfectacion) : undefined,
+      codigoNovedad: codigoNovedadUnidades,
       direccion: categoria === "listas_vinculantes" ? direccion || undefined : undefined,
       nitCliente: nitCliente || undefined,
       nombreCliente: nombreCliente || undefined,

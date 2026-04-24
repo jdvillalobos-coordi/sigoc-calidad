@@ -283,6 +283,39 @@ function validarCierreDinU(ev: Evento): string[] {
   return f;
 }
 
+/**
+ * Presentes / responsables de hallazgos se reflejan en `personasParticipantes` y `personasResponsables`
+ * (resumen superior y tarjetas inferiores). Por cédula, la fila de hallazgo sustituye al vínculo duplicado.
+ */
+function sincronizarPersonasHallazgoConVinculos(evId: string) {
+  const idx = eventos.findIndex((x) => x.id === evId);
+  if (idx === -1) return;
+  const e = eventos[idx];
+  if (e.categoria !== "dineros" && e.categoria !== "unidades" && e.categoria !== "eventos_criticos") return;
+
+  const cedPresentes = new Set((e.presentesHallazgo ?? []).map((x) => x.cedula));
+  const fromHallazgoP: PersonaVinculada[] = (e.presentesHallazgo ?? []).map((f) => ({
+    personaId: f.personaId,
+    cedula: f.cedula,
+    nombre: f.nombre,
+    rol: "participante",
+    equipo: f.equipo?.trim() ? f.equipo.trim() : undefined,
+  }));
+  const restPart = (e.personasParticipantes ?? []).filter((p) => !cedPresentes.has(p.cedula));
+  eventos[idx].personasParticipantes = [...fromHallazgoP, ...restPart];
+
+  const cedRespH = new Set((e.responsablesHallazgo ?? []).map((x) => x.cedula));
+  const fromHallazgoR: PersonaVinculada[] = (e.responsablesHallazgo ?? []).map((f) => ({
+    personaId: f.personaId,
+    cedula: f.cedula,
+    nombre: f.nombre,
+    rol: "responsable",
+    equipo: f.equipo?.trim() ? f.equipo.trim() : undefined,
+  }));
+  const restResp = (e.personasResponsables ?? []).filter((p) => !cedRespH.has(p.cedula));
+  eventos[idx].personasResponsables = [...fromHallazgoR, ...restResp];
+}
+
 function HallazgoPersonasConEquipo({
   ev, setLocalEventos, field, label, requireEquipo = false,
 }: {
@@ -307,6 +340,7 @@ function HallazgoPersonasConEquipo({
     } else {
       eventos[idx].responsablesHallazgo = nuevo.length ? nuevo : undefined;
     }
+    sincronizarPersonasHallazgoConVinculos(ev.id);
     setLocalEventos([...eventos]);
   }
 
@@ -501,6 +535,16 @@ export function RecordDetailDrawer() {
       },
     ];
     eventos[idx].timelineSeguimiento = undefined;
+    _setLocalEventos([...eventos]);
+    bumpData();
+  }, [drawer.id, drawer.tipo, bumpData]);
+
+  /** Al abrir el detalle, alinear vínculos del evento con hallazgos (evita listas desconectadas). */
+  useEffect(() => {
+    if (drawer.tipo !== "registro" || !drawer.id) return;
+    const e = eventos.find((x) => x.id === drawer.id);
+    if (!e || (e.categoria !== "dineros" && e.categoria !== "unidades" && e.categoria !== "eventos_criticos")) return;
+    sincronizarPersonasHallazgoConVinculos(drawer.id);
     _setLocalEventos([...eventos]);
     bumpData();
   }, [drawer.id, drawer.tipo, bumpData]);
@@ -1082,7 +1126,9 @@ export function RecordDetailDrawer() {
                           <AvatarInicial nombre={pv.nombre} size="sm" />
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-medium">{pv.nombre}</span>
-                            <span className="text-xs text-muted-foreground ml-2">ID {pv.cedula}{p?.cargo ? ` · ${p.cargo}` : ""}</span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ID {pv.cedula}{p?.cargo ? ` · ${p.cargo}` : ""}{pv.equipo ? ` · Equipo ${pv.equipo}` : ""}
+                            </span>
                           </div>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap ${pv.rol === "responsable" ? "bg-red-50 text-red-700 border-red-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
                             {pv.rol === "responsable" ? "Responsable" : "Presente"}
@@ -1274,6 +1320,9 @@ export function RecordDetailDrawer() {
                 <p className="text-xs text-muted-foreground">Personas (registro legado, solo lectura): {ev.personasResponsablesHechos}</p>
               ) : (
                 <div className="space-y-3">
+                  <p className="text-[10px] text-muted-foreground leading-snug">
+                    Quienes agregues en <span className="font-medium text-foreground">presentes</span> o <span className="font-medium text-foreground">responsables</span> se reflejan en las secciones <span className="font-medium text-foreground">Personas participantes</span> y <span className="font-medium text-foreground">Personas responsables</span> más abajo (y en el resumen del evento).
+                  </p>
                   <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="presentesHallazgo" label="Personas presentes (ID y Equipo)" />
                   <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="responsablesHallazgo" label="Personas responsables (ID y Equipo) (opcional)" />
                 </div>
@@ -1367,6 +1416,9 @@ export function RecordDetailDrawer() {
               <p className="text-[10px] text-muted-foreground leading-snug">
                 El seguimiento día a día del caso va en <span className="font-medium text-foreground">Timeline de seguimiento</span> (más abajo): agrega anotaciones con fecha y autor.
               </p>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Quienes agregues en <span className="font-medium text-foreground">presentes</span> o <span className="font-medium text-foreground">responsables</span> se reflejan en <span className="font-medium text-foreground">Personas participantes</span> y <span className="font-medium text-foreground">Personas responsables</span> más abajo (y en el resumen del evento).
+              </p>
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Contenido / Recurso afectado</label>
                 <select
@@ -1414,6 +1466,9 @@ export function RecordDetailDrawer() {
                 </div>
               </div>
               <div className="space-y-3">
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  Quienes agregues en <span className="font-medium text-foreground">presentes</span> o <span className="font-medium text-foreground">responsables</span> se reflejan en <span className="font-medium text-foreground">Personas participantes</span> y <span className="font-medium text-foreground">Personas responsables</span> más abajo (y en el resumen del evento).
+                </p>
                 <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="presentesHallazgo" label="Personas presentes (ID y Equipo)" />
                 <HallazgoPersonasConEquipo ev={ev} setLocalEventos={setLocalEventos} field="responsablesHallazgo" label="Personas responsables (ID y Equipo) (opcional)" />
               </div>
@@ -1865,7 +1920,7 @@ export function RecordDetailDrawer() {
                       <AvatarInicial nombre={p.nombre} size="md" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm">{p.nombre}</div>
-                        <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
+                        <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}{pv.equipo ? ` · Equipo ${pv.equipo}` : ""}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">Responsable</span>
                     </div>
@@ -1891,7 +1946,7 @@ export function RecordDetailDrawer() {
                       <AvatarInicial nombre={p.nombre} size="md" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm">{p.nombre}</div>
-                        <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}</div>
+                        <div className="text-xs text-muted-foreground">ID {p.cedula} · {p.cargo}{pv.equipo ? ` · Equipo ${pv.equipo}` : ""}</div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Participante</span>
                     </div>
