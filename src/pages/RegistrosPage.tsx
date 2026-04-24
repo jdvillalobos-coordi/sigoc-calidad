@@ -8,6 +8,7 @@ import type { CategoriaEvento } from "@/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 import { format, isWithinInterval, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
@@ -30,6 +31,17 @@ const PAGE_SIZES: { value: PageSizeOpt; label: string }[] = [
   { value: 50,    label: "50" },
   { value: 100,   label: "100" },
   { value: "all", label: "Todo" },
+];
+
+type OperadorAsignacion = { id: string; nombre: string; cargo: string };
+
+const OPERADORES_BASE: OperadorAsignacion[] = [
+  { id: "u-sandra", nombre: "Sandra Herrera", cargo: "Coordinadora Nacional de Calidad" },
+  { id: "u-jorge", nombre: "Jorge Castaño", cargo: "Interventor de Faltantes" },
+  { id: "u-ana", nombre: "Ana Martínez", cargo: "Analista de Seguridad" },
+  { id: "u-diego", nombre: "Diego Ramírez", cargo: "Gestor de Calidad" },
+  { id: "u-lucia", nombre: "Lucía Gómez", cargo: "Agente Logístico" },
+  { id: "u-nicolas", nombre: "Nicolás Ríos Castaño", cargo: "Contralor Nacional de Calidad" },
 ];
 
 // ── Componentes pequeños ─────────────────────────────────────
@@ -88,7 +100,7 @@ function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; on
 // ── Página principal ─────────────────────────────────────────
 
 export default function RegistrosPage() {
-  const { abrirRegistro, setNuevaRegistroAbierto, setFormPrefill, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro, dataVersion } = useApp();
+  const { abrirRegistro, setNuevaRegistroAbierto, setFormPrefill, busquedaQuery, setBusquedaQuery, registrosNavFiltro, setRegistrosNavFiltro, dataVersion, bumpData } = useApp();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string>("todos");
   const [estadoFiltro, setEstadoFiltro]       = useState<string>("todos");
   const [estadoFlujoFiltro, setEstadoFlujoFiltro] = useState<string>("todos");
@@ -107,6 +119,8 @@ export default function RegistrosPage() {
   const [sortDir, setSortDir]                 = useState<"asc" | "desc">("desc");
   const [page, setPage]                       = useState(1);
   const [perPage, setPerPage]                 = useState<PageSizeOpt>(50);
+  const [seleccionados, setSeleccionados]     = useState<Set<string>>(new Set());
+  const [operadorDestinoId, setOperadorDestinoId] = useState("");
 
   // Aplica el filtro de navegación al montar (viene del Panel de Control)
   useEffect(() => {
@@ -146,6 +160,16 @@ export default function RegistrosPage() {
     const map = new Map<string, string>();
     eventos.forEach((e) => { if (e.asignadoA?.id) map.set(e.asignadoA.id, e.asignadoA.nombre); });
     return Array.from(map.entries()).map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [dataVersion]);
+
+  const operadoresAsignacion = useMemo(() => {
+    const map = new Map<string, OperadorAsignacion>();
+    OPERADORES_BASE.forEach((op) => map.set(op.id, op));
+    map.set(usuarioLogueado.id, { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo });
+    eventos.forEach((e) => {
+      if (e.asignadoA) map.set(e.asignadoA.id, e.asignadoA);
+    });
+    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [dataVersion]);
 
   const q = busquedaQuery.toLowerCase().trim();
@@ -199,6 +223,68 @@ export default function RegistrosPage() {
   const effectivePerPage = perPage === "all" ? filtered.length : perPage;
   const pages = effectivePerPage > 0 ? Math.ceil(filtered.length / effectivePerPage) : 1;
   const paged = perPage === "all" ? filtered : filtered.slice((page - 1) * effectivePerPage, page * effectivePerPage);
+  const eventosSeleccionablesPagina = paged.filter((e) => e.estadoFlujo !== "cerrado").map((e) => e.id);
+  const todosPaginaSeleccionados = eventosSeleccionablesPagina.length > 0 && eventosSeleccionablesPagina.every((id) => seleccionados.has(id));
+  const operadorDestino = operadoresAsignacion.find((op) => op.id === operadorDestinoId);
+
+  function toggleSeleccion(id: string) {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSeleccionPagina() {
+    setSeleccionados((prev) => {
+      const next = new Set(prev);
+      if (todosPaginaSeleccionados) eventosSeleccionablesPagina.forEach((id) => next.delete(id));
+      else eventosSeleccionablesPagina.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  function asignarEventosSeleccionados(operador: OperadorAsignacion | null) {
+    const ahora = new Date().toISOString();
+    let actualizados = 0;
+    eventos.forEach((evento) => {
+      if (!seleccionados.has(evento.id) || evento.estadoFlujo === "cerrado") return;
+      if (operador) {
+        evento.asignadoA = operador;
+        evento.fechaAsignacion = ahora;
+        evento.asignadoPor = { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre };
+        evento.historial.push({
+          id: `h-${Date.now()}-${evento.id}`,
+          fecha: ahora,
+          usuarioNombre: usuarioLogueado.nombre,
+          accion: `Asignó el evento a ${operador.nombre}`,
+        });
+      } else {
+        const anterior = evento.asignadoA?.nombre ?? "sin asignación";
+        delete evento.asignadoA;
+        delete evento.fechaAsignacion;
+        evento.asignadoPor = { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre };
+        evento.historial.push({
+          id: `h-${Date.now()}-${evento.id}`,
+          fecha: ahora,
+          usuarioNombre: usuarioLogueado.nombre,
+          accion: `Liberó el evento (antes asignado a ${anterior})`,
+        });
+      }
+      actualizados += 1;
+    });
+
+    if (actualizados === 0) {
+      toast({ variant: "destructive", title: "No hay eventos abiertos seleccionados" });
+      return;
+    }
+
+    setSeleccionados(new Set());
+    setOperadorDestinoId("");
+    bumpData();
+    toast({ title: operador ? `${actualizados} evento(s) asignado(s)` : `${actualizados} evento(s) liberado(s)` });
+  }
 
   function toggleSort(field: typeof sortField) {
     if (sortField === field) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -343,6 +429,46 @@ export default function RegistrosPage() {
             <button onClick={limpiarFiltros} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">Limpiar filtros</button>
           </div>
         )}
+        {seleccionados.size > 0 && (
+          <div className="flex items-center gap-2 flex-wrap rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+            <span className="text-xs font-semibold text-primary">{seleccionados.size} seleccionado(s)</span>
+            <button
+              onClick={() => asignarEventosSeleccionados({ id: usuarioLogueado.id, nombre: usuarioLogueado.nombre, cargo: usuarioLogueado.cargo })}
+              className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+            >
+              Tomar seleccionados
+            </button>
+            <select
+              value={operadorDestinoId}
+              onChange={(e) => setOperadorDestinoId(e.target.value)}
+              className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Asignar a...</option>
+              {operadoresAsignacion.map((op) => (
+                <option key={op.id} value={op.id}>{op.nombre} — {op.cargo}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => operadorDestino && asignarEventosSeleccionados(operadorDestino)}
+              disabled={!operadorDestino}
+              className="px-3 py-1.5 rounded-lg border border-border bg-background text-xs font-medium hover:bg-muted disabled:opacity-40 transition-colors"
+            >
+              Asignar
+            </button>
+            <button
+              onClick={() => asignarEventosSeleccionados(null)}
+              className="px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium hover:bg-amber-100 transition-colors"
+            >
+              Liberar
+            </button>
+            <button
+              onClick={() => { setSeleccionados(new Set()); setOperadorDestinoId(""); }}
+              className="text-xs text-muted-foreground hover:text-foreground underline"
+            >
+              Cancelar selección
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Cuerpo: tabla + panel ── */}
@@ -354,6 +480,16 @@ export default function RegistrosPage() {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-muted/90 backdrop-blur z-10">
                 <tr className="border-b border-border">
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={todosPaginaSeleccionados}
+                      onChange={toggleSeleccionPagina}
+                      disabled={eventosSeleccionablesPagina.length === 0}
+                      className="accent-primary"
+                      aria-label="Seleccionar eventos de la página"
+                    />
+                  </th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-32">Categoría</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground w-28"
                     onClick={() => toggleSort("id")}>
@@ -386,6 +522,17 @@ export default function RegistrosPage() {
                     <tr key={e.id}
                       onClick={() => abrirRegistro(e.id)}
                       className={`cursor-pointer transition-colors hover:bg-muted/40 ${slaSinAsignar ? "bg-red-50/90" : "bg-card"}`}>
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={seleccionados.has(e.id)}
+                          disabled={e.estadoFlujo === "cerrado"}
+                          onClick={(ev) => ev.stopPropagation()}
+                          onChange={() => toggleSeleccion(e.id)}
+                          className="accent-primary disabled:opacity-30"
+                          aria-label={`Seleccionar evento ${e.id}`}
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <CategoriaBadge categoria={e.categoria} />
                       </td>

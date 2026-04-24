@@ -231,6 +231,8 @@ export interface Evento {
   // === FLUJO DE TRABAJO ===
   estadoFlujo: EstadoFlujo;
   asignadoA?: { id: string; nombre: string; cargo: string };
+  fechaAsignacion?: string;
+  asignadoPor?: { id: string; nombre: string };
   tipoEscalamiento?: TipoEscalamiento;
   escaladoA?: { id: string; nombre: string; cargo: string };
   escaladoPor?: { id: string; nombre: string; cargo?: string };

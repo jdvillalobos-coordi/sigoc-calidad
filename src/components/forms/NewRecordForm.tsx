@@ -453,11 +453,13 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
       soportesAdjuntos: sinPersonasAperturaDinUnid ? undefined : (adjuntos.length > 0 ? adjuntos : undefined),
       fuenteExterna: FUENTES[categoria!],
       estadoFlujo: "abierto",
-      asignadoA: categoria === "pqr" ? undefined : {
+      asignadoA: {
         id: usuarioLogueado.id,
         nombre: usuarioLogueado.nombre,
         cargo: usuarioLogueado.cargo,
       },
+      fechaAsignacion: fechaRegistroIso,
+      asignadoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
       usuarioRegistro: usuarioLogueado.id,
       perfilUsuario: usuarioLogueado.cargo,
       terminalUsuario: usuarioLogueado.terminal,
@@ -508,10 +510,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
           </div>
           {categoria && !eventoCreado && (
             <p className="text-xs text-muted-foreground mt-2">
-              {categoria === "pqr"
-                ? <>Este registro quedará <span className="font-semibold text-foreground">sin asignar</span> para que un Agente de SPL lo tome · Estado: <span className="font-semibold text-foreground">Abierto</span></>
-                : <>Este evento se asignará automáticamente a <span className="font-semibold text-foreground">{usuarioLogueado.nombre}</span> · Estado: <span className="font-semibold text-foreground">Abierto</span></>
-              }
+              <>Este registro se asignará automáticamente a <span className="font-semibold text-foreground">{usuarioLogueado.nombre}</span> · Estado: <span className="font-semibold text-foreground">Abierto</span></>
             </p>
           )}
         </div>
@@ -1125,7 +1124,7 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
             <div className="flex flex-col items-center gap-4 py-8">
               <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-2xl">✅</div>
               <p className="text-sm text-center text-muted-foreground">
-                El evento <span className="font-bold text-foreground">{eventoCreado}</span> fue creado exitosamente{categoria === "pqr" ? " y está disponible para asignación." : <> y asignado a <span className="font-semibold">{usuarioLogueado.nombre}</span>.</>}
+                El evento <span className="font-bold text-foreground">{eventoCreado}</span> fue creado exitosamente y asignado a <span className="font-semibold">{usuarioLogueado.nombre}</span>.
               </p>
               <div className="flex gap-3">
                 <button
