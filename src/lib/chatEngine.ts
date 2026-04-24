@@ -15,6 +15,7 @@ import {
   getMonedaPorTerminal,
 } from "@/data/mockData";
 import type { Evento, Persona } from "@/types";
+import { filtrarInsumosRCEParaEventoAutomatico } from "@/lib/businessRules/rceRules";
 
 export interface ChatMessage {
   id: string;
@@ -343,14 +344,13 @@ function intentEventosAuto(text: string): QueryResult | null {
   const n = normalize(text);
   if (!matchesAny(n, ["auto", "automatico", "automaticos", "rce", "recaudo", "novedad 100", "regla", "reglas"])) return null;
 
-  // Eventos auto-generados por reglas de negocio (RCE > $1M → dineros, novedad 100 → unidades).
-  // Las reglas finales aún las define negocio; por ahora reportamos el universo candidato del mock.
-  const candidatosDinero = insumosRCE.filter((r) => r.valorRecaudo > 1_000_000);
+  // Eventos auto-generados por reglas de negocio (RCE por recaudar >= $500.000 → dineros, novedad 100 → unidades).
+  const candidatosDinero = filtrarInsumosRCEParaEventoAutomatico(insumosRCE, eventos);
   const candidatosUnidad = insumosFaltantes.filter((f) => f.codigoNovedad === "100");
   const valorCandidatos = candidatosDinero.reduce((acc, r) => acc + r.valorRecaudo, 0);
 
   return {
-    content: `**Eventos auto-generados por reglas de negocio:**\n\nLos eventos de dineros y unidades se crean en automático cuando se cumple la regla, y el operador los toma desde el módulo Eventos (estado abierto, sin asignar). También se pueden crear manualmente.\n\n**Candidatos en el universo actual:**\n- Dineros (RCE > $1M): **${candidatosDinero.length}** guías por valor de ${formatCurrency(valorCandidatos)}\n- Unidades (novedad 100): **${candidatosUnidad.length}** guías\n\n**Top 3 RCE de mayor valor:**\n${candidatosDinero.sort((a, b) => b.valorRecaudo - a.valorRecaudo).slice(0, 3).map((r) => { const g = getGuia(r.guia); const m = getMonedaPorTerminal(g?.terminalOrigen); return `- Guía ${r.guia}: ${formatCurrency(r.valorRecaudo, m.currency, m.locale)}`; }).join("\n")}`,
+    content: `**Eventos auto-generados por reglas de negocio:**\n\nLos eventos de dineros y unidades se crean en automático cuando se cumple la regla, y el operador los toma desde el módulo Eventos (estado abierto, sin asignar). También se pueden crear manualmente.\n\n**Candidatos en el universo actual:**\n- Dineros (RCE por recaudar >= $500.000): **${candidatosDinero.length}** guías por valor de ${formatCurrency(valorCandidatos)}\n- Unidades (novedad 100): **${candidatosUnidad.length}** guías\n\n**Top 3 RCE de mayor valor:**\n${candidatosDinero.sort((a, b) => b.valorRecaudo - a.valorRecaudo).slice(0, 3).map((r) => { const g = getGuia(r.guia); const m = getMonedaPorTerminal(g?.terminalOrigen); return `- Guía ${r.guia}: ${formatCurrency(r.valorRecaudo, m.currency, m.locale)}`; }).join("\n")}`,
     entities: [],
   };
 }
@@ -429,12 +429,12 @@ export function generateInsights(): Array<{ title: string; description: string; 
     });
   }
 
-  const candidatosDinero = insumosRCE.filter((r) => r.valorRecaudo > 1_000_000);
+  const candidatosDinero = filtrarInsumosRCEParaEventoAutomatico(insumosRCE, eventos);
   if (candidatosDinero.length > 5) {
     const valor = candidatosDinero.reduce((acc, r) => acc + r.valorRecaudo, 0);
     insights.push({
       title: `${candidatosDinero.length} candidatos a evento auto-generado de dineros (${formatCurrency(valor)})`,
-      description: "Volumen alto de RCE > $1M que dispararían eventos automáticos. Verificar capacidad del equipo para tomarlos.",
+      description: "Volumen alto de RCE por recaudar >= $500.000 que dispararían eventos automáticos. Verificar capacidad del equipo para tomarlos.",
       severity: "alta",
       entities: [],
     });

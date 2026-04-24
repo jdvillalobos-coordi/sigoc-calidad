@@ -16,6 +16,7 @@ import type {
   CategoriaLesiva,
   DecisionPersona,
 } from "@/types";
+import { generarEventosAutomaticosRCE } from "@/lib/businessRules/rceRules";
 
 // ============================================================
 // USUARIO LOGUEADO
@@ -2674,7 +2675,7 @@ export const evidencias: Evidencia[] = [
 ];
 
 // ============================================================
-// INSUMOS BANDEJA — RCE (recaudo contra entrega > $1M)
+// INSUMOS BANDEJA — RCE (regla auto: por recaudar >= $500.000 COP)
 // ============================================================
 export const insumosRCE: InsumoRCE[] = [
   // --- Marzo ---
@@ -3077,5 +3078,26 @@ function alinearCodigoNovedadUnidadesDesdeTipo() {
   }
 }
 
+function aplicarReglasAutomaticasRCE() {
+  const nuevosEventos = generarEventosAutomaticosRCE(insumosRCE, eventos, {
+    guias,
+    usuario: usuarioLogueado,
+  });
+
+  if (nuevosEventos.length === 0) return;
+
+  eventos.unshift(...nuevosEventos);
+  nuevosEventos.forEach((evento) => {
+    const insumo = insumosRCE.find((rce) => rce.id === evento.insumoOrigenId);
+    if (!insumo) return;
+    insumo.estadoRevision = "abierto";
+    insumo.estadoRecaudo = "por_recaudar";
+    insumo.eventoGenerado = evento.id;
+    insumo.revisadoPor = "Regla automática RCE";
+    insumo.fechaRevision = evento.fechaRegistro.split("T")[0];
+  });
+}
+
 restaurarDatos();
 alinearCodigoNovedadUnidadesDesdeTipo();
+aplicarReglasAutomaticasRCE();

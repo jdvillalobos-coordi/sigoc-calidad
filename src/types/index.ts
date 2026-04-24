@@ -127,6 +127,10 @@ export interface Evento {
   tipoEvento: string;
   modulo?: string;
   fuenteExterna?: string;
+  origenEvento?: "manual" | "automatico";
+  insumoOrigenId?: string;
+  insumoOrigenTipo?: "rce" | "faltante" | "evidencia";
+  reglaOrigen?: string;
 
   // === ENTIDAD INVOLUCRADA ===
   tipoEntidad: "empleado" | "aliado_goo" | "aliado_droop" | "contratista" | "tercero" | "vehiculo" | "delincuencia" | "remitente" | "destinatario";
@@ -414,6 +418,8 @@ export interface InsumoRCE {
   id: string;
   guia: string;
   valorRecaudo: number;
+  /** Estado operativo del recaudo. Si no viene, los insumos pendientes legacy se tratan como por_recaudar. */
+  estadoRecaudo?: string;
   estadoRevision: EstadoRevisionInsumo;
   fechaAsignacion: string;
   revisadoPor?: string;

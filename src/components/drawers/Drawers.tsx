@@ -2829,9 +2829,9 @@ export function Guia360Drawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {guia.valorDeclarado >= 1000000 && (
+          {guia.valorDeclarado >= 500000 && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <div className="text-xs font-semibold text-green-700">💰 Guía con recaudo superior a $1M — Seguimiento RCE activo</div>
+              <div className="text-xs font-semibold text-green-700">💰 Guía con recaudo &gt;= $500.000 — Seguimiento RCE activo</div>
               <div className="text-xs text-green-600/70 mt-0.5">Esta guía requiere seguimiento preventivo de seguridad por su alto valor de recaudo ({(() => { const m = getMonedaPorTerminal(guia.terminalOrigen); return formatCurrency(guia.valorDeclarado, m.currency, m.locale); })()})</div>
             </div>
           )}
