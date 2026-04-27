@@ -2544,18 +2544,35 @@ export function Persona360Drawer() {
   const persona = personas.find((p) => p.id === drawer.id);
   if (!persona) return null;
 
+  const coincidePersonaVinculada = (pv: { personaId: string; cedula: string }) =>
+    pv.personaId === persona.id || pv.personaId === persona.cedula || pv.cedula === persona.cedula;
+
+  const obtenerRolesPersonaEnEvento = (e: Evento): { responsable: boolean; participante: boolean } => {
+    const responsable =
+      (e.personasResponsables ?? []).some(coincidePersonaVinculada)
+      || (e.responsablesHallazgo ?? []).some((f) => f.personaId === persona.id || f.cedula === persona.cedula)
+      || (!!e.codigoEmpleadoResponsable && (e.codigoEmpleadoResponsable === persona.cedula || e.codigoEmpleadoResponsable === persona.id));
+
+    const participante =
+      (e.personasParticipantes ?? []).some(coincidePersonaVinculada)
+      || (e.presentesHallazgo ?? []).some((f) => f.personaId === persona.id || f.cedula === persona.cedula);
+
+    return { responsable, participante };
+  };
+
   const evPersona = eventos.filter((e) =>
-    (e.personasResponsables ?? []).some((pv) => pv.personaId === persona.id) ||
-    (e.personasParticipantes ?? []).some((pv) => pv.personaId === persona.id)
+    (() => {
+      const roles = obtenerRolesPersonaEnEvento(e);
+      return roles.responsable || roles.participante;
+    })()
   );
   const estudios = estudiosSeguridad.filter((e) => e.personaId === persona.id);
-  const alertasPersona = alertasIA.filter(a =>
-    a.entidadesInvolucradas.some(e => e.tipo === "persona" && e.id === persona.id)
-  );
 
   const totalEv = evPersona.length;
   const evAbiertos = evPersona.filter(e => e.estado === "abierto").length;
   const evCerrados = evPersona.filter(e => e.estado === "cerrado").length;
+  const evComoResponsable = evPersona.filter((e) => obtenerRolesPersonaEnEvento(e).responsable).length;
+  const evComoParticipante = evPersona.filter((e) => obtenerRolesPersonaEnEvento(e).participante).length;
 
   const decisiones = evPersona.filter(e => e.decisionGH).map(e => ({
     decision: e.decisionGH!,
@@ -2568,22 +2585,26 @@ export function Persona360Drawer() {
     a.tipo === "reincidencia_persona" && a.entidadesInvolucradas.some(e => e.tipo === "persona" && e.id === persona.id)
   );
 
-  type TimelineItem = { fecha: string; icon: string; desc: string; badge?: React.ReactNode; onClick?: () => void };
+  type TimelineItem = { fecha: string; icon: string; desc: string; badge?: React.ReactNode; rolBadge?: React.ReactNode; onClick?: () => void };
 
   const timeline: TimelineItem[] = [
-    ...evPersona.map(e => ({
-      fecha: e.fecha,
-      icon: CAT_ICON[e.categoria] ?? "📋",
-      desc: `${e.id} — ${e.tipoEvento} · ${e.terminal}`,
-      badge: <EstadoBadge estado={e.estado} />,
-      onClick: () => abrirRegistro(e.id),
-    })),
-    ...alertasPersona.map(a => ({
-      fecha: a.fechaDeteccion,
-      icon: "🤖",
-      desc: a.titulo,
-      badge: <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${a.severidad === "critica" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>{a.severidad}</span>,
-    })),
+    ...evPersona.map(e => {
+      const roles = obtenerRolesPersonaEnEvento(e);
+      const rolBadge = roles.responsable && roles.participante
+        ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200 font-medium">Responsable y presente</span>
+        : roles.responsable
+          ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 font-medium">Responsable</span>
+          : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200 font-medium">Presente</span>;
+
+      return {
+        fecha: e.fecha,
+        icon: CAT_ICON[e.categoria] ?? "📋",
+        desc: `${e.id} — ${e.tipoEvento} · ${e.terminal}`,
+        rolBadge,
+        badge: <EstadoBadge estado={e.estado} />,
+        onClick: () => abrirRegistro(e.id),
+      };
+    }),
   ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
 
   return (
@@ -2614,7 +2635,12 @@ export function Persona360Drawer() {
           {/* Eventos asociados */}
           <div className={`border rounded-xl p-4 ${totalEv >= 5 ? "bg-red-50 border-red-200" : totalEv >= 3 ? "bg-amber-50 border-amber-200" : "bg-muted/40 border-border"}`}>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{totalEv} evento{totalEv !== 1 ? "s" : ""} asociado{totalEv !== 1 ? "s" : ""}</span>
+              <div>
+                <span className="text-sm font-semibold">{totalEv} evento{totalEv !== 1 ? "s" : ""} asociado{totalEv !== 1 ? "s" : ""}</span>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Responsable en {evComoResponsable} · Presente en {evComoParticipante}
+                </p>
+              </div>
               <div className="flex items-center gap-2 text-xs">
                 {evAbiertos > 0 && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200 font-medium">{evAbiertos} abierto{evAbiertos !== 1 ? "s" : ""}</span>}
                 {evCerrados > 0 && <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200 font-medium">{evCerrados} cerrado{evCerrados !== 1 ? "s" : ""}</span>}
@@ -2833,7 +2859,10 @@ export function Persona360Drawer() {
                     <span className="text-[11px] font-mono text-muted-foreground w-[72px] flex-shrink-0">{item.fecha}</span>
                     <span className="text-sm leading-none flex-shrink-0">{item.icon}</span>
                     <span className="text-xs flex-1 min-w-0 truncate">{item.desc}</span>
-                    {item.badge && <div className="flex-shrink-0">{item.badge}</div>}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {item.rolBadge && <div className="flex-shrink-0">{item.rolBadge}</div>}
+                      {item.badge && <div className="flex-shrink-0">{item.badge}</div>}
+                    </div>
                   </button>
                 ))}
               </div>

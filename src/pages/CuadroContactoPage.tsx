@@ -37,13 +37,27 @@ function Bar({ value, max }: { value: number; max: number }) {
   );
 }
 
+function obtenerRolesPersonaEnEvento(e: Evento, p: Pick<Persona, "id" | "cedula">): { responsable: boolean; participante: boolean } {
+  const coincidePersonaVinculada = (pv: { personaId: string; cedula: string }) =>
+    pv.personaId === p.id || pv.personaId === p.cedula || pv.cedula === p.cedula;
+
+  const responsable =
+    (e.personasResponsables ?? []).some(coincidePersonaVinculada)
+    || (e.responsablesHallazgo ?? []).some((f) => f.personaId === p.id || f.cedula === p.cedula)
+    // Investigación faltantes (300/400/829): vínculo por responsable identificado.
+    || (!!e.codigoEmpleadoResponsable && (e.codigoEmpleadoResponsable === p.cedula || e.codigoEmpleadoResponsable === p.id));
+
+  const participante =
+    (e.personasParticipantes ?? []).some(coincidePersonaVinculada)
+    || (e.presentesHallazgo ?? []).some((f) => f.personaId === p.id || f.cedula === p.cedula);
+
+  return { responsable, participante };
+}
+
 /** Diligencias de apertura + presentes/responsables en investigación. */
 function personaLigadaAEvento(e: Evento, p: Pick<Persona, "id" | "cedula">): boolean {
-  if ((e.personasResponsables ?? []).some((pv) => pv.personaId === p.id)) return true;
-  if ((e.personasParticipantes ?? []).some((pv) => pv.personaId === p.id)) return true;
-  if ((e.presentesHallazgo ?? []).some((f) => f.personaId === p.id || f.cedula === p.cedula)) return true;
-  if ((e.responsablesHallazgo ?? []).some((f) => f.personaId === p.id || f.cedula === p.cedula)) return true;
-  return false;
+  const roles = obtenerRolesPersonaEnEvento(e, p);
+  return roles.responsable || roles.participante;
 }
 
 const DECISION_LABELS: Record<string, string> = {
@@ -124,12 +138,23 @@ export default function CuadroContactoPage() {
       if (enCategoriaYFecha.length === 0) return null;
 
       const vinculacionesEnPeriodo = filtradosSoloFecha.filter((e) => personaLigadaAEvento(e, p));
+      const { eventosComoResponsable, eventosComoParticipante } = vinculacionesEnPeriodo.reduce(
+        (acc, e) => {
+          const roles = obtenerRolesPersonaEnEvento(e, p);
+          if (roles.responsable) acc.eventosComoResponsable += 1;
+          if (roles.participante) acc.eventosComoParticipante += 1;
+          return acc;
+        },
+        { eventosComoResponsable: 0, eventosComoParticipante: 0 }
+      );
       const lesivas = actividadesLesivas.filter((a) => a.personaId === p.id).length;
       const ultimaDecision = decisionesPersona.filter((d) => d.personaId === p.id).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
       return {
         ...p,
         totalEventos: vinculacionesEnPeriodo.length,
         eventosEnCategoriaFiltro: enCategoriaYFecha.length,
+        eventosComoResponsable,
+        eventosComoParticipante,
         lesivas,
         ultimaDecision,
       };
@@ -408,6 +433,9 @@ export default function CuadroContactoPage() {
                           subTabPersonas === "desvinculados" ? "text-muted-foreground" : "text-foreground"
                         }`}>{p.nombre}</span>
                         <span className="text-[10px] text-muted-foreground">{p.cargo} · {p.terminal}</span>
+                        <span className="text-[10px] text-muted-foreground block">
+                          Participación en eventos: Responsable {p.eventosComoResponsable} · Presente {p.eventosComoParticipante}
+                        </span>
                         {subTabPersonas === "desvinculados" && p.ultimaDecision && (
                           <span className="text-[10px] text-red-500 block">
                             Desvinculado el {p.ultimaDecision.fecha}
