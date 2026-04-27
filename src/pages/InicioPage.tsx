@@ -2,7 +2,7 @@ import React from "react";
 import { eventos, alertasIA, guias, evidencias, usuarioLogueado } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
-import { FolderOpen, Clock, Bot, Camera, Briefcase, ArrowUpRight, Check, CalendarDays, X, BarChart3, Timer } from "lucide-react";
+import { FolderOpen, Clock, Bot, Camera, Briefcase, ArrowUpRight, Check, CalendarDays, X, BarChart3, Timer, PieChart } from "lucide-react";
 import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
 import { format, isBefore, startOfDay, isAfter, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -26,8 +26,98 @@ export default function InicioPage() {
   const sinAsignarSla  = React.useMemo(() => eventos.filter(eventoSinAsignarSlaCritico).length, [dataVersion]);
   const nuevasIA       = alertasIA.filter((a) => a.estado === "nueva");
   const criticas       = nuevasIA.filter((a) => a.severidad === "critica");
+  const [categoriaResolucionFiltro, setCategoriaResolucionFiltro] = React.useState("todos");
+  const eventosCerrados = React.useMemo(() => eventos.filter((e) => e.estadoFlujo === "cerrado"), [dataVersion]);
+  const categoriasCerradas = React.useMemo(
+    () => Array.from(new Set(eventosCerrados.map((e) => e.categoria))).sort((a, b) => a.localeCompare(b)),
+    [eventosCerrados]
+  );
+  const eventosCerradosFiltrados = React.useMemo(
+    () => eventosCerrados.filter((e) => categoriaResolucionFiltro === "todos" || e.categoria === categoriaResolucionFiltro),
+    [eventosCerrados, categoriaResolucionFiltro]
+  );
+  const resolutionLabelMap: Record<string, string> = {
+    sin_hallazgos: "Sin hallazgos",
+    llamado_atencion_verbal: "Llamado verbal",
+    llamado_atencion_escrito: "Llamado escrito",
+    suspension_temporal: "Suspensión temporal",
+    proceso_disciplinario: "Proceso disciplinario",
+    desvinculacion: "Desvinculación",
+    escalamiento_seguridad: "Escalamiento seguridad",
+    caso_insuficiente: "Caso insuficiente",
+  };
+
+  const resoluciones = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    eventosCerradosFiltrados.forEach((e) => {
+      const key =
+        e.codigoConclusion
+          ? `Conclusión ${e.codigoConclusion}`
+          : e.resolucionFinal
+            ? (resolutionLabelMap[e.resolucionFinal] ?? e.resolucionFinal)
+            : e.grupoCierre
+              ? `Cierre: ${e.grupoCierre}`
+              : e.estadoGestionSG
+                ? `Gestión SG: ${e.estadoGestionSG}`
+                : "Sin clasificación de cierre";
+      map[key] = (map[key] ?? 0) + 1;
+    });
+    return Object.entries(map)
+      .map(([label, count]) => ({ label, count, pct: eventosCerradosFiltrados.length > 0 ? (count / eventosCerradosFiltrados.length) * 100 : 0 }))
+      .sort((a, b) => b.count - a.count);
+  }, [eventosCerradosFiltrados, dataVersion]);
+
+  const resolucionesUnidades = React.useMemo(() => {
+    const unidadesCerradas = eventosCerrados.filter((e) => e.categoria === "unidades");
+    const unidades100101 = unidadesCerradas.filter((e) => {
+      const codigo = e.codigoNovedad ?? "";
+      const esInv = e.subflujo === "investigacion_faltantes" || ["300", "400", "829"].includes(codigo);
+      return !esInv;
+    });
+    const unidades300400829 = unidadesCerradas.filter((e) => {
+      const codigo = e.codigoNovedad ?? "";
+      return e.subflujo === "investigacion_faltantes" || ["300", "400", "829"].includes(codigo);
+    });
+
+    const agrupar = (items: typeof unidadesCerradas, modo: "seguridad" | "investigacion") => {
+      const map: Record<string, number> = {};
+      items.forEach((e) => {
+        const key = modo === "investigacion"
+          ? (e.codigoConclusion ? `Conclusión ${e.codigoConclusion}` : "Sin conclusión de investigación")
+          : e.resolucionFinal
+            ? (resolutionLabelMap[e.resolucionFinal] ?? e.resolucionFinal)
+            : e.grupoCierre
+              ? `Cierre: ${e.grupoCierre}`
+              : e.estadoGestionSG
+                ? `Gestión SG: ${e.estadoGestionSG}`
+                : "Sin clasificación 100/101";
+        map[key] = (map[key] ?? 0) + 1;
+      });
+      return Object.entries(map)
+        .map(([label, count]) => ({ label, count, pct: items.length > 0 ? (count / items.length) * 100 : 0 }))
+        .sort((a, b) => b.count - a.count);
+    };
+
+    return {
+      total: unidadesCerradas.length,
+      total100101: unidades100101.length,
+      total300400829: unidades300400829.length,
+      data100101: agrupar(unidades100101, "seguridad"),
+      data300400829: agrupar(unidades300400829, "investigacion"),
+    };
+  }, [eventosCerrados, dataVersion]);
 
   const fechaHoy = format(new Date(), "EEEE d 'de' MMMM, yyyy", { locale: es });
+
+  const categoriaLabelMap: Record<string, string> = {
+    dineros: "Dineros",
+    unidades: "Unidades",
+    listas_vinculantes: "Listas vinculantes",
+    pqr: "Solicitudes Postventa",
+    disciplinarios: "Disciplinarios",
+    eventos_criticos: "Eventos críticos",
+    evidencias: "Evidencias",
+  };
 
   return (
     <div className="h-full overflow-y-auto">
@@ -112,6 +202,84 @@ export default function InicioPage() {
 
         {/* ── Consulta de eventos ── */}
         <ConsultaEventos dataVersion={dataVersion} />
+
+        {/* Resolución de eventos */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-primary" /> Cómo se están resolviendo los eventos
+            </h2>
+            <span className="text-[11px] text-muted-foreground">
+              {eventosCerradosFiltrados.length} cerrados (de {eventosCerrados.length})
+            </span>
+          </div>
+          <div className="bg-card border border-border rounded-xl p-4">
+            <div className="mb-3 flex items-center justify-end">
+              <select
+                className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring text-foreground min-w-[260px]"
+                value={categoriaResolucionFiltro}
+                onChange={(e) => setCategoriaResolucionFiltro(e.target.value)}
+              >
+                <option value="todos">Categoría: Todas</option>
+                {categoriasCerradas.map((categoria) => (
+                  <option key={categoria} value={categoria}>
+                    {categoriaLabelMap[categoria] ?? categoria}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {resoluciones.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Aún no hay eventos cerrados para mostrar su forma de resolución.</p>
+            ) : categoriaResolucionFiltro === "unidades" ? (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-xs font-semibold text-foreground mb-2">
+                    Unidades 100/101 · {resolucionesUnidades.total100101} evento{resolucionesUnidades.total100101 !== 1 ? "s" : ""}
+                  </h3>
+                  {resolucionesUnidades.data100101.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sin cierres 100/101 en el período.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {resolucionesUnidades.data100101.map((r) => (
+                        <div key={`u100-${r.label}`} className="flex items-center justify-between text-xs">
+                          <span className="text-foreground truncate pr-3">{r.label}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">{r.count} · {Math.round(r.pct)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-border">
+                  <h3 className="text-xs font-semibold text-foreground mb-2">
+                    Unidades 300/400/829 (investigación) · {resolucionesUnidades.total300400829} evento{resolucionesUnidades.total300400829 !== 1 ? "s" : ""}
+                  </h3>
+                  {resolucionesUnidades.data300400829.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sin cierres 300/400/829 en el período.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {resolucionesUnidades.data300400829.map((r) => (
+                        <div key={`u3-${r.label}`} className="flex items-center justify-between text-xs">
+                          <span className="text-foreground truncate pr-3">{r.label}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">{r.count} · {Math.round(r.pct)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {resoluciones.slice(0, 10).map((r) => (
+                  <div key={r.label} className="flex items-center justify-between text-xs">
+                    <span className="text-foreground truncate pr-3">{r.label}</span>
+                    <span className="text-muted-foreground whitespace-nowrap">{r.count} · {Math.round(r.pct)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
       </div>
     </div>

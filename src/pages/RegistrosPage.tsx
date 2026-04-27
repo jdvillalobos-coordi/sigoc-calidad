@@ -594,6 +594,7 @@ export default function RegistrosPage() {
             </button>
           </div>
         )}
+
       </div>
 
       {/* ── Cuerpo: tabla + panel ── */}
