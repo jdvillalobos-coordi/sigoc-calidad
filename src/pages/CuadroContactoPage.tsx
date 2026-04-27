@@ -132,8 +132,82 @@ export default function CuadroContactoPage() {
     return Object.values(c).sort((a, b) => b.count - a.count);
   }, [filtrados, dataVersion]);
 
+  const personasBase = React.useMemo(() => {
+    const map = new Map<string, Persona>();
+
+    const upsertPersona = (seed: Partial<Persona> & { cedula?: string; id?: string; nombre?: string; terminal?: string }) => {
+      const cedula = (seed.cedula ?? seed.id ?? "").trim();
+      if (!cedula) return;
+      if (map.has(cedula)) return;
+      map.set(cedula, {
+        id: (seed.id ?? cedula).trim(),
+        cedula,
+        nombre: seed.nombre?.trim() || "Persona sin nombre",
+        cargo: seed.cargo?.trim() || "Sin cargo",
+        terminal: seed.terminal?.trim() || "Sin terminal",
+        tipo: seed.tipo ?? "empleado",
+      });
+    };
+
+    personas.forEach((p) => upsertPersona(p));
+
+    filtradosSoloFecha.forEach((e) => {
+      (e.personasResponsables ?? []).forEach((pv) => {
+        upsertPersona({
+          id: pv.personaId,
+          cedula: pv.cedula,
+          nombre: pv.nombre,
+          cargo: pv.cargo,
+          terminal: e.terminal,
+          tipo: "empleado",
+        });
+      });
+      (e.personasParticipantes ?? []).forEach((pv) => {
+        upsertPersona({
+          id: pv.personaId,
+          cedula: pv.cedula,
+          nombre: pv.nombre,
+          cargo: pv.cargo,
+          terminal: e.terminal,
+          tipo: "empleado",
+        });
+      });
+      (e.presentesHallazgo ?? []).forEach((pv) => {
+        upsertPersona({
+          id: pv.personaId,
+          cedula: pv.cedula,
+          nombre: pv.nombre,
+          cargo: pv.cargo,
+          terminal: e.terminal,
+          tipo: "empleado",
+        });
+      });
+      (e.responsablesHallazgo ?? []).forEach((pv) => {
+        upsertPersona({
+          id: pv.personaId,
+          cedula: pv.cedula,
+          nombre: pv.nombre,
+          cargo: pv.cargo,
+          terminal: e.terminal,
+          tipo: "empleado",
+        });
+      });
+      if (e.codigoEmpleadoResponsable) {
+        upsertPersona({
+          id: e.codigoEmpleadoResponsable,
+          cedula: e.codigoEmpleadoResponsable,
+          nombre: e.nombreEmpleadoResponsable,
+          terminal: e.terminal,
+          tipo: "empleado",
+        });
+      }
+    });
+
+    return [...map.values()];
+  }, [filtradosSoloFecha, dataVersion]);
+
   const cuadroContacto = React.useMemo(() => {
-    return personas.map((p) => {
+    return personasBase.map((p) => {
       const enCategoriaYFecha = filtrados.filter((e) => personaLigadaAEvento(e, p));
       if (enCategoriaYFecha.length === 0) return null;
 
@@ -162,7 +236,7 @@ export default function CuadroContactoPage() {
       const diff = (a?.totalEventos ?? 0) - (b?.totalEventos ?? 0);
       return sortDir === "desc" ? -diff : diff;
     });
-  }, [filtrados, filtradosSoloFecha, sortDir, dataVersion]);
+  }, [personasBase, filtrados, filtradosSoloFecha, sortDir, dataVersion]);
 
   const cuadroFiltrado = React.useMemo(() => {
     let lista = cuadroContacto;

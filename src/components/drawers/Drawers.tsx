@@ -2541,7 +2541,33 @@ export function Persona360Drawer() {
   const [, forceUpdate] = useState(0);
 
   if (drawer.tipo !== "persona360" || !drawer.id) return null;
-  const persona = personas.find((p) => p.id === drawer.id);
+  const personaCatalogo = personas.find((p) => p.id === drawer.id || p.cedula === drawer.id);
+  const personaDesdeEventos = (() => {
+    const candidato = eventos.find((e) =>
+      (e.personasResponsables ?? []).some((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id)
+      || (e.personasParticipantes ?? []).some((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id)
+      || (e.presentesHallazgo ?? []).some((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id)
+      || (e.responsablesHallazgo ?? []).some((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id)
+      || e.codigoEmpleadoResponsable === drawer.id
+    );
+    if (!candidato) return null;
+
+    const ref =
+      (candidato.personasResponsables ?? []).find((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id)
+      ?? (candidato.personasParticipantes ?? []).find((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id)
+      ?? (candidato.presentesHallazgo ?? []).find((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id)
+      ?? (candidato.responsablesHallazgo ?? []).find((pv) => pv.personaId === drawer.id || pv.cedula === drawer.id);
+
+    return {
+      id: ref?.personaId ?? drawer.id,
+      cedula: ref?.cedula ?? candidato.codigoEmpleadoResponsable ?? drawer.id,
+      nombre: ref?.nombre ?? candidato.nombreEmpleadoResponsable ?? "Persona sin nombre",
+      cargo: ref?.cargo ?? "Sin cargo",
+      terminal: candidato.terminal ?? "Sin terminal",
+      tipo: "empleado" as const,
+    };
+  })();
+  const persona = personaCatalogo ?? personaDesdeEventos;
   if (!persona) return null;
 
   const coincidePersonaVinculada = (pv: { personaId: string; cedula: string }) =>

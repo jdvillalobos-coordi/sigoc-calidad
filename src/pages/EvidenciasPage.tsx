@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Camera, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, User, FileText } from "lucide-react";
-import { evidencias, usuarioLogueado, eventos, getPersonaPorCedula } from "@/data/mockData";
+import { evidencias, usuarioLogueado, eventos, personas, getPersonaPorCedula } from "@/data/mockData";
+import type { Persona } from "@/types";
 import { useApp } from "@/context/AppContext";
 import { formatDate } from "@/lib/utils-app";
 import { toast } from "@/hooks/use-toast";
@@ -131,12 +132,24 @@ function EvidenciaRow({
 
       const personasResp: Evento["personasResponsables"] = [];
       if (ev.operadorCedula) {
-        const persona = getPersonaPorCedula(ev.operadorCedula);
+        let persona = getPersonaPorCedula(ev.operadorCedula);
+        if (!persona) {
+          // Si el operador no existe en catálogo, se crea para que quede visible en Cuadro de Contacto.
+          const nuevaPersona: Persona = {
+            id: ev.operadorCedula,
+            cedula: ev.operadorCedula,
+            nombre: ev.operadorNombre ?? "Operador sin nombre",
+            cargo: ev.operadorCargo ?? "Operador",
+            terminal: ev.terminal,
+            tipo: "empleado",
+          };
+          personas.push(nuevaPersona);
+          persona = nuevaPersona;
+        }
         personasResp.push({
-          personaId: persona?.id ?? ev.operadorCedula,
+          personaId: persona.id,
           nombre: ev.operadorNombre ?? "Desconocido",
           cedula: ev.operadorCedula,
-          cargo: ev.operadorCargo ?? "",
           rol: "responsable",
         });
       }
