@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { eventos, personas, vehiculos, guias, getPersona, getVehiculo, getVehiculoPorPlaca, getEventosPorGuia, getEventosRelacionados, estudiosSeguridad, alertasIA, PAISES_REGIONALES, solicitudesCCTV, CATEGORIAS_LESIVAS, actividadesLesivas, getActividadesLesivasPorPersona, getActividadesLesivasPorVehiculo, usuarioLogueado, insumosRCE, insumosFaltantes, getMonedaPorTerminal, decisionesPersona, getDecisionesPersona, buscarPersonas } from "@/data/mockData";
 import { CategoriaBadge, EstadoBadge, SeveridadBadge, AvatarInicial, formatDate, formatDateTime, formatCurrency, descripcionCorta, categoriaConfig, estadoConfig, labelCategoriaEvento } from "@/lib/utils-app";
 import { eventoSinAsignarSlaCritico } from "@/lib/evento-sla";
+import { textoQuienReportaNovedad } from "@/lib/quien-reporta-novedad";
 import { useApp } from "@/context/AppContext";
-import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Trash2, Image as ImageIcon, FileVideo } from "lucide-react";
+import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV, Persona, PersonaVinculada, Anotacion } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import { CONTENIDO_RECURSO_DINEROS, CONTENIDO_RECURSO_UNIDADES, GRUPO_CIERRE_OPCIONES, CAUSA_UNIFICADA_DINEROS, CAUSA_UNIFICADA_UNIDADES } from "./dinerosUnidadesLists";
@@ -115,8 +116,9 @@ function validarCierreInvestigacionFaltantes(ev: Evento): string[] {
   if (!ev.codigoConclusion) f.push("Conclusión investigación");
   if (!ev.terminalResponsable) f.push("Terminal responsable");
   if (!ev.equipoResponsable?.trim()) f.push("Equipo responsable");
-  if (!ev.codigoEmpleadoResponsable?.trim()) f.push("Código empleado responsable");
-  if (!ev.nombreEmpleadoResponsable?.trim()) f.push("Nombre empleado responsable");
+  if (ev.codigoEmpleadoResponsable?.trim() && !ev.nombreEmpleadoResponsable?.trim()) {
+    f.push("Código empleado responsable: sin coincidencia en directorio");
+  }
   return f;
 }
 
@@ -1409,7 +1411,7 @@ export function RecordDetailDrawer() {
                     ["Fecha novedad", ev.fechaNovedad ? formatDate(ev.fechaNovedad) : undefined],
                     ["NIT cliente", ev.nitCliente],
                     ["Cliente", ev.nombreCliente],
-                    ["Rol solicitante", ev.rolSolicitante],
+                    ...(textoQuienReportaNovedad(ev) ? [["Novedad reportada por", textoQuienReportaNovedad(ev)]] as const : []),
                   ].filter(([, v]) => v).map(([label, value]) => (
                     <div key={label} className={label === "Descripción de la novedad" ? "md:col-span-2" : ""}>
                       <div className="text-orange-700/70 mb-0.5">{label}</div>
@@ -1445,7 +1447,31 @@ export function RecordDetailDrawer() {
                       if (idx !== -1) { eventos[idx].reporteJefeInmediatoAdjuntos = [...(ev.reporteJefeInmediatoAdjuntos ?? []), ...nombres]; setLocalEventos([...eventos]); }
                       e.target.value = "";
                     }} className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2 disabled:opacity-60 disabled:cursor-not-allowed" />
-                    {!!ev.reporteJefeInmediatoAdjuntos?.length && <p className="text-[10px] text-muted-foreground mt-1">{ev.reporteJefeInmediatoAdjuntos.join(", ")}</p>}
+                    {!!ev.reporteJefeInmediatoAdjuntos?.length && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {ev.reporteJefeInmediatoAdjuntos.map((s, i) => (
+                          <span key={`rj-${i}-${s}`} className="inline-flex items-center gap-0.5 max-w-full px-2 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 border border-blue-200">
+                            <span className="truncate">📎 {s}</span>
+                            {!investigacionFaltantesCerrada && (
+                              <button
+                                type="button"
+                                aria-label={`Quitar ${s}`}
+                                onClick={() => {
+                                  const idx = eventos.findIndex((x) => x.id === ev.id);
+                                  if (idx === -1) return;
+                                  const next = (ev.reporteJefeInmediatoAdjuntos ?? []).filter((_, j) => j !== i);
+                                  eventos[idx].reporteJefeInmediatoAdjuntos = next.length ? next : undefined;
+                                  setLocalEventos([...eventos]);
+                                }}
+                                className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Soportes adicionales (imágenes, documentos o enlaces)</label>
@@ -1480,7 +1506,34 @@ export function RecordDetailDrawer() {
                         </button>
                       </div>
                     )}
-                    {!!ev.soportesAdicionalesInvestigacion?.length && <p className="text-[10px] text-muted-foreground mt-1">{ev.soportesAdicionalesInvestigacion.join(", ")}</p>}
+                    {!!ev.soportesAdicionalesInvestigacion?.length && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {ev.soportesAdicionalesInvestigacion.map((s, i) => {
+                          const esUrl = /^https?:\/\//i.test(s);
+                          return (
+                            <span key={`sop-inv-${i}-${s.slice(0, 24)}`} className="inline-flex items-center gap-0.5 max-w-full px-2 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-800 border border-blue-200">
+                              <span className="truncate">{esUrl ? "🔗" : "📎"} {s}</span>
+                              {!investigacionFaltantesCerrada && (
+                                <button
+                                  type="button"
+                                  aria-label={`Quitar ${esUrl ? "enlace" : "archivo"}`}
+                                  onClick={() => {
+                                    const idx = eventos.findIndex((x) => x.id === ev.id);
+                                    if (idx === -1) return;
+                                    const next = (ev.soportesAdicionalesInvestigacion ?? []).filter((_, j) => j !== i);
+                                    eventos[idx].soportesAdicionalesInvestigacion = next.length ? next : undefined;
+                                    setLocalEventos([...eventos]);
+                                  }}
+                                  className="hover:bg-blue-200 rounded-full p-0.5 shrink-0"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1512,10 +1565,10 @@ export function RecordDetailDrawer() {
                     }} className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background disabled:opacity-60 disabled:cursor-not-allowed" />
                   </div>
                   <div>
-                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Código empleado responsable *</label>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">Código empleado responsable</label>
                     <input value={ev.codigoEmpleadoResponsable ?? ""} disabled={investigacionFaltantesCerrada} onChange={(e) => {
                       const codigo = e.target.value;
-                      const persona = personas.find((p) => p.cedula === codigo || p.id === codigo);
+                      const persona = codigo ? personas.find((p) => p.cedula === codigo || p.id === codigo) : undefined;
                       const idx = eventos.findIndex((x) => x.id === ev.id);
                       if (idx !== -1) {
                         eventos[idx].codigoEmpleadoResponsable = codigo || undefined;
@@ -1625,10 +1678,13 @@ export function RecordDetailDrawer() {
                       <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-green-100 text-green-700 border border-green-200">
                         📎 {s}
                         <button
+                          type="button"
+                          aria-label={`Quitar ${s}`}
                           onClick={() => {
                             const idx = eventos.findIndex((x) => x.id === ev.id);
                             if (idx !== -1) {
-                              eventos[idx].soportesAdjuntos = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                              const next = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                              eventos[idx].soportesAdjuntos = next.length ? next : undefined;
                               setLocalEventos([...eventos]);
                             }
                           }}
@@ -1744,10 +1800,13 @@ export function RecordDetailDrawer() {
                       <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-green-100 text-green-700 border border-green-200">
                         📎 {s}
                         <button
+                          type="button"
+                          aria-label={`Quitar ${s}`}
                           onClick={() => {
                             const idx = eventos.findIndex((x) => x.id === ev.id);
                             if (idx !== -1) {
-                              eventos[idx].soportesAdjuntos = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                              const next = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                              eventos[idx].soportesAdjuntos = next.length ? next : undefined;
                               setLocalEventos([...eventos]);
                             }
                           }}
@@ -2015,13 +2074,21 @@ export function RecordDetailDrawer() {
                     {ev.soportesAdjuntos.map((s, i) => (
                       <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-green-100 text-green-700 border border-green-200">
                         📎 {s}
-                        <button onClick={() => {
-                          const idx = eventos.findIndex((x) => x.id === ev.id);
-                          if (idx !== -1) {
-                            eventos[idx].soportesAdjuntos = ev.soportesAdjuntos!.filter((_, j) => j !== i);
-                            setLocalEventos([...eventos]);
-                          }
-                        }} className="hover:bg-green-200 rounded-full p-0.5 ml-0.5"><X className="w-2.5 h-2.5" /></button>
+                        <button
+                          type="button"
+                          aria-label={`Quitar ${s}`}
+                          onClick={() => {
+                            const idx = eventos.findIndex((x) => x.id === ev.id);
+                            if (idx !== -1) {
+                              const next = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                              eventos[idx].soportesAdjuntos = next.length ? next : undefined;
+                              setLocalEventos([...eventos]);
+                            }
+                          }}
+                          className="hover:bg-green-200 rounded-full p-0.5 ml-0.5"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
                       </span>
                     ))}
                   </div>
@@ -2379,10 +2446,12 @@ export function RecordDetailDrawer() {
                               </span>
                             </div>
                             <button
+                              type="button"
+                              aria-label={`Quitar ${file.name}`}
                               onClick={() => setCctvArchivos(prev => prev.filter((_, i) => i !== idx))}
-                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                              className="text-muted-foreground hover:text-destructive transition-colors flex-shrink-0 rounded-full p-0.5 hover:bg-destructive/10"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <X className="w-3 h-3" />
                             </button>
                           </div>
                         );

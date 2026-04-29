@@ -913,10 +913,11 @@ export default function NewRecordForm({ onClose, prefill }: { onClose: () => voi
                         <span className="flex-1 truncate">{n}</span>
                         <button
                           type="button"
-                          className="text-muted-foreground hover:text-red-500"
+                          aria-label={`Quitar ${n}`}
+                          className="text-muted-foreground hover:text-destructive rounded-full p-0.5 shrink-0"
                           onClick={() => setAdjuntos((prev) => prev.filter((_, j) => j !== i))}
                         >
-                          ✕
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     ))}
