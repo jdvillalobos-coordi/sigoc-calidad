@@ -151,3 +151,36 @@ export const CAUSA_UNIFICADA_UNIDADES: { group: string; options: string[] }[] = 
     "25-Se entrega unidad a Control Salvamento con guia asociada",
   ]},
 ];
+
+export const CLASIFICACIONES_INCONSISTENCIA = [
+  { value: "injustificado", label: "Injustificado" },
+  { value: "seguridad", label: "Seguridad" },
+  { value: "administrativo", label: "Administrativo" },
+  { value: "operativa", label: "Desviación operativa" },
+] as const;
+
+export const SUBCLASIFICACIONES_INCONSISTENCIA: Record<string, string[]> = {
+  injustificado: ["Injustificado"],
+  seguridad: [
+    "Faltante por hurto del recaudo",
+    "Pérdida por robo con violencia",
+  ],
+  administrativo: [
+    "Faltante por error en convenio bancario",
+    "Faltante por error operativo en consignación",
+  ],
+  operativa: [
+    "Error en fecha de entrega",
+    "Error en proceso de legalización",
+    "Faltante de guía por proceso incorrecto",
+  ],
+};
+
+export const CONCLUSIONES_INCONSISTENCIA_DINERO = [
+  "Cierre — Caso justificado",
+  "Cierre — Pérdida asumida por la empresa",
+  "Cierre — Recuperación del dinero",
+  "Cierre — Proceso disciplinario iniciado",
+  "Cierre — Proceso penal iniciado",
+  "Cierre — Caso insuficiente",
+] as const;

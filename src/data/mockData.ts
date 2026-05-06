@@ -337,7 +337,7 @@ export const guias: Guia[] = [
 export const eventos: Evento[] = [
 
   // ══════════════════════════════════
-  // DINEROS (8)
+  // DINEROS (incl. inconsistencias Sigo Dineros)
   // ══════════════════════════════════
   {
     id: "DIN-001",
@@ -617,6 +617,72 @@ export const eventos: Evento[] = [
       { id: "h90", fecha: "2026-03-16T09:30:00", usuarioNombre: "Sandra Herrera", accion: "Creó el evento desde Bandeja RCE" },
       { id: "h91", fecha: "2026-03-18T08:30:00", usuarioNombre: "Jorge Castaño", accion: "Agregó hallazgo de seguimiento" },
     ],
+  },
+  {
+    id: "INC-001",
+    estado: "abierto",
+    categoria: "dineros",
+    subflujo: "inconsistencia_faltante_dinero",
+    tipoEvento: "Inconsistencia Faltante — Injustificado",
+    origenEvento: "automatico",
+    idRegistroSigoDineros: "SD-4821",
+    tipoEntidad: "empleado",
+    fecha: "2026-05-02",
+    terminal: "Bogotá",
+    ciudad: "Bogotá",
+    regional: "Centro",
+    pais: "Colombia",
+    clasificacionInconsistencia: "injustificado",
+    subclasificacionInconsistencia: "Injustificado",
+    montoFaltanteInconsistencia: 1200000,
+    valorAfectacion: 1200000,
+    valorDinero: 1200000,
+    personasResponsables: [{ personaId: "1036452781", cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya", rol: "responsable" }],
+    responsablesHallazgo: [{ personaId: "1036452781", cedula: "1036452781", nombre: "Carlos Andrés Pérez Montoya", rol: "responsable" }],
+    personasParticipantes: [],
+    vehiculosVinculados: [],
+    descripcionHechos: "El colaborador presentó un faltante de $1.200.000 en la legalización del recaudo del día. No logró justificar el faltante ante el área de recaudos.",
+    estadoFlujo: "abierto",
+    usuarioRegistro: "sistema",
+    perfilUsuario: "Sistema automático",
+    terminalUsuario: "Bogotá",
+    fechaRegistro: "2026-05-02T08:30:00",
+    anotaciones: [],
+    historial: [{ id: "h-inc-001", fecha: "2026-05-02T08:30:00", usuarioNombre: "Sistema", accion: "Evento creado automáticamente desde Sigo Dineros" }],
+    diasAbierto: 4,
+  },
+  {
+    id: "INC-002",
+    estado: "abierto",
+    categoria: "dineros",
+    subflujo: "inconsistencia_faltante_dinero",
+    tipoEvento: "Inconsistencia Faltante — Seguridad",
+    origenEvento: "automatico",
+    idRegistroSigoDineros: "SD-4850",
+    tipoEntidad: "aliado_goo",
+    fecha: "2026-05-04",
+    terminal: "Medellín",
+    ciudad: "Medellín",
+    regional: "Antioquia",
+    pais: "Colombia",
+    clasificacionInconsistencia: "seguridad",
+    subclasificacionInconsistencia: "Faltante por hurto del recaudo",
+    montoFaltanteInconsistencia: 5000000,
+    valorAfectacion: 5000000,
+    valorDinero: 5000000,
+    personasResponsables: [{ personaId: "80123456", cedula: "80123456", nombre: "Andrés Felipe Morales Duque", rol: "responsable" }],
+    responsablesHallazgo: [{ personaId: "80123456", cedula: "80123456", nombre: "Andrés Felipe Morales Duque", rol: "responsable" }],
+    personasParticipantes: [],
+    vehiculosVinculados: [],
+    descripcionHechos: "Aliado GO reportó hurto del recaudo en vía pública. Presenta denuncia penal radicada.",
+    estadoFlujo: "abierto",
+    usuarioRegistro: "sistema",
+    perfilUsuario: "Sistema automático",
+    terminalUsuario: "Medellín",
+    fechaRegistro: "2026-05-04T10:15:00",
+    anotaciones: [],
+    historial: [{ id: "h-inc-002", fecha: "2026-05-04T10:15:00", usuarioNombre: "Sistema", accion: "Evento creado automáticamente desde Sigo Dineros" }],
+    diasAbierto: 2,
   },
 
   // ══════════════════════════════════
@@ -3227,6 +3293,21 @@ const EVENTOS_BASE_INVESTIGACION_FALTANTES: Evento[] = eventos
     soportesAdicionalesInvestigacion: e.soportesAdicionalesInvestigacion ? [...e.soportesAdicionalesInvestigacion] : undefined,
   }));
 
+const EVENTOS_BASE_INCONSISTENCIA_DINERO: Evento[] = eventos
+  .filter((e) => e.subflujo === "inconsistencia_faltante_dinero")
+  .map((e) => ({
+    ...e,
+    guias: e.guias ? [...e.guias] : undefined,
+    personasResponsables: [...(e.personasResponsables ?? [])],
+    personasParticipantes: [...(e.personasParticipantes ?? [])],
+    presentesHallazgo: e.presentesHallazgo ? [...e.presentesHallazgo] : undefined,
+    responsablesHallazgo: e.responsablesHallazgo ? [...e.responsablesHallazgo] : undefined,
+    vehiculosVinculados: e.vehiculosVinculados ? [...e.vehiculosVinculados] : undefined,
+    anotaciones: [...(e.anotaciones ?? [])],
+    historial: [...(e.historial ?? [])],
+    soportesAdjuntos: e.soportesAdjuntos ? [...e.soportesAdjuntos] : undefined,
+  }));
+
 // ============================================================
 // PERSISTENCIA EN LOCALSTORAGE
 // ============================================================
@@ -3325,6 +3406,24 @@ function sembrarInvestigacionFaltantesBase() {
   }
 }
 
+function sembrarInconsistenciaFaltanteDineroBase() {
+  for (const eventoBase of EVENTOS_BASE_INCONSISTENCIA_DINERO) {
+    if (eventos.some((e) => e.id === eventoBase.id)) continue;
+    eventos.push({
+      ...eventoBase,
+      guias: eventoBase.guias ? [...eventoBase.guias] : undefined,
+      personasResponsables: [...(eventoBase.personasResponsables ?? [])],
+      personasParticipantes: [...(eventoBase.personasParticipantes ?? [])],
+      presentesHallazgo: eventoBase.presentesHallazgo ? [...eventoBase.presentesHallazgo] : undefined,
+      responsablesHallazgo: eventoBase.responsablesHallazgo ? [...eventoBase.responsablesHallazgo] : undefined,
+      vehiculosVinculados: eventoBase.vehiculosVinculados ? [...eventoBase.vehiculosVinculados] : undefined,
+      anotaciones: [...(eventoBase.anotaciones ?? [])],
+      historial: [...(eventoBase.historial ?? [])],
+      soportesAdjuntos: eventoBase.soportesAdjuntos ? [...eventoBase.soportesAdjuntos] : undefined,
+    });
+  }
+}
+
 function balancearAsignacionesMockUnidades100101() {
   const ajustes: Record<string, Evento["asignadoA"] | undefined> = {
     "UNI-001": { id: "u-ana", nombre: "Ana Martínez", cargo: "Analista de Seguridad" },
@@ -3365,5 +3464,6 @@ function aplicarReglasAutomaticasRCE() {
 restaurarDatos();
 alinearCodigoNovedadUnidadesDesdeTipo();
 sembrarInvestigacionFaltantesBase();
+sembrarInconsistenciaFaltanteDineroBase();
 balancearAsignacionesMockUnidades100101();
 aplicarReglasAutomaticasRCE();

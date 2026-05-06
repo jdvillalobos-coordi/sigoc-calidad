@@ -7,7 +7,16 @@ import { useApp } from "@/context/AppContext";
 import { X, ChevronDown, ChevronRight, AlertTriangle, Check, UserCheck, User, RotateCcw, Lock, Scale, Video, Upload, Image as ImageIcon, FileVideo } from "lucide-react";
 import type { Evento, EstadoEvento, EstadoFlujo, ResolucionFinal, AlertaIA, SolicitudCCTV, Persona, PersonaVinculada, Anotacion } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import { CONTENIDO_RECURSO_DINEROS, CONTENIDO_RECURSO_UNIDADES, GRUPO_CIERRE_OPCIONES, CAUSA_UNIFICADA_DINEROS, CAUSA_UNIFICADA_UNIDADES } from "./dinerosUnidadesLists";
+import {
+  CONTENIDO_RECURSO_DINEROS,
+  CONTENIDO_RECURSO_UNIDADES,
+  GRUPO_CIERRE_OPCIONES,
+  CAUSA_UNIFICADA_DINEROS,
+  CAUSA_UNIFICADA_UNIDADES,
+  CLASIFICACIONES_INCONSISTENCIA,
+  SUBCLASIFICACIONES_INCONSISTENCIA,
+  CONCLUSIONES_INCONSISTENCIA_DINERO,
+} from "./dinerosUnidadesLists";
 
 const CONTENIDO_RECURSO_EVENTOS_CRITICOS = [
   "Instalaciones",
@@ -109,6 +118,10 @@ function esInvestigacionFaltantes(ev: Evento) {
   return ev.categoria === "unidades" && ev.subflujo === "investigacion_faltantes";
 }
 
+function esInconsistenciaFaltanteDinero(ev: Evento) {
+  return ev.categoria === "dineros" && ev.subflujo === "inconsistencia_faltante_dinero";
+}
+
 function validarCierreInvestigacionFaltantes(ev: Evento): string[] {
   const f: string[] = [];
   if (!ev.hallazgosOrigen?.trim()) f.push("Hallazgos relevantes en origen");
@@ -119,6 +132,29 @@ function validarCierreInvestigacionFaltantes(ev: Evento): string[] {
   if (ev.codigoEmpleadoResponsable?.trim() && !ev.nombreEmpleadoResponsable?.trim()) {
     f.push("Código empleado responsable: sin coincidencia en directorio");
   }
+  return f;
+}
+
+function validarCierreInconsistenciaFaltante(ev: Evento): string[] {
+  const f: string[] = [];
+  if (!ev.clasificacionInconsistencia) f.push("Clasificación del faltante");
+  const opcionesSub =
+    ev.clasificacionInconsistencia != null
+      ? (SUBCLASIFICACIONES_INCONSISTENCIA[ev.clasificacionInconsistencia] ?? [])
+      : [];
+  if (opcionesSub.length > 0 && !ev.subclasificacionInconsistencia?.trim()) {
+    f.push("Subclasificación");
+  }
+  if (ev.montoFaltanteInconsistencia == null || ev.montoFaltanteInconsistencia <= 0) {
+    f.push("Monto faltante");
+  }
+  if (!ev.responsablesHallazgo || ev.responsablesHallazgo.length < 1) {
+    f.push("Persona responsable del faltante");
+  }
+  if (!ev.justificacionResponsable?.trim()) f.push("Versión del responsable");
+  if (!ev.intervencionSeguridad?.trim()) f.push("Intervención de seguridad");
+  if (!ev.causaRaiz?.trim()) f.push("Desviaciones / Causa raíz");
+  if (!ev.estadoGestionSG?.trim()) f.push("Conclusión Seguridad");
   return f;
 }
 
@@ -609,6 +645,8 @@ export function RecordDetailDrawer() {
   const wasEscalated = !!(ev.escaladoA || ev.fechaEscalamiento);
   const investigacionFaltantes = esInvestigacionFaltantes(ev);
   const investigacionFaltantesCerrada = investigacionFaltantes && ev.estadoFlujo === "cerrado";
+  const inconsistenciaFaltante = esInconsistenciaFaltanteDinero(ev);
+  const inconsistenciaFaltanteCerrada = inconsistenciaFaltante && ev.estadoFlujo === "cerrado";
 
   function avanzarFlujo(nuevoFlujo: EstadoFlujo, extras: Partial<Evento> = {}) {
     const prevLabel = FLUJO_STEPS.find(s => s.key === ev!.estadoFlujo)?.label ?? ev!.estadoFlujo;
@@ -637,6 +675,10 @@ export function RecordDetailDrawer() {
       cerrarInvestigacionFaltantes();
       return;
     }
+    if (inconsistenciaFaltante) {
+      cerrarInconsistenciaFaltante();
+      return;
+    }
     const faltantes = validarCierreDinU(ev!);
     if (faltantes.length > 0) {
       toast({ variant: "destructive", title: "Completa los campos requeridos", description: faltantes.join(" · ") });
@@ -660,6 +702,19 @@ export function RecordDetailDrawer() {
       resueltoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
     });
     toast({ title: "Investigación Faltantes cerrada correctamente" });
+  }
+
+  function cerrarInconsistenciaFaltante() {
+    const faltantes = validarCierreInconsistenciaFaltante(ev!);
+    if (faltantes.length > 0) {
+      toast({ variant: "destructive", title: "Completa los campos requeridos", description: faltantes.join(" · ") });
+      return;
+    }
+    avanzarFlujo("cerrado", {
+      fechaResolucion: new Date().toISOString(),
+      resueltoPor: { id: usuarioLogueado.id, nombre: usuarioLogueado.nombre },
+    });
+    toast({ title: "Investigación de inconsistencia cerrada correctamente" });
   }
 
   function agregarSoporteInvestigacionUrl() {
@@ -875,6 +930,11 @@ export function RecordDetailDrawer() {
                     Investigación Faltantes · Interventores
                   </span>
                 )}
+                {inconsistenciaFaltante && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-semibold">
+                    Inconsistencia Faltante · Dineros
+                  </span>
+                )}
                 {ev.categoria === "unidades" && !investigacionFaltantes && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-semibold">
                     Seguridad SG · 100/101
@@ -961,12 +1021,20 @@ export function RecordDetailDrawer() {
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors">
                   <AlertTriangle className="w-3.5 h-3.5" /> Escalar
                 </button>
-                {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes ? (
+                {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes && !inconsistenciaFaltante ? (
                   <button onClick={cerrarEventoDinU}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
                     <Check className="w-3.5 h-3.5" /> Resolver y cerrar
                   </button>
-                ) : !investigacionFaltantes ? (
+                ) : inconsistenciaFaltante ? (
+                  <button
+                    type="button"
+                    onClick={cerrarInconsistenciaFaltante}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm"
+                  >
+                    <Check className="w-3.5 h-3.5" /> Resolver y cerrar
+                  </button>
+                ) : !investigacionFaltantes && !inconsistenciaFaltante ? (
                   <button onClick={() => setResolviendoAbierto(!resolviendoAbierto)}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-medium transition-colors shadow-sm">
                     <Check className="w-3.5 h-3.5" /> Resolver y cerrar
@@ -1202,7 +1270,18 @@ export function RecordDetailDrawer() {
           <section>
             <h3 className="text-sm font-semibold mb-3">Información del evento</h3>
             <div className="grid grid-cols-2 gap-3 bg-muted/40 rounded-xl p-4">
-              {(investigacionFaltantes ? [
+              {(inconsistenciaFaltante ? [
+                ["Categoría", labelCategoriaEvento(ev.categoria)],
+                ["Flujo operativo", "Inconsistencias Faltantes — Sigo Dineros"],
+                ["Tipo de evento", ev.tipoEvento],
+                ["Origen", ev.origenEvento === "automatico" ? "Automático" : ev.origenEvento],
+                ...(ev.idRegistroSigoDineros ? [["ID Sigo Dineros", `#${ev.idRegistroSigoDineros}`]] : []),
+                ["Terminal", ev.terminal],
+                ["Ciudad", ev.ciudad],
+                ...(ev.regional ? [["Regional", ev.regional]] : []),
+                [ev.categoria === "pqr" ? "Fecha radicación" : "Fecha", formatDate(ev.fecha)],
+                ["Días abierto", `${ev.diasAbierto} días`],
+              ] : investigacionFaltantes ? [
                 ["Categoría", labelCategoriaEvento(ev.categoria)],
                 ["Flujo operativo", "Investigación Faltantes - Interventores"],
                 ["Tipo de evento", ev.tipoEvento],
@@ -1589,8 +1668,334 @@ export function RecordDetailDrawer() {
             </>
           )}
 
+          {inconsistenciaFaltante && (
+            <>
+              <section className="border border-purple-200 bg-purple-50/40 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-purple-800">Datos del faltante</h3>
+                  <div className="flex items-center gap-1.5">
+                    {ev.origenEvento === "automatico" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-purple-700 border border-purple-200 font-semibold">
+                        Creado automáticamente
+                      </span>
+                    )}
+                    {ev.idRegistroSigoDineros && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200 font-semibold">
+                        Sigo Dineros #{ev.idRegistroSigoDineros}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {[
+                    ["Tipo de evento", ev.tipoEvento],
+                    ["Clasificación", ev.clasificacionInconsistencia
+                      ? CLASIFICACIONES_INCONSISTENCIA.find((c) => c.value === ev.clasificacionInconsistencia)?.label
+                      : undefined],
+                    ["Subclasificación", ev.subclasificacionInconsistencia],
+                    ["Monto faltante", ev.montoFaltanteInconsistencia != null
+                      ? formatCurrency(ev.montoFaltanteInconsistencia, "COP", "es-CO")
+                      : undefined],
+                    ["Terminal", ev.terminal],
+                    ["Ciudad", ev.ciudad],
+                    ["Fecha del registro", ev.fecha ? formatDate(ev.fecha) : undefined],
+                  ].filter(([, v]) => v).map(([label, value]) => (
+                    <div key={String(label)}>
+                      <div className="text-purple-700/70 mb-0.5">{label}</div>
+                      <div className="font-medium text-purple-950">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-blue-800">Investigación de seguridad</h3>
+                  {inconsistenciaFaltanteCerrada && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold">
+                      Investigación cerrada
+                    </span>
+                  )}
+                </div>
+
+                {!inconsistenciaFaltanteCerrada && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                        Clasificación del faltante *
+                      </label>
+                      <select
+                        value={ev.clasificacionInconsistencia ?? ""}
+                        onChange={(e) => {
+                          const idx = eventos.findIndex((x) => x.id === ev.id);
+                          if (idx !== -1) {
+                            eventos[idx].clasificacionInconsistencia = (e.target.value || undefined) as Evento["clasificacionInconsistencia"];
+                            eventos[idx].subclasificacionInconsistencia = undefined;
+                            setLocalEventos([...eventos]);
+                          }
+                        }}
+                        className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="">Seleccionar…</option>
+                        {CLASIFICACIONES_INCONSISTENCIA.map((c) => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {ev.clasificacionInconsistencia && (
+                      <div>
+                        <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                          Subclasificación *
+                        </label>
+                        <select
+                          value={ev.subclasificacionInconsistencia ?? ""}
+                          onChange={(e) => {
+                            const idx = eventos.findIndex((x) => x.id === ev.id);
+                            if (idx !== -1) {
+                              eventos[idx].subclasificacionInconsistencia = e.target.value || undefined;
+                              setLocalEventos([...eventos]);
+                            }
+                          }}
+                          className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">Seleccionar…</option>
+                          {(SUBCLASIFICACIONES_INCONSISTENCIA[ev.clasificacionInconsistencia] ?? []).map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!inconsistenciaFaltanteCerrada && (
+                  <div className="max-w-sm">
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                      Monto faltante (COP) *
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={ev.montoFaltanteInconsistencia ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) {
+                          eventos[idx].montoFaltanteInconsistencia = e.target.value ? Number(e.target.value) : undefined;
+                          setLocalEventos([...eventos]);
+                        }
+                      }}
+                      placeholder="500000"
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                )}
+
+                {!inconsistenciaFaltanteCerrada && (
+                  <HallazgoPersonasConEquipo
+                    ev={ev}
+                    setLocalEventos={setLocalEventos}
+                    field="responsablesHallazgo"
+                    label="Persona responsable del faltante *"
+                  />
+                )}
+                {inconsistenciaFaltanteCerrada && (ev.responsablesHallazgo?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[11px] font-medium text-muted-foreground mb-1">Persona responsable del faltante</div>
+                    <ul className="text-xs space-y-1">
+                      {(ev.responsablesHallazgo ?? []).map((p) => (
+                        <li key={p.cedula} className="font-medium">{p.nombre} · ID {p.cedula}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                    Versión del responsable *
+                  </label>
+                  <textarea
+                    rows={3}
+                    disabled={inconsistenciaFaltanteCerrada}
+                    value={ev.justificacionResponsable ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) {
+                        eventos[idx].justificacionResponsable = e.target.value || undefined;
+                        setLocalEventos([...eventos]);
+                      }
+                    }}
+                    placeholder="Qué dijo la persona cuando se le solicitó justificar el faltante…"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed"
+                  />
+                </div>
+
+                {!inconsistenciaFaltanteCerrada && (
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                      Intervención de seguridad *
+                    </label>
+                    <select
+                      value={ev.intervencionSeguridad ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) {
+                          eventos[idx].intervencionSeguridad = e.target.value || undefined;
+                          setLocalEventos([...eventos]);
+                        }
+                      }}
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Seleccionar…</option>
+                      {INTERVENCION_DINEROS_OPCIONES.map((o) => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {inconsistenciaFaltanteCerrada && ev.intervencionSeguridad && (
+                  <div>
+                    <div className="text-[11px] font-medium text-muted-foreground mb-0.5">Intervención de seguridad</div>
+                    <div className="text-xs font-medium">{ev.intervencionSeguridad}</div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                    Soportes adjuntos (denuncia, acta, evidencias)
+                  </label>
+                  {!inconsistenciaFaltanteCerrada && (
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf,.xlsx,.xls"
+                      multiple
+                      onChange={(e) => {
+                        const nombres = Array.from(e.target.files ?? []).map((f) => f.name);
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) {
+                          eventos[idx].soportesAdjuntos = [...(ev.soportesAdjuntos ?? []), ...nombres];
+                          setLocalEventos([...eventos]);
+                        }
+                        e.target.value = "";
+                      }}
+                      className="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 file:cursor-pointer cursor-pointer border border-border rounded-lg py-1 px-2"
+                    />
+                  )}
+                  {!!ev.soportesAdjuntos?.length && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {ev.soportesAdjuntos.map((s, i) => (
+                        <span key={`inc-sop-${i}-${s}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-purple-100 text-purple-700 border border-purple-200">
+                          📎 {s}
+                          {!inconsistenciaFaltanteCerrada && (
+                            <button
+                              type="button"
+                              aria-label={`Quitar ${s}`}
+                              onClick={() => {
+                                const idx = eventos.findIndex((x) => x.id === ev.id);
+                                if (idx !== -1) {
+                                  const next = ev.soportesAdjuntos!.filter((_, j) => j !== i);
+                                  eventos[idx].soportesAdjuntos = next.length ? next : undefined;
+                                  setLocalEventos([...eventos]);
+                                }
+                              }}
+                              className="hover:bg-purple-200 rounded-full p-0.5 ml-0.5"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {!inconsistenciaFaltanteCerrada && (
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                      Desviaciones identificadas / Causa raíz *
+                    </label>
+                    <select
+                      value={ev.causaRaiz ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) {
+                          eventos[idx].causaRaiz = e.target.value || undefined;
+                          setLocalEventos([...eventos]);
+                        }
+                      }}
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Seleccionar…</option>
+                      {CAUSA_UNIFICADA_DINEROS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {inconsistenciaFaltanteCerrada && ev.causaRaiz && (
+                  <div>
+                    <div className="text-[11px] font-medium text-muted-foreground mb-0.5">Desviaciones / Causa raíz</div>
+                    <div className="text-xs font-medium">{ev.causaRaiz}</div>
+                  </div>
+                )}
+
+                {!inconsistenciaFaltanteCerrada && (
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                      Conclusión Seguridad *
+                    </label>
+                    <select
+                      value={ev.estadoGestionSG ?? ""}
+                      onChange={(e) => {
+                        const idx = eventos.findIndex((x) => x.id === ev.id);
+                        if (idx !== -1) {
+                          eventos[idx].estadoGestionSG = e.target.value || undefined;
+                          setLocalEventos([...eventos]);
+                        }
+                      }}
+                      className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Seleccionar…</option>
+                      <optgroup label="En proceso">
+                        {ESTADO_DINEROS_PARCIAL.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </optgroup>
+                      <optgroup label="Cierre investigación">
+                        {ESTADO_DINEROS_CIERRE.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </optgroup>
+                    </select>
+                  </div>
+                )}
+                {inconsistenciaFaltanteCerrada && ev.estadoGestionSG && (
+                  <div>
+                    <div className="text-[11px] font-medium text-muted-foreground mb-0.5">Conclusión Seguridad</div>
+                    <div className="text-xs font-medium">{ev.estadoGestionSG}</div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground mb-1 block">
+                    Observaciones adicionales (opcional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    disabled={inconsistenciaFaltanteCerrada}
+                    value={ev.comentariosAdicionales ?? ""}
+                    onChange={(e) => {
+                      const idx = eventos.findIndex((x) => x.id === ev.id);
+                      if (idx !== -1) {
+                        eventos[idx].comentariosAdicionales = e.target.value || undefined;
+                        setLocalEventos([...eventos]);
+                      }
+                    }}
+                    placeholder="Detalle adicional sobre la resolución del faltante…"
+                    className="w-full text-xs border border-border rounded-lg px-2.5 py-2 bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </section>
+            </>
+          )}
+
           {/* Hallazgos de la investigación — Dineros y Unidades */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes && ev.estadoFlujo !== "cerrado" && (
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes && !inconsistenciaFaltante && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-green-200 bg-green-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-green-800">Hallazgos de la investigación</h3>
               <p className="text-[10px] text-muted-foreground leading-snug">
@@ -1838,7 +2243,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Gestión de Seguridad — Dineros y Unidades */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes && ev.estadoFlujo !== "cerrado" && (
+          {(ev.categoria === "dineros" || ev.categoria === "unidades") && !investigacionFaltantes && !inconsistenciaFaltante && ev.estadoFlujo !== "cerrado" && (
             <section className="border border-blue-200 bg-blue-50/30 rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-semibold text-blue-800">🛡️ Gestión de Seguridad</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2113,7 +2518,7 @@ export function RecordDetailDrawer() {
           )}
 
           {/* Hallazgos de investigación — read-only para cerrados */}
-          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_criticos") && !investigacionFaltantes && ev.estadoFlujo === "cerrado" &&
+          {(ev.categoria === "dineros" || ev.categoria === "unidades" || ev.categoria === "listas_vinculantes" || ev.categoria === "eventos_criticos") && !investigacionFaltantes && !inconsistenciaFaltante && ev.estadoFlujo === "cerrado" &&
             (ev.unidadesFaltantes != null || ev.contenidoMercancia || ev.lugarLatitud != null || ev.lugarLongitud != null || ev.personasResponsablesHechos
               || (ev.presentesHallazgo && ev.presentesHallazgo.length) || (ev.responsablesHallazgo && ev.responsablesHallazgo.length) || ev.registroWorkflow
               || (ev.soportesAdjuntos && ev.soportesAdjuntos.length > 0)) && (
@@ -2165,6 +2570,7 @@ export function RecordDetailDrawer() {
           {(
             (ev.categoria === "dineros" || ev.categoria === "unidades")
               && ev.estadoFlujo === "cerrado"
+              && !esInconsistenciaFaltanteDinero(ev)
               && (ev.causaRaiz || ev.grupoCierre)
               && (ev.subgrupoCierre || (ev.grupoCierre && ["Hurto", "Perdida", "Solución SG en la Operación"].includes(ev.grupoCierre!)))
           ) && (
@@ -2181,6 +2587,7 @@ export function RecordDetailDrawer() {
           {/* Gestión SG — vista read-only si cerrado (Dineros / Unidades) */}
           {(ev.categoria === "dineros" || ev.categoria === "unidades")
             && !investigacionFaltantes
+            && !inconsistenciaFaltante
             && ev.estadoFlujo === "cerrado"
             && !!(ev.intervencionSeguridad || ev.causaRaiz || ev.estadoGestionSG || ev.grupoCierre) && (
             <section className="bg-muted/40 rounded-xl p-4">

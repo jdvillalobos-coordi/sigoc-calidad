@@ -56,8 +56,27 @@ function esSeguridadUnidadesEvento(e: Pick<Evento, "categoria" | "subflujo">) {
   return e.categoria === "unidades" && e.subflujo !== "investigacion_faltantes";
 }
 
+type FlujoDinerosFiltro = "todos" | "seguimiento_rce" | "inconsistencia_faltante";
+const FLUJOS_DINEROS: { value: FlujoDinerosFiltro; label: string; detail: string }[] = [
+  { value: "todos", label: "Todos", detail: "Dineros" },
+  { value: "seguimiento_rce", label: "Seguimiento RCE", detail: "RCE / Guías" },
+  { value: "inconsistencia_faltante", label: "Inconsistencias Faltantes", detail: "Sigo Dineros" },
+];
+
+function esInconsistenciaFaltanteEvento(e: Pick<Evento, "categoria" | "subflujo">) {
+  return e.categoria === "dineros" && e.subflujo === "inconsistencia_faltante_dinero";
+}
+
+function esSeguimientoRCEEvento(e: Pick<Evento, "categoria" | "subflujo">) {
+  return e.categoria === "dineros" && e.subflujo !== "inconsistencia_faltante_dinero";
+}
+
 function labelFlujoUnidades(flujo: FlujoUnidadesFiltro) {
   return FLUJOS_UNIDADES.find((f) => f.value === flujo)?.label ?? flujo;
+}
+
+function labelFlujoDineros(flujo: FlujoDinerosFiltro) {
+  return FLUJOS_DINEROS.find((f) => f.value === flujo)?.label ?? flujo;
 }
 
 // ── Componentes pequeños ─────────────────────────────────────
@@ -131,6 +150,8 @@ export default function RegistrosPage() {
   const [terminalFiltro, setTerminalFiltro]   = useState("todos");
   const [asignadoFiltro, setAsignadoFiltro]   = useState<FiltroAsignacionTrabajo>("todos");
   const [flujoUnidadesFiltro, setFlujoUnidadesFiltro] = useState<FlujoUnidadesFiltro>("todos");
+  const [flujoDinerosFiltro, setFlujoDinerosFiltro] = useState<FlujoDinerosFiltro>("todos");
+  const [clasificacionInconsistenciaFiltro, setClasificacionInconsistenciaFiltro] = useState<string>("todos");
   const [codigoNovedadFiltro, setCodigoNovedadFiltro] = useState("todos");
   const [equipoFaltantesFiltro, setEquipoFaltantesFiltro] = useState("todos");
   const [fechaNovedadFiltro, setFechaNovedadFiltro] = useState<DateRange | undefined>(undefined);
@@ -184,20 +205,35 @@ export default function RegistrosPage() {
 
   const q = busquedaQuery.toLowerCase().trim();
   const mostrarFiltrosInvestigacionFaltantes = categoriaFiltro === "unidades" && flujoUnidadesFiltro === "investigacion_faltantes";
+  const mostrarFiltroClasificacionInconsistencia =
+    categoriaFiltro === "dineros" && flujoDinerosFiltro === "inconsistencia_faltante";
 
   const filtered = useMemo(() => eventos
     .filter((e) => categoriaFiltro === "todos" || e.categoria === categoriaFiltro)
     .filter((e) => {
+      if (categoriaFiltro !== "unidades") return true;
       if (flujoUnidadesFiltro === "todos") return true;
       if (flujoUnidadesFiltro === "investigacion_faltantes") return esInvestigacionFaltantesEvento(e);
       return esSeguridadUnidadesEvento(e);
     })
+    .filter((e) => {
+      if (categoriaFiltro !== "dineros") return true;
+      if (flujoDinerosFiltro === "todos") return true;
+      if (flujoDinerosFiltro === "inconsistencia_faltante") return esInconsistenciaFaltanteEvento(e);
+      if (flujoDinerosFiltro === "seguimiento_rce") return esSeguimientoRCEEvento(e);
+      return true;
+    })
+    .filter((e) => {
+      if (flujoDinerosFiltro !== "inconsistencia_faltante") return true;
+      if (clasificacionInconsistenciaFiltro === "todos") return true;
+      return e.clasificacionInconsistencia === clasificacionInconsistenciaFiltro;
+    })
     .filter((e) => estadoFiltro === "todos" || e.estado === estadoFiltro)
     .filter((e) => estadoFlujoFiltro === "todos" || e.estadoFlujo === estadoFlujoFiltro)
-    .filter((e) => flujoUnidadesFiltro !== "investigacion_faltantes" || codigoNovedadFiltro === "todos" || e.codigoNovedad === codigoNovedadFiltro)
-    .filter((e) => flujoUnidadesFiltro !== "investigacion_faltantes" || equipoFaltantesFiltro === "todos" || e.ultimoEquipoAsignado === equipoFaltantesFiltro)
+    .filter((e) => categoriaFiltro !== "unidades" || flujoUnidadesFiltro !== "investigacion_faltantes" || codigoNovedadFiltro === "todos" || e.codigoNovedad === codigoNovedadFiltro)
+    .filter((e) => categoriaFiltro !== "unidades" || flujoUnidadesFiltro !== "investigacion_faltantes" || equipoFaltantesFiltro === "todos" || e.ultimoEquipoAsignado === equipoFaltantesFiltro)
     .filter((e) => {
-      if (flujoUnidadesFiltro !== "investigacion_faltantes" || !fechaNovedadFiltro?.from) return true;
+      if (categoriaFiltro !== "unidades" || flujoUnidadesFiltro !== "investigacion_faltantes" || !fechaNovedadFiltro?.from) return true;
       if (!e.fechaNovedad) return false;
       const fecha = parseISO(e.fechaNovedad);
       const to = fechaNovedadFiltro.to ?? new Date();
@@ -243,7 +279,7 @@ export default function RegistrosPage() {
       else                                  cmp = a.id.localeCompare(b.id);
       return sortDir === "asc" ? cmp : -cmp;
     })
-  , [categoriaFiltro, flujoUnidadesFiltro, estadoFiltro, estadoFlujoFiltro, codigoNovedadFiltro, equipoFaltantesFiltro, fechaNovedadFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, soloSinAsignar24h, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir, dataVersion]);
+  , [categoriaFiltro, flujoUnidadesFiltro, flujoDinerosFiltro, clasificacionInconsistenciaFiltro, estadoFiltro, estadoFlujoFiltro, codigoNovedadFiltro, equipoFaltantesFiltro, fechaNovedadFiltro, soloMios, soloCerrados, soloEscaladosAMi, soloVencidos, soloSinAsignar24h, asignadoFiltro, paisFiltro, regionalFiltro, terminalFiltro, dateRange, q, sortField, sortDir, dataVersion]);
 
   const effectivePerPage = perPage === "all" ? filtered.length : perPage;
   const pages = effectivePerPage > 0 ? Math.ceil(filtered.length / effectivePerPage) : 1;
@@ -330,7 +366,7 @@ export default function RegistrosPage() {
 
   const hayFiltrosNav = !!navEtiqueta || estadoFlujoFiltro !== "todos" || soloMios || soloCerrados || soloEscaladosAMi || soloVencidos || soloSinAsignar24h || estadoFiltro !== "todos";
   const hayFiltrosFaltantesActivos = mostrarFiltrosInvestigacionFaltantes && (codigoNovedadFiltro !== "todos" || equipoFaltantesFiltro !== "todos" || !!fechaNovedadFiltro?.from);
-  const hayFiltrosActivos = hayFiltrosNav || categoriaFiltro !== "todos" || flujoUnidadesFiltro !== "todos" || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || hayFiltrosFaltantesActivos || !!dateRange?.from || !!q;
+  const hayFiltrosActivos = hayFiltrosNav || categoriaFiltro !== "todos" || flujoUnidadesFiltro !== "todos" || flujoDinerosFiltro !== "todos" || paisFiltro !== "todos" || regionalFiltro !== "todos" || terminalFiltro !== "todos" || asignadoFiltro !== "todos" || hayFiltrosFaltantesActivos || (mostrarFiltroClasificacionInconsistencia && clasificacionInconsistenciaFiltro !== "todos") || !!dateRange?.from || !!q;
   const totalVisible = filtered.length;
 
   function limpiarFiltrosInvestigacionFaltantes() {
@@ -354,6 +390,11 @@ export default function RegistrosPage() {
     if (value !== "unidades") {
       setFlujoUnidadesFiltro("todos");
       limpiarFiltrosInvestigacionFaltantes();
+      setClasificacionInconsistenciaFiltro("todos");
+    }
+    if (value !== "dineros") {
+      setFlujoDinerosFiltro("todos");
+      setClasificacionInconsistenciaFiltro("todos");
     }
     setPage(1);
   }
@@ -364,11 +405,19 @@ export default function RegistrosPage() {
     setPage(1);
   }
 
+  function seleccionarFlujoDineros(value: FlujoDinerosFiltro) {
+    setFlujoDinerosFiltro(value);
+    if (value !== "inconsistencia_faltante") setClasificacionInconsistenciaFiltro("todos");
+    setPage(1);
+  }
+
   function limpiarFiltros() {
     setCategoriaFiltro("todos");
     setFlujoUnidadesFiltro("todos");
+    setFlujoDinerosFiltro("todos");
     setPaisFiltro("todos"); setRegionalFiltro("todos"); setTerminalFiltro("todos"); setAsignadoFiltro("todos");
     setCodigoNovedadFiltro("todos"); setEquipoFaltantesFiltro("todos"); setFechaNovedadFiltro(undefined);
+    setClasificacionInconsistenciaFiltro("todos");
     setDateRange(undefined); setBusquedaQuery(""); setEstadoFiltro("todos");
     setEstadoFlujoFiltro("todos"); setSoloMios(false); setSoloCerrados(false); setSoloEscaladosAMi(false);
     setSoloVencidos(false); setSoloSinAsignar24h(false); setNavEtiqueta(null); setPage(1);
@@ -406,6 +455,26 @@ export default function RegistrosPage() {
                   className={cn(
                     "px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors",
                     flujoUnidadesFiltro === flujo.value
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-card/60"
+                  )}
+                >
+                  <span>{flujo.label}</span>
+                  <span className="ml-1 font-mono text-[10px] font-medium opacity-70">{flujo.detail}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {categoriaFiltro === "dineros" && (
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+              {FLUJOS_DINEROS.map((flujo) => (
+                <button
+                  key={flujo.value}
+                  onClick={() => seleccionarFlujoDineros(flujo.value)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors",
+                    flujoDinerosFiltro === flujo.value
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-card/60"
                   )}
@@ -489,6 +558,24 @@ export default function RegistrosPage() {
             </>
           )}
 
+          {mostrarFiltroClasificacionInconsistencia && (
+            <>
+              <div className="w-px h-5 bg-border mx-1" />
+              <select
+                className="text-xs border border-border rounded-lg px-2.5 py-1.5 bg-background
+                 focus:outline-none focus:ring-2 focus:ring-ring"
+                value={clasificacionInconsistenciaFiltro}
+                onChange={(e) => { setClasificacionInconsistenciaFiltro(e.target.value); setPage(1); }}
+              >
+                <option value="todos">Todas las clasificaciones</option>
+                <option value="injustificado">Injustificado</option>
+                <option value="seguridad">Seguridad</option>
+                <option value="administrativo">Administrativo</option>
+                <option value="operativa">Desviación operativa</option>
+              </select>
+            </>
+          )}
+
           <div className="flex-1" />
           <span className="text-xs text-muted-foreground font-medium">{totalVisible} evento{totalVisible !== 1 ? "s" : ""}</span>
           {!mostrarFiltrosInvestigacionFaltantes && (
@@ -520,6 +607,12 @@ export default function RegistrosPage() {
                 onRemove={() => seleccionarFlujoUnidades("todos")}
               />
             )}
+            {categoriaFiltro === "dineros" && flujoDinerosFiltro !== "todos" && (
+              <FilterPill
+                label={`Flujo: ${labelFlujoDineros(flujoDinerosFiltro)}`}
+                onRemove={() => seleccionarFlujoDineros("todos")}
+              />
+            )}
             {q && <FilterPill label={`Búsqueda: "${busquedaQuery}"`} onRemove={() => { setBusquedaQuery(""); setPage(1); }} />}
             {paisFiltro !== "todos" && <FilterPill label={`País: ${paisFiltro}`} onRemove={() => handlePaisChange("todos")} />}
             {regionalFiltro !== "todos" && <FilterPill label={`Regional: ${regionalFiltro}`} onRemove={() => handleRegionalChange("todos")} />}
@@ -531,6 +624,19 @@ export default function RegistrosPage() {
               <FilterPill
                 label={`Fecha novedad: ${format(fechaNovedadFiltro.from, "dd MMM", { locale: es })}${fechaNovedadFiltro.to ? ` – ${format(fechaNovedadFiltro.to, "dd MMM", { locale: es })}` : ""}`}
                 onRemove={() => { setFechaNovedadFiltro(undefined); setPage(1); }}
+              />
+            )}
+            {mostrarFiltroClasificacionInconsistencia && clasificacionInconsistenciaFiltro !== "todos" && (
+              <FilterPill
+                label={`Clasificación: ${
+                  ({
+                    injustificado: "Injustificado",
+                    seguridad: "Seguridad",
+                    administrativo: "Administrativo",
+                    operativa: "Desviación operativa",
+                  } as Record<string, string>)[clasificacionInconsistenciaFiltro] ?? clasificacionInconsistenciaFiltro
+                }`}
+                onRemove={() => { setClasificacionInconsistenciaFiltro("todos"); setPage(1); }}
               />
             )}
             {soloSinAsignar24h && !navEtiqueta && (

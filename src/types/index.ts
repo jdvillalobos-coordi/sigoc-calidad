@@ -125,7 +125,7 @@ export interface Evento {
   eventosAsociados?: string[];
   categoria: CategoriaEvento;
   tipoEvento: string;
-  subflujo?: "investigacion_faltantes";
+  subflujo?: "investigacion_faltantes" | "inconsistencia_faltante_dinero";
   modulo?: string;
   fuenteExterna?: string;
   origenEvento?: "manual" | "automatico";
@@ -173,6 +173,13 @@ export interface Evento {
   // === CAMPOS ESPECÍFICOS POR CATEGORÍA ===
   // Dineros:
   valorDinero?: number;
+  /** Inconsistencias faltantes dinero (Sigo Dineros) */
+  clasificacionInconsistencia?: "injustificado" | "seguridad" | "administrativo" | "operativa";
+  subclasificacionInconsistencia?: string;
+  idRegistroSigoDineros?: string;
+  montoFaltanteInconsistencia?: number;
+  justificacionResponsable?: string;
+  conclusionRecaudos?: string;
   // Unidades:
   codigoNovedad?: string;
   codigoConclusion?: "301" | "302" | "401" | "402" | "411";
